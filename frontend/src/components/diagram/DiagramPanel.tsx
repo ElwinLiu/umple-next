@@ -5,6 +5,7 @@ import { FeatureDiagram } from './FeatureDiagram'
 import { StructureDiagram } from './StructureDiagram'
 import { GvDiagramView } from './GvDiagramView'
 import { CodeOutput } from '../generation/CodeOutput'
+import { CanvasBanner } from '../layout/CanvasBanner'
 import { useDiagramStore } from '../../stores/diagramStore'
 import { useUiStore } from '../../stores/uiStore'
 import { useEditorStore } from '../../stores/editorStore'
@@ -108,6 +109,8 @@ export function DiagramPanel() {
 
   return (
     <div className="h-full flex flex-col" data-testid="diagram-panel">
+      {/* Canvas banner with Run, diagram type, fullscreen */}
+      <CanvasBanner />
       {/* Content — full height, toolbar floats on top */}
       <div className="flex-1 relative" data-testid="diagram-canvas">
         {/* Floating toolbar controls */}

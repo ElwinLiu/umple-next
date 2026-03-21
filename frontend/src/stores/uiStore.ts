@@ -2,6 +2,8 @@ import { create } from 'zustand'
 
 interface UiState {
   showEditor: boolean
+  showSidebar: boolean
+  sidebarWidth: number
   showTaskPanel: boolean
   showAiPanel: boolean
   showExecutionPanel: boolean
@@ -23,6 +25,8 @@ interface UiState {
   generatedError: string | null
 
   toggleEditor: () => void
+  toggleSidebar: () => void
+  setSidebarWidth: (width: number) => void
   toggleTaskPanel: () => void
   toggleAiPanel: () => void
   toggleExecutionPanel: () => void
@@ -41,6 +45,8 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   showEditor: true,
+  showSidebar: true,
+  sidebarWidth: 280,
   showTaskPanel: false,
   showAiPanel: false,
   showExecutionPanel: false,
@@ -59,6 +65,8 @@ export const useUiStore = create<UiState>((set) => ({
   generatedError: null,
 
   toggleEditor: () => set((s) => ({ showEditor: !s.showEditor })),
+  toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
+  setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.min(480, Math.max(200, sidebarWidth)) }),
   toggleTaskPanel: () => set((s) => ({ showTaskPanel: !s.showTaskPanel })),
   toggleAiPanel: () => set((s) => ({ showAiPanel: !s.showAiPanel })),
   toggleExecutionPanel: () => set((s) => ({ showExecutionPanel: !s.showExecutionPanel })),

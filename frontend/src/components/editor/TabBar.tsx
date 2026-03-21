@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useEditorStore, type Tab } from '../../stores/editorStore'
-import { Plus, X, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useUiStore } from '../../stores/uiStore'
+import { Plus, X, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react'
+import { Tip } from '@/components/ui/tooltip'
 
 // ── TabBar ────────────────────────────────────────────────────────────
 
@@ -92,8 +94,24 @@ export function TabBar() {
     [tabs, activeTabId, setActiveTab, removeTab]
   )
 
+  const showSidebar = useUiStore((s) => s.showSidebar)
+  const toggleSidebar = useUiStore((s) => s.toggleSidebar)
+
   return (
     <div className="flex items-end h-[38px] shrink-0 bg-surface-2 border-b border-border">
+      {/* Sidebar toggle (visible when sidebar is closed) */}
+      {!showSidebar && (
+        <Tip content="Show sidebar" side="bottom">
+          <button
+            onClick={toggleSidebar}
+            className="flex items-center justify-center size-7 rounded-full text-ink-faint hover:text-ink-muted hover:bg-surface-1 transition-colors cursor-pointer shrink-0 ml-2 mb-[3px]"
+            aria-label="Show sidebar"
+          >
+            <PanelLeft className="size-3.5" />
+          </button>
+        </Tip>
+      )}
+
       {/* Scroll left */}
       {canScrollLeft && (
         <button

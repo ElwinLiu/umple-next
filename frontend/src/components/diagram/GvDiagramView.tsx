@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useMemo } from 'react'
+import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 
@@ -6,48 +6,130 @@ interface GvDiagramViewProps {
   svg: string
 }
 
-/** Sanitize SVG by parsing it and stripping script/event-handler content */
-function sanitizeSvg(raw: string): string {
+/** Parse, sanitize, and extract dimensions from an SVG string in a single DOMParser pass */
+function processSvg(raw: string): { html: string; dims: { width: number; height: number } | null } {
   const parser = new DOMParser()
   const doc = parser.parseFromString(raw, 'image/svg+xml')
+  const svgEl = doc.documentElement
 
-  // Remove script elements
-  const scripts = doc.querySelectorAll('script')
-  scripts.forEach((s) => s.remove())
-
-  // Remove event handler attributes (onclick, onload, etc.)
-  const allEls = doc.querySelectorAll('*')
-  allEls.forEach((el) => {
-    const attrs = Array.from(el.attributes)
-    for (const attr of attrs) {
+  // Sanitize: strip scripts, event handlers, foreignObject
+  doc.querySelectorAll('script').forEach((s) => s.remove())
+  doc.querySelectorAll('*').forEach((el) => {
+    for (const attr of Array.from(el.attributes)) {
       if (attr.name.startsWith('on') || attr.value.startsWith('javascript:')) {
         el.removeAttribute(attr.name)
       }
     }
   })
+  doc.querySelectorAll('foreignObject').forEach((fo) => fo.remove())
 
-  // Remove foreignObject elements
-  const foreignObjects = doc.querySelectorAll('foreignObject')
-  foreignObjects.forEach((fo) => fo.remove())
+  const html = new XMLSerializer().serializeToString(svgEl)
 
-  const serializer = new XMLSerializer()
-  return serializer.serializeToString(doc.documentElement)
+  // Extract dimensions
+  const parseUnit = (val: string | null): number | null => {
+    if (!val) return null
+    const match = val.match(/^([\d.]+)(pt|px)?$/)
+    if (!match) return null
+    const num = parseFloat(match[1])
+    return match[2] === 'pt' ? num * 1.333 : num
+  }
+
+  const w = parseUnit(svgEl.getAttribute('width'))
+  const h = parseUnit(svgEl.getAttribute('height'))
+  if (w && h) return { html, dims: { width: w, height: h } }
+
+  const vb = svgEl.getAttribute('viewBox')
+  if (vb) {
+    const parts = vb.split(/[\s,]+/).map(Number)
+    if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+      return { html, dims: { width: parts[2], height: parts[3] } }
+    }
+  }
+
+  return { html, dims: null }
 }
+
+const PADDING = 24
 
 export function GvDiagramView({ svg }: GvDiagramViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
   const [dragging, setDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const { html: sanitizedSvg, dims: svgDims } = useMemo(() => processSvg(svg), [svg])
 
-  const sanitizedSvg = useMemo(() => sanitizeSvg(svg), [svg])
+  const fitToView = useCallback(() => {
+    const container = containerRef.current
+    if (!container) {
+      setTransform({ x: 0, y: 0, scale: 1 })
+      return
+    }
+
+    const contentEl = contentRef.current
+    let contentW: number
+    let contentH: number
+
+    if (contentEl) {
+      const svgChild = contentEl.querySelector('svg')
+      if (svgChild) {
+        const bbox = svgChild.getBBox()
+        contentW = bbox.width
+        contentH = bbox.height
+      } else if (svgDims) {
+        contentW = svgDims.width
+        contentH = svgDims.height
+      } else {
+        setTransform({ x: 0, y: 0, scale: 1 })
+        return
+      }
+    } else if (svgDims) {
+      contentW = svgDims.width
+      contentH = svgDims.height
+    } else {
+      setTransform({ x: 0, y: 0, scale: 1 })
+      return
+    }
+
+    const { width: cw, height: ch } = container.getBoundingClientRect()
+    const availW = cw - PADDING * 2
+    const availH = ch - PADDING * 2
+
+    if (availW <= 0 || availH <= 0 || contentW <= 0 || contentH <= 0) {
+      setTransform({ x: 0, y: 0, scale: 1 })
+      return
+    }
+
+    const scale = Math.min(availW / contentW, availH / contentH, 1)
+    const x = (cw - contentW * scale) / 2
+    const y = (ch - contentH * scale) / 2
+
+    setTransform({ x, y, scale })
+  }, [svgDims])
+
+  useEffect(() => {
+    const id = requestAnimationFrame(fitToView)
+    return () => cancelAnimationFrame(id)
+  }, [sanitizedSvg, fitToView])
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
     e.preventDefault()
-    const delta = e.deltaY > 0 ? 0.9 : 1.1
+
+    const rect = containerRef.current?.getBoundingClientRect()
+    if (!rect) return
+
+    const cursorX = e.clientX - rect.left
+    const cursorY = e.clientY - rect.top
+
     setTransform((prev) => {
-      const newScale = Math.min(Math.max(prev.scale * delta, 0.1), 5)
-      return { ...prev, scale: newScale }
+      // Scale zoom speed by deltaY magnitude — matches ReactFlow behavior.
+      // Trackpad pinch sends small deltaY (~1-4), mouse wheel sends larger (~100).
+      const factor = 1 - e.deltaY * 0.005
+      const newScale = Math.min(Math.max(prev.scale * factor, 0.1), 5)
+      const ratio = newScale / prev.scale
+      const newX = cursorX - ratio * (cursorX - prev.x)
+      const newY = cursorY - ratio * (cursorY - prev.y)
+      return { x: newX, y: newY, scale: newScale }
     })
   }, [])
 
@@ -68,10 +150,6 @@ export function GvDiagramView({ svg }: GvDiagramViewProps) {
 
   const handleMouseUp = useCallback(() => {
     setDragging(false)
-  }, [])
-
-  const fitToView = useCallback(() => {
-    setTransform({ x: 0, y: 0, scale: 1 })
   }, [])
 
   const handleZoomIn = useCallback(() => {
@@ -128,11 +206,11 @@ export function GvDiagramView({ svg }: GvDiagramViewProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-hidden relative bg-surface-1 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]"
+      className="w-full h-full overflow-hidden relative bg-surface-0 select-none focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]"
       style={{ cursor: dragging ? 'grabbing' : 'grab' }}
       tabIndex={0}
       role="application"
-      aria-label="GraphViz diagram viewer — use arrow keys to pan, +/- to zoom"
+      aria-label="GraphViz diagram viewer — use arrow keys to pan, +/- to zoom, scroll to zoom"
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
@@ -140,7 +218,7 @@ export function GvDiagramView({ svg }: GvDiagramViewProps) {
       onMouseLeave={handleMouseUp}
       onKeyDown={handleKeyDown}
     >
-      {/* Zoom controls */}
+      {/* Controls — matches DiagramControls overlay */}
       <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-0.5 bg-surface-0 border border-border rounded-lg shadow-sm p-0.5">
         <GvControlButton onClick={handleZoomIn} label="Zoom in">
           <ZoomIn className="size-3.5" />
@@ -155,6 +233,7 @@ export function GvDiagramView({ svg }: GvDiagramViewProps) {
       </div>
 
       <div
+        ref={contentRef}
         className="inline-block origin-top-left"
         style={{
           transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,

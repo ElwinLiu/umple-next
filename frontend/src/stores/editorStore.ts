@@ -26,21 +26,7 @@ interface EditorState {
   reorderTabs: (fromIndex: number, toIndex: number) => void
 }
 
-const DEFAULT_CODE = `// Umple model
-class Student {
-  name;
-  id;
-}
-
-class Course {
-  title;
-  code;
-}
-
-association {
-  * Student -- * Course;
-}
-`
+const DEFAULT_CODE = ''
 
 let nextTabCounter = 1
 

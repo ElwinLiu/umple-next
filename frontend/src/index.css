@@ -243,6 +243,38 @@ body {
   background-color: var(--color-brand);
 }
 
+/* ── Sidebar peek slide-in ── */
+
+@keyframes sidebar-peek-in {
+  from {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-sidebar-peek-in {
+  animation: sidebar-peek-in 200ms ease-out;
+}
+
+@keyframes sidebar-peek-out {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.animate-sidebar-peek-out {
+  animation: sidebar-peek-out 200ms ease-in forwards;
+}
+
 /* ── Spin animation for pending buttons ── */
 
 @keyframes spin {
