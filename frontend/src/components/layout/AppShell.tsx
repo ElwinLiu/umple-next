@@ -1,7 +1,7 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Sidebar } from './Sidebar'
 import { EditorPanel } from '../editor/EditorPanel'
-import { ExecutionPanel } from '../editor/ExecutionPanel'
+import { ExecutionPanel, OutputBanner } from '../editor/ExecutionPanel'
 import { DiagramPanel } from '../diagram/DiagramPanel'
 import { AiPanel } from '../ai/AiPanel'
 import { TaskPanel } from '../task/TaskPanel'
@@ -45,8 +45,11 @@ export function AppShell() {
                       </Panel>
                     </PanelGroup>
                   ) : (
-                    <div className="h-full rounded-lg overflow-hidden bg-surface-0">
-                      <EditorPanel />
+                    <div className="h-full flex flex-col gap-2.5">
+                      <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-surface-0">
+                        <EditorPanel />
+                      </div>
+                      <OutputBanner />
                     </div>
                   )}
                 </Panel>

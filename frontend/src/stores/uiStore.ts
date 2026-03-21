@@ -7,6 +7,8 @@ interface UiState {
   showTaskPanel: boolean
   showAiPanel: boolean
   showExecutionPanel: boolean
+  executionOutput: string
+  executionErrors: string | null
   theme: 'light' | 'dark' | 'system'
 
   // Diagram display preferences
@@ -23,6 +25,7 @@ interface UiState {
   generatedLanguage: string
   generatingCode: boolean
   generatedError: string | null
+  generationRequested: boolean
 
   toggleEditor: () => void
   toggleSidebar: () => void
@@ -30,6 +33,7 @@ interface UiState {
   toggleTaskPanel: () => void
   toggleAiPanel: () => void
   toggleExecutionPanel: () => void
+  setExecutionOutput: (output: string, errors?: string | null) => void
   setTheme: (theme: 'light' | 'dark' | 'system') => void
   togglePreference: (key: 'showAttributes' | 'showMethods' | 'showActions' | 'showTraits') => void
 
@@ -50,6 +54,8 @@ export const useUiStore = create<UiState>((set) => ({
   showTaskPanel: false,
   showAiPanel: false,
   showExecutionPanel: false,
+  executionOutput: '',
+  executionErrors: null,
   theme: 'system',
   showAttributes: true,
   showMethods: true,
@@ -63,6 +69,7 @@ export const useUiStore = create<UiState>((set) => ({
   generatedLanguage: 'Java',
   generatingCode: false,
   generatedError: null,
+  generationRequested: false,
 
   toggleEditor: () => set((s) => ({ showEditor: !s.showEditor })),
   toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
@@ -70,6 +77,8 @@ export const useUiStore = create<UiState>((set) => ({
   toggleTaskPanel: () => set((s) => ({ showTaskPanel: !s.showTaskPanel })),
   toggleAiPanel: () => set((s) => ({ showAiPanel: !s.showAiPanel })),
   toggleExecutionPanel: () => set((s) => ({ showExecutionPanel: !s.showExecutionPanel })),
+  setExecutionOutput: (executionOutput, executionErrors = null) =>
+    set({ executionOutput, executionErrors }),
   setTheme: (theme) => set({ theme }),
   togglePreference: (key) => set((s) => ({ [key]: !s[key] })),
 
@@ -79,7 +88,10 @@ export const useUiStore = create<UiState>((set) => ({
   setDiagramOnly: (diagramOnly) => set({ diagramOnly, showEditor: !diagramOnly }),
   setGeneratedOutput: (generatedCode, generatedLanguage) =>
     set({ generatedCode, generatedLanguage, rightPanelView: 'generated', generatedError: null }),
-  setGeneratingCode: (generatingCode) => set({ generatingCode }),
+  setGeneratingCode: (generatingCode) => set(generatingCode
+    ? { generatingCode, generationRequested: true, rightPanelView: 'generated' }
+    : { generatingCode }
+  ),
   setGeneratedError: (generatedError) => set({ generatedError }),
-  clearGenerated: () => set({ generatedCode: '', generatedError: null, rightPanelView: 'diagram' }),
+  clearGenerated: () => set({ generatedCode: '', generatedError: null, rightPanelView: 'diagram', generationRequested: false }),
 }))

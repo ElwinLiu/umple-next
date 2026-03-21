@@ -24,11 +24,23 @@ interface EditorState {
   setActiveTab: (id: string) => void
   renameTab: (id: string, name: string) => void
   reorderTabs: (fromIndex: number, toIndex: number) => void
+  loadExample: (name: string, code: string) => void
+  closeOtherTabs: (id: string) => void
 }
 
 const DEFAULT_CODE = ''
 
-let nextTabCounter = 1
+function nextTabNumber(tabs: Tab[]): number {
+  const used = new Set(
+    tabs
+      .map((t) => t.name.match(/^untitled-(\d+)\.ump$/))
+      .filter(Boolean)
+      .map((m) => Number(m![1]))
+  )
+  let n = 1
+  while (used.has(n)) n++
+  return n
+}
 
 export const useEditorStore = create<EditorState>((set) => ({
   code: DEFAULT_CODE,
@@ -62,16 +74,15 @@ export const useEditorStore = create<EditorState>((set) => ({
     code: tab.code,
   })),
 
-  addNewTab: () => {
+  addNewTab: () => set((s) => {
     const id = `tab-${Date.now()}`
-    const name = `untitled-${nextTabCounter++}.ump`
-    const code = '// New Umple model\n'
-    set((s) => ({
-      tabs: [...s.tabs, { id, name, code, dirty: false, savedCode: code }],
+    const name = `untitled-${nextTabNumber(s.tabs)}.ump`
+    return {
+      tabs: [...s.tabs, { id, name, code: '', dirty: false, savedCode: '' }],
       activeTabId: id,
-      code,
-    }))
-  },
+      code: '',
+    }
+  }),
 
   removeTab: (id) => set((s) => {
     const remaining = s.tabs.filter((t) => t.id !== id)
@@ -111,5 +122,24 @@ export const useEditorStore = create<EditorState>((set) => ({
     const [moved] = newTabs.splice(fromIndex, 1)
     newTabs.splice(toIndex, 0, moved)
     return { tabs: newTabs }
+  }),
+
+  loadExample: (name, code) => set((s) => ({
+    code,
+    tabs: s.tabs.map((t) =>
+      t.id === s.activeTabId
+        ? { ...t, name, code, dirty: false, savedCode: code }
+        : t
+    ),
+  })),
+
+  closeOtherTabs: (id) => set((s) => {
+    const tab = s.tabs.find((t) => t.id === id)
+    if (!tab) return s
+    return {
+      tabs: [tab],
+      activeTabId: id,
+      code: tab.code,
+    }
   }),
 }))

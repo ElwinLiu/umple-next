@@ -2,10 +2,13 @@ import { useEffect } from 'react'
 import { useUiStore } from '../../stores/uiStore'
 import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
 import { useExecute } from '../../hooks/useExecute'
+import { useGenerate } from '../../hooks/useGenerate'
+import { UMPLE_TARGETS } from '../../api/types'
 import { Play, Loader2, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -20,11 +23,16 @@ const VIEW_MODES: { value: DiagramView; label: string }[] = [
 ]
 
 export function CanvasBanner() {
-  const { diagramOnly, setDiagramOnly } = useUiStore()
-  const { compiling, lastError, viewMode, setViewMode } = useDiagramStore()
+  const {
+    diagramOnly, setDiagramOnly,
+    rightPanelView, setRightPanelView,
+    generatedLanguage, generatingCode,
+    generationRequested,
+  } = useUiStore()
+  const { viewMode, setViewMode } = useDiagramStore()
   const { execute, running } = useExecute()
+  const handleGenerate = useGenerate()
 
-  // Ctrl+' shortcut to run
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "'") {
@@ -32,31 +40,26 @@ export function CanvasBanner() {
         e.stopPropagation()
         execute()
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === '1') {
+        e.preventDefault()
+        e.stopPropagation()
+        useUiStore.getState().setRightPanelView('diagram')
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '2') {
+        if (useUiStore.getState().generationRequested) {
+          e.preventDefault()
+          e.stopPropagation()
+          useUiStore.getState().setRightPanelView('generated')
+        }
+      }
     }
     window.addEventListener('keydown', handler, true)
     return () => window.removeEventListener('keydown', handler, true)
   }, [execute])
 
   return (
-    <div className="flex items-center justify-between h-[38px] px-3 shrink-0 bg-surface-2 border-b border-border" data-testid="canvas-banner">
-      {/* Left: Status + Run + Diagram dropdown */}
+    <div className="relative flex items-center justify-between h-[38px] px-3 shrink-0 bg-surface-2 border-b border-border" data-testid="canvas-banner">
       <div className="flex items-center gap-2">
-        {/* Status indicator */}
-        {compiling ? (
-          <span className="flex items-center gap-1.5 text-status-warning text-[11px]">
-            <span className="w-1.5 h-1.5 rounded-full bg-status-warning animate-pulse" />
-            Compiling
-          </span>
-        ) : lastError ? (
-          <Tip content={lastError} side="bottom">
-            <span className="flex items-center gap-1.5 text-status-error text-[11px] max-w-[200px] truncate cursor-default">
-              <span className="w-1.5 h-1.5 rounded-full bg-status-error shrink-0" />
-              {lastError}
-            </span>
-          </Tip>
-        ) : null}
-
-        {/* Run button */}
         <Tip content="Run (Ctrl+')" side="bottom">
           <button
             onClick={execute}
@@ -74,7 +77,6 @@ export function CanvasBanner() {
           </button>
         </Tip>
 
-        {/* Diagram view mode dropdown */}
         <DropdownMenu>
           <Tip content="Diagram view" side="bottom">
             <DropdownMenuTrigger className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-0/60 transition-colors cursor-pointer outline-none" aria-label="Diagram view">
@@ -94,7 +96,59 @@ export function CanvasBanner() {
         </DropdownMenu>
       </div>
 
-      {/* Right: Fullscreen toggle */}
+      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-0.5">
+        <Tip content="Diagram (Ctrl+1)" side="bottom">
+          <button
+            onClick={() => setRightPanelView('diagram')}
+            className={`text-[11px] px-2.5 py-1 cursor-pointer transition-colors ${
+              rightPanelView === 'diagram'
+                ? 'text-brand font-semibold border-b-2 border-brand'
+                : 'text-ink-muted font-medium hover:text-ink'
+            }`}
+          >
+            Diagram
+          </button>
+        </Tip>
+        {generationRequested && (
+          <div className="flex items-center">
+            <Tip content="Generated code (Ctrl+2)" side="bottom">
+              <button
+                onClick={() => setRightPanelView('generated')}
+                className={`text-[11px] px-2.5 py-1 cursor-pointer transition-colors flex items-center gap-1.5 ${
+                  rightPanelView === 'generated'
+                    ? 'text-brand font-semibold border-b-2 border-brand'
+                    : 'text-ink-muted font-medium hover:text-ink'
+                }`}
+              >
+                {generatingCode && <span className="w-1.5 h-1.5 rounded-full bg-status-warning animate-pulse" />}
+                {generatedLanguage}
+              </button>
+            </Tip>
+            <DropdownMenu>
+              <Tip content="Change language" side="bottom">
+                <DropdownMenuTrigger
+                  className="px-1 py-0.5 text-[11px] transition-colors cursor-pointer outline-none text-ink-faint hover:text-ink-muted"
+                  aria-label="Change language"
+                >
+                  <ChevronDown className="size-3" />
+                </DropdownMenuTrigger>
+              </Tip>
+              <DropdownMenuContent align="start" className="w-40 max-h-52">
+                {UMPLE_TARGETS.map((target) => (
+                  <DropdownMenuItem
+                    key={target}
+                    onSelect={() => handleGenerate(target)}
+                    className={`text-xs ${target === generatedLanguage ? 'bg-brand-light text-brand font-semibold' : ''}`}
+                  >
+                    {target}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center gap-1">
         <Tip content={diagramOnly ? 'Show editor' : 'Diagram only'} side="bottom">
           <button

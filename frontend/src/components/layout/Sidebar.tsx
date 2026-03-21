@@ -255,8 +255,13 @@ function ResizeHandle() {
   return (
     <div
       onMouseDown={handleMouseDown}
-      className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-brand active:bg-brand transition-colors z-10"
-    />
+      className="group absolute right-0 top-0 bottom-0 w-2.5 -mr-1 cursor-col-resize z-10"
+    >
+      {/* Full-height line (visible on hover/active) */}
+      <div className="absolute left-1/2 top-0 bottom-0 w-[2px] -translate-x-1/2 rounded-full bg-transparent group-hover:bg-brand group-active:bg-brand transition-colors pointer-events-none" />
+      {/* Grip indicator (always visible) */}
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[2px] h-8 rounded-full bg-border group-hover:bg-brand group-active:bg-brand transition-colors pointer-events-none" />
+    </div>
   )
 }
 
@@ -266,7 +271,7 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
   const { viewMode, setViewMode, renderMode, setRenderMode } = useDiagramStore()
   const [allExamples, setAllExamples] = useState<ExampleEntry[]>([])
   const [loaded, setLoaded] = useState(false)
-  const setCode = useEditorStore((s) => s.setCode)
+  const loadExample = useEditorStore((s) => s.loadExample)
 
   const views: { value: DiagramView; label: string }[] = [
     { value: 'class', label: 'Editable Class Diagram' },
@@ -292,9 +297,9 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
   const handleLoadExample = useCallback(async (name: string) => {
     try {
       const res = await api.getExample(name)
-      setCode(res.code)
+      loadExample(res.name, res.code)
     } catch { /* ignore */ }
-  }, [setCode])
+  }, [loadExample])
 
   return (
     <Section title="Diagram Type" open={open} onToggle={onToggle}>

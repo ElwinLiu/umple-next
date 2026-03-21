@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUiStore } from '../../stores/uiStore'
 import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
 import { useEditorStore } from '../../stores/editorStore'
+import { useGenerate } from '../../hooks/useGenerate'
 import { api } from '../../api/client'
 import { UMPLE_TARGETS, type ExampleEntry } from '../../api/types'
 import {
@@ -30,13 +31,11 @@ const DIAGRAM_VIEWS: { value: DiagramView; label: string; icon: React.ReactNode 
 export function CommandPalette() {
   const {
     commandPaletteOpen, closeCommandPalette,
-    setGeneratedOutput, setGeneratingCode, setGeneratedError,
     toggleAiPanel, toggleTaskPanel, setDiagramOnly, diagramOnly, toggleExecutionPanel,
   } = useUiStore()
   const { setViewMode, setRenderMode, renderMode } = useDiagramStore()
-  const code = useEditorStore((s) => s.code)
-  const modelId = useEditorStore((s) => s.modelId)
-  const setCode = useEditorStore((s) => s.setCode)
+  const loadExample = useEditorStore((s) => s.loadExample)
+  const generate = useGenerate()
 
   const [examples, setExamples] = useState<ExampleEntry[]>([])
 
@@ -67,27 +66,16 @@ export function CommandPalette() {
 
   const handleGenerate = useCallback(async (language: string) => {
     closeCommandPalette()
-    if (!code.trim()) return
-    setGeneratingCode(true)
-    setGeneratedError(null)
-    try {
-      const res = await api.generate({ code, language, modelId: modelId ?? undefined })
-      setGeneratedOutput(res.output, language)
-      if (res.errors) setGeneratedError(res.errors)
-    } catch (err: any) {
-      setGeneratedError(err.message || 'Generation failed')
-    } finally {
-      setGeneratingCode(false)
-    }
-  }, [code, modelId, closeCommandPalette, setGeneratedOutput, setGeneratingCode, setGeneratedError])
+    generate(language)
+  }, [closeCommandPalette, generate])
 
   const handleLoadExample = useCallback(async (name: string) => {
     closeCommandPalette()
     try {
       const res = await api.getExample(name)
-      setCode(res.code)
+      loadExample(res.name, res.code)
     } catch { /* ignore */ }
-  }, [closeCommandPalette, setCode])
+  }, [closeCommandPalette, loadExample])
 
   return (
     <CommandDialog

@@ -102,4 +102,4 @@ All colors are semantic tokens defined in `frontend/src/index.css` `@theme`. Use
 
 Source: [uOttawa brand guidelines](https://www.uottawa.ca/about-us/administration-services/brand)
 
-**Important**: When previewing the app in a browser (including Chrome MCP), always use `http://umple-next.elwin.cc` — never `localhost:3100`. The external hostname is required for Chrome screenshot tools and cross-device access.
+**Important**: When previewing the app in a browser (including Chrome MCP), always use `http://umple-next.elwin.cc` without port. The external hostname is required for Chrome screenshot tools and cross-device access.

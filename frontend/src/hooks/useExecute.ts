@@ -13,14 +13,16 @@ export function useExecute() {
     runningRef.current = true
     setRunning(true)
 
-    const { showExecutionPanel, toggleExecutionPanel } = useUiStore.getState()
+    const { showExecutionPanel, toggleExecutionPanel, setExecutionOutput } = useUiStore.getState()
     if (!showExecutionPanel) toggleExecutionPanel()
+    setExecutionOutput('')
 
     const code = useEditorStore.getState().code
     try {
-      await api.execute({ code, language: 'Java' })
-    } catch {
-      // handled in ExecutionPanel
+      const result = await api.execute({ code, language: 'Java' })
+      setExecutionOutput(result.output || '', result.errors || null)
+    } catch (err: unknown) {
+      setExecutionOutput('', err instanceof Error ? err.message : 'Execution failed')
     } finally {
       runningRef.current = false
       setRunning(false)

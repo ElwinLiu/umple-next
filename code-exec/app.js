@@ -11,7 +11,6 @@ app.use(bodyParser.json())
 
 const server = http.createServer(app);
 const port=4400;
-const basePath= __dirname+"/models/"; //current working path
 
 // Declare max requests
 const MAX_REQUESTS = 20;
@@ -35,7 +34,7 @@ app.post('/run' , (req, res)  =>
             numberOfRequests++;
 
             // Extract out path and validate
-            const path = basePath + req.body.path;
+            const path = req.body.path;
             const compileError = req.body.error;
             const language = req.body.language;
             console.log(`language is ${language}`);

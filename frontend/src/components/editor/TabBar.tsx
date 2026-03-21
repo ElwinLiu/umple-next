@@ -3,6 +3,12 @@ import { useEditorStore, type Tab } from '../../stores/editorStore'
 import { useUiStore } from '../../stores/uiStore'
 import { Plus, X, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+} from '@/components/ui/context-menu'
 
 // ── TabBar ────────────────────────────────────────────────────────────
 
@@ -13,6 +19,7 @@ export function TabBar() {
   const removeTab = useEditorStore((s) => s.removeTab)
   const addNewTab = useEditorStore((s) => s.addNewTab)
   const renameTab = useEditorStore((s) => s.renameTab)
+  const closeOtherTabs = useEditorStore((s) => s.closeOtherTabs)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -148,6 +155,7 @@ export function TabBar() {
             onActivate={() => setActiveTab(tab.id)}
             onClose={() => removeTab(tab.id)}
             onRename={(name) => renameTab(tab.id, name)}
+            onCloseOthers={() => closeOtherTabs(tab.id)}
           />
         ))}
 
@@ -189,9 +197,10 @@ interface ChromeTabProps {
   onActivate: () => void
   onClose: () => void
   onRename: (name: string) => void
+  onCloseOthers: () => void
 }
 
-function ChromeTab({ tab, isActive, isOnly, onActivate, onClose, onRename }: ChromeTabProps) {
+function ChromeTab({ tab, isActive, isOnly, onActivate, onClose, onRename, onCloseOthers }: ChromeTabProps) {
   const [editing, setEditing] = useState(false)
   const [editValue, setEditValue] = useState('')
   const [hovered, setHovered] = useState(false)
@@ -235,66 +244,74 @@ function ChromeTab({ tab, isActive, isOnly, onActivate, onClose, onRename }: Chr
   const showDirtyDot = tab.dirty && !showClose
 
   return (
-    <div
-      role="tab"
-      id={`tab-${tab.id}`}
-      aria-selected={isActive}
-      aria-controls={`tabpanel-${tab.id}`}
-      tabIndex={isActive ? 0 : -1}
-      className={`
-        group relative flex items-center h-[34px] pl-3 pr-1.5 shrink-0 cursor-pointer
-        select-none text-[13px] font-medium transition-colors rounded-t-[8px]
-        ${isActive
-          ? 'chrome-tab-active bg-surface-0 text-ink mb-[-1px]'
-          : 'text-ink-muted hover:text-ink hover:bg-surface-tab'
-        }
-      `}
-      onClick={onActivate}
-      onDoubleClick={startRename}
-      onAuxClick={handleAuxClick}
-      onMouseDown={handleMouseDown}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-    >
-      {/* Tab label or rename input */}
-      {editing ? (
-        <input
-          ref={inputRef}
-          value={editValue}
-          onChange={(e) => setEditValue(e.target.value)}
-          onBlur={commitRename}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commitRename()
-            if (e.key === 'Escape') setEditing(false)
-          }}
-          className="w-20 bg-transparent text-[13px] text-ink outline-none border-b border-brand"
-          onClick={(e) => e.stopPropagation()}
-        />
-      ) : (
-        <span className="truncate max-w-[120px]">{tab.name}</span>
-      )}
+    <ContextMenu>
+      <ContextMenuTrigger asChild disabled={editing}>
+        <div
+          role="tab"
+          id={`tab-${tab.id}`}
+          aria-selected={isActive}
+          aria-controls={`tabpanel-${tab.id}`}
+          tabIndex={isActive ? 0 : -1}
+          className={`
+            group relative flex items-center h-[34px] pl-3 pr-1.5 shrink-0 cursor-pointer
+            select-none text-[13px] font-medium transition-colors rounded-t-[8px]
+            ${isActive
+              ? 'chrome-tab-active bg-surface-0 text-ink mb-[-1px]'
+              : 'text-ink-muted hover:text-ink hover:bg-surface-tab'
+            }
+          `}
+          onClick={onActivate}
+          onAuxClick={handleAuxClick}
+          onMouseDown={handleMouseDown}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
+          {/* Tab label or rename input */}
+          {editing ? (
+            <input
+              ref={inputRef}
+              value={editValue}
+              onChange={(e) => setEditValue(e.target.value)}
+              onBlur={commitRename}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') commitRename()
+                if (e.key === 'Escape') setEditing(false)
+              }}
+              className="w-20 bg-transparent text-[13px] text-ink outline-none border-b border-brand"
+              onClick={(e) => e.stopPropagation()}
+            />
+          ) : (
+            <span className="truncate max-w-[120px]">{tab.name}</span>
+          )}
 
-      {/* Close / dirty indicator — fixed-width area to prevent layout shift */}
-      <div className="w-5 h-5 ml-1.5 shrink-0 flex items-center justify-center">
-        {showDirtyDot ? (
-          <span className="w-2 h-2 rounded-full bg-ink-muted" />
-        ) : showClose ? (
-          <button
-            onClick={(e) => { e.stopPropagation(); onClose() }}
-            className={`
-              flex items-center justify-center w-5 h-5 rounded-full transition-colors
-              ${isActive
-                ? 'text-ink-muted hover:text-ink hover:bg-surface-2'
-                : 'text-ink-faint hover:text-ink-muted hover:bg-surface-2'
-              }
-            `}
-            aria-label={`Close ${tab.name}`}
-            tabIndex={-1}
-          >
-            <X className="size-3" />
-          </button>
-        ) : null}
-      </div>
-    </div>
+          {/* Close / dirty indicator — fixed-width area to prevent layout shift */}
+          <div className="w-5 h-5 ml-1.5 shrink-0 flex items-center justify-center">
+            {showDirtyDot ? (
+              <span className="w-2 h-2 rounded-full bg-ink-muted" />
+            ) : showClose ? (
+              <button
+                onClick={(e) => { e.stopPropagation(); onClose() }}
+                className={`
+                  flex items-center justify-center w-5 h-5 rounded-full transition-colors
+                  ${isActive
+                    ? 'text-ink-muted hover:text-ink hover:bg-surface-2'
+                    : 'text-ink-faint hover:text-ink-muted hover:bg-surface-2'
+                  }
+                `}
+                aria-label={`Close ${tab.name}`}
+                tabIndex={-1}
+              >
+                <X className="size-3" />
+              </button>
+            ) : null}
+          </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        <ContextMenuItem onSelect={startRename}>Rename</ContextMenuItem>
+        <ContextMenuItem onSelect={onClose} disabled={isOnly}>Close</ContextMenuItem>
+        <ContextMenuItem onSelect={onCloseOthers} disabled={isOnly}>Close Others</ContextMenuItem>
+      </ContextMenuContent>
+    </ContextMenu>
   )
 }

@@ -35,18 +35,18 @@ const darkHighlight = HighlightStyle.define([
 
 const lightEditorTheme = EditorView.theme({
   '&': { backgroundColor: '#ffffff', color: '#2d2d2c' },
-  '.cm-gutters': { backgroundColor: '#f9f9f9', color: '#80746c', border: 'none' },
-  '.cm-activeLineGutter': { backgroundColor: '#f0f0f0' },
-  '.cm-activeLine': { backgroundColor: '#f5f4f3' },
+  '.cm-gutters': { backgroundColor: '#ffffff', color: '#80746c', border: 'none' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent' },
+  '.cm-activeLine': { backgroundColor: 'transparent', boxShadow: 'inset 0 0 0 1.5px #e0ddd9' },
   '.cm-cursor': { borderLeftColor: '#2d2d2c' },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { backgroundColor: '#f0b0bb40' },
 }, { dark: false })
 
 const darkEditorTheme = EditorView.theme({
   '&': { backgroundColor: '#1a1a1a', color: '#e4e2df' },
-  '.cm-gutters': { backgroundColor: '#1f1f1f', color: '#6e6964', border: 'none' },
-  '.cm-activeLineGutter': { backgroundColor: '#272727' },
-  '.cm-activeLine': { backgroundColor: '#242424' },
+  '.cm-gutters': { backgroundColor: '#1a1a1a', color: '#6e6964', border: 'none' },
+  '.cm-activeLineGutter': { backgroundColor: 'transparent' },
+  '.cm-activeLine': { backgroundColor: 'transparent', boxShadow: 'inset 0 0 0 1.5px #333330' },
   '.cm-cursor': { borderLeftColor: '#e4e2df' },
   '&.cm-focused .cm-selectionBackground, .cm-selectionBackground': { backgroundColor: '#d44a6030' },
 }, { dark: true })

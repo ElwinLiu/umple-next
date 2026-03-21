@@ -11,7 +11,7 @@ function toTestId(value: string) {
 }
 
 export function ExampleBrowser() {
-  const setCode = useEditorStore((s) => s.setCode)
+  const loadExample = useEditorStore((s) => s.loadExample)
   const [examples, setExamples] = useState<ExampleEntry[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
@@ -42,11 +42,11 @@ export function ExampleBrowser() {
     setLoadingExample(name)
     api.getExample(name)
       .then((res) => {
-        setCode(res.code)
+        loadExample(res.name, res.code)
       })
       .catch((err) => setError(err.message || 'Failed to load example'))
       .finally(() => setLoadingExample(null))
-  }, [setCode])
+  }, [loadExample])
 
   return (
     <div className="flex flex-col h-full" data-testid="example-browser">
