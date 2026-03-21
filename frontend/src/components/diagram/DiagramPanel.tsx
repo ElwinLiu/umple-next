@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { UMPLE_TARGETS } from '../../api/types'
+import { Tip } from '@/components/ui/tooltip'
 
 export function DiagramPanel() {
   const { viewMode, renderMode, svgCache, stateNodes, compiling, setRenderMode } = useDiagramStore()
@@ -112,17 +113,17 @@ export function DiagramPanel() {
         {/* Floating toolbar controls */}
         {rightPanelView === 'diagram' && (
           <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
-            <ToolbarButton onClick={handleExportSvg} title="Export SVG">SVG</ToolbarButton>
-            <ToolbarButton onClick={handleExportPng} title="Export PNG">PNG</ToolbarButton>
+            <ToolbarButton onClick={handleExportSvg} label="Export SVG">SVG</ToolbarButton>
+            <ToolbarButton onClick={handleExportPng} label="Export PNG">PNG</ToolbarButton>
             {!showGv && (
-              <ToolbarButton onClick={handleFitView} title="Fit to view">Fit</ToolbarButton>
+              <ToolbarButton onClick={handleFitView} label="Fit to view">Fit</ToolbarButton>
             )}
             {hasReactFlowData && (
               <>
                 <div className="w-px h-3.5 bg-border mx-0.5" />
                 <ToolbarButton
                   onClick={() => setRenderMode(renderMode === 'reactflow' ? 'graphviz' : 'reactflow')}
-                  title="Toggle render mode"
+                  label="Toggle render mode"
                   active={renderMode === 'graphviz'}
                 >
                   {renderMode === 'reactflow' ? 'GV' : 'RF'}
@@ -147,16 +148,18 @@ export function DiagramPanel() {
               {generatedLanguage}
             </button>
             <DropdownMenu>
+              <Tip content="Change language" side="bottom">
               <DropdownMenuTrigger
                 className={`px-1 py-0.5 text-[11px] rounded-r transition-colors cursor-pointer outline-none ${
                   rightPanelView === 'generated'
                     ? 'bg-brand text-ink-inverse/70 hover:text-ink-inverse'
                     : 'text-ink-faint hover:bg-surface-2'
                 }`}
-                title="Change language"
+                aria-label="Change language"
               >
                 <ChevronDown className="size-3" />
               </DropdownMenuTrigger>
+              </Tip>
               <DropdownMenuContent align="start" className="w-40 max-h-52">
                 {UMPLE_TARGETS.map((target) => (
                   <DropdownMenuItem
@@ -219,26 +222,27 @@ export function DiagramPanel() {
 
 function ToolbarButton({
   onClick,
-  title,
+  label,
   active,
   children,
 }: {
   onClick: () => void
-  title: string
+  label: string
   active?: boolean
   children: React.ReactNode
 }) {
   return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={`px-1.5 py-0.5 text-[11px] cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 ${
-        active
-          ? 'text-brand font-semibold bg-brand-light'
-          : 'text-ink-muted hover:text-ink hover:bg-surface-2'
-      }`}
-    >
-      {children}
-    </button>
+    <Tip content={label} side="bottom">
+      <button
+        onClick={onClick}
+        className={`px-1.5 py-0.5 text-[11px] cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 ${
+          active
+            ? 'text-brand font-semibold bg-brand-light'
+            : 'text-ink-muted hover:text-ink hover:bg-surface-2'
+        }`}
+      >
+        {children}
+      </button>
+    </Tip>
   )
 }

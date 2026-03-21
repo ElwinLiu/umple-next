@@ -8,6 +8,7 @@ import { TaskPanel } from '../task/TaskPanel'
 import { CommandPalette } from '../command/CommandPalette'
 import { useUiStore } from '../../stores/uiStore'
 import { useCompiler } from '../../hooks/useCompiler'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 export function AppShell() {
   const { showEditor, diagramOnly, showExecutionPanel, showAiPanel, showTaskPanel } = useUiStore()
@@ -17,6 +18,7 @@ export function AppShell() {
   const editorVisible = showEditor && !diagramOnly
 
   return (
+    <TooltipProvider>
     <div className="h-screen flex flex-col bg-surface-1" data-testid="app-shell">
       <Header />
       <div className="flex-1 min-h-0 p-2.5 pt-0">
@@ -59,5 +61,6 @@ export function AppShell() {
       {showTaskPanel && <TaskPanel />}
       <CommandPalette />
     </div>
+    </TooltipProvider>
   )
 }

@@ -1,5 +1,6 @@
 import { useRef, useState, useCallback, useMemo } from 'react'
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react'
+import { Tip } from '@/components/ui/tooltip'
 
 interface GvDiagramViewProps {
   svg: string
@@ -141,14 +142,14 @@ export function GvDiagramView({ svg }: GvDiagramViewProps) {
     >
       {/* Zoom controls */}
       <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-0.5 bg-surface-0 border border-border rounded-lg shadow-sm p-0.5">
-        <GvControlButton onClick={handleZoomIn} title="Zoom in">
+        <GvControlButton onClick={handleZoomIn} label="Zoom in">
           <ZoomIn className="size-3.5" />
         </GvControlButton>
-        <GvControlButton onClick={handleZoomOut} title="Zoom out">
+        <GvControlButton onClick={handleZoomOut} label="Zoom out">
           <ZoomOut className="size-3.5" />
         </GvControlButton>
         <div className="h-px bg-border mx-0.5" />
-        <GvControlButton onClick={fitToView} title="Fit to view" data-diagram-fit-view>
+        <GvControlButton onClick={fitToView} label="Fit to view" data-diagram-fit-view>
           <Maximize className="size-3.5" />
         </GvControlButton>
       </div>
@@ -166,22 +167,24 @@ export function GvDiagramView({ svg }: GvDiagramViewProps) {
 
 function GvControlButton({
   onClick,
-  title,
+  label,
   children,
   ...rest
 }: {
   onClick: () => void
-  title: string
+  label: string
   children: React.ReactNode
 } & React.HTMLAttributes<HTMLButtonElement>) {
   return (
-    <button
-      onClick={onClick}
-      title={title}
-      {...rest}
-      className="flex items-center justify-center w-7 h-7 rounded-md transition-colors cursor-pointer text-ink-muted hover:text-ink hover:bg-surface-1 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
-    >
-      {children}
-    </button>
+    <Tip content={label} side="right">
+      <button
+        onClick={onClick}
+        aria-label={label}
+        {...rest}
+        className="flex items-center justify-center w-7 h-7 rounded-md transition-colors cursor-pointer text-ink-muted hover:text-ink hover:bg-surface-1 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
+      >
+        {children}
+      </button>
+    </Tip>
   )
 }

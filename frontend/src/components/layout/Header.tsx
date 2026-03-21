@@ -14,6 +14,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
+import { Tip } from '@/components/ui/tooltip'
 
 const VIEW_MODES: { value: DiagramView; label: string }[] = [
   { value: 'class', label: 'Class' },
@@ -74,23 +75,24 @@ export function Header() {
             Compiling
           </span>
         ) : lastError ? (
+          <Tip content={lastError} side="bottom">
           <span
             className="flex items-center gap-1.5 text-status-error text-xs max-w-[300px] truncate cursor-default"
-            title={lastError}
           >
             <span className="w-1.5 h-1.5 rounded-full bg-status-error shrink-0" />
             {lastError}
           </span>
+          </Tip>
         ) : null}
 
         {/* Run button */}
         <div className="flex items-center rounded-lg bg-surface-2 overflow-hidden">
+          <Tip content="Run (Ctrl+')" side="bottom">
           <button
             onClick={handleRun}
             disabled={running}
             aria-label={running ? 'Running code' : "Run code (Ctrl+')"}
             data-testid="run-code-button"
-            title="Ctrl+'"
             className="flex items-center gap-2 px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer hover:bg-border text-ink disabled:cursor-not-allowed"
           >
             {running ? (
@@ -100,14 +102,17 @@ export function Header() {
             )}
             {running ? 'Running...' : ''}
           </button>
+          </Tip>
         </div>
 
         {/* Diagram view mode dropdown */}
         <DropdownMenu>
-          <DropdownMenuTrigger className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-ink-muted bg-surface-1 rounded-lg hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer outline-none" title="Diagram view">
+          <Tip content="Diagram view" side="bottom">
+          <DropdownMenuTrigger className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium text-ink-muted bg-surface-1 rounded-lg hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer outline-none">
             {VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}
             <ChevronDown className="size-3" />
           </DropdownMenuTrigger>
+          </Tip>
           <DropdownMenuContent align="start" className="w-32">
             <DropdownMenuRadioGroup value={viewMode} onValueChange={(v) => setViewMode(v as DiagramView)}>
               {VIEW_MODES.map((m) => (
@@ -123,27 +128,31 @@ export function Header() {
       {/* Right actions */}
       <div className="flex items-center gap-1.5">
         {/* Command palette trigger */}
+        <Tip content="Command palette" side="bottom">
         <button
           onClick={openCommandPalette}
           className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-ink-muted bg-surface-1 rounded-lg hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
-          title="Command palette"
+          aria-label="Command palette"
         >
           <kbd className="text-[10px] font-mono">Ctrl K</kbd>
         </button>
+        </Tip>
 
         {/* Settings gear */}
         <SettingsDropdown />
 
         {/* Diagram-only toggle */}
+        <Tip content={diagramOnly ? 'Show editor' : 'Diagram only'} side="bottom">
         <button
           onClick={() => setDiagramOnly(!diagramOnly)}
           className={`p-1.5 transition-colors cursor-pointer rounded-lg ${
             diagramOnly ? 'text-brand bg-brand-light' : 'text-ink-muted hover:text-ink hover:bg-surface-1'
           }`}
-          title={diagramOnly ? 'Show editor' : 'Diagram only'}
+          aria-label={diagramOnly ? 'Show editor' : 'Diagram only'}
         >
           {diagramOnly ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
         </button>
+        </Tip>
       </div>
     </header>
   )
@@ -163,12 +172,14 @@ function SettingsDropdown() {
 
   return (
     <DropdownMenu>
+      <Tip content="Settings" side="bottom">
       <DropdownMenuTrigger
         className="p-1.5 transition-colors cursor-pointer rounded-lg text-ink-muted hover:text-ink hover:bg-surface-1 outline-none data-[state=open]:text-ink data-[state=open]:bg-surface-2"
-        title="Settings"
+        aria-label="Settings"
       >
         <Settings className="size-4" />
       </DropdownMenuTrigger>
+      </Tip>
       <DropdownMenuContent align="end" className="w-48">
         <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
           Diagram Display
