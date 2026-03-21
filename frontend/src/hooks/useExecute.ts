@@ -1,9 +1,11 @@
 import { useState, useCallback, useRef } from 'react'
 import { useEditorStore } from '../stores/editorStore'
 import { useUiStore } from '../stores/uiStore'
+import { useDiagram } from './useDiagram'
 import { api } from '../api/client'
+import { compileAndRefresh } from './useCompiler'
 
-/** Shared hook for executing code via the backend. Manages loading state and execution panel visibility. */
+/** Sends code to the backend execute endpoint (code-exec service). */
 export function useExecute() {
   const [running, setRunning] = useState(false)
   const runningRef = useRef(false)
@@ -18,8 +20,9 @@ export function useExecute() {
     setExecutionOutput('')
 
     const code = useEditorStore.getState().code
+    const language = useUiStore.getState().generatedLanguage
     try {
-      const result = await api.execute({ code, language: 'Java' })
+      const result = await api.execute({ code, language })
       setExecutionOutput(result.output || '', result.errors || null)
     } catch (err: unknown) {
       setExecutionOutput('', err instanceof Error ? err.message : 'Execution failed')
@@ -30,4 +33,29 @@ export function useExecute() {
   }, [])
 
   return { execute, running }
+}
+
+/** Triggers an immediate compile + diagram refresh (bypasses the auto-compile debounce). */
+export function useCompile() {
+  const [compiling, setCompiling] = useState(false)
+  const compilingRef = useRef(false)
+  const { updateFromModel, updateStateDiagramFromModel } = useDiagram()
+
+  const compile = useCallback(async () => {
+    if (compilingRef.current) return
+    compilingRef.current = true
+    setCompiling(true)
+
+    try {
+      const ok = await compileAndRefresh({ updateFromModel, updateStateDiagramFromModel })
+      if (ok) useUiStore.getState().setExecutionOutput('Compiled successfully.')
+    } catch {
+      // compileAndRefresh handles error reporting
+    } finally {
+      compilingRef.current = false
+      setCompiling(false)
+    }
+  }, [updateFromModel, updateStateDiagramFromModel])
+
+  return { compile, compiling }
 }

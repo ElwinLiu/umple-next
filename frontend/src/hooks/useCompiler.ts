@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useEditorStore } from '../stores/editorStore'
+import { useUiStore } from '../stores/uiStore'
 import { useDiagramStore, VIEW_TO_GV_TYPE, type DiagramView } from '../stores/diagramStore'
 import { useDiagram } from './useDiagram'
 import { api } from '../api/client'
@@ -7,83 +8,114 @@ import type { UmpleModel } from '../api/types'
 
 const DEBOUNCE_MS = 1500
 
+interface CompileCallbacks {
+  updateFromModel: (model: UmpleModel) => void
+  updateStateDiagramFromModel: (model: UmpleModel) => void
+}
+
+/** Core compile + diagram refresh. Shared by auto-compile and manual compile.
+ *  Returns true if no errors. */
+export async function compileAndRefresh(
+  callbacks: CompileCallbacks,
+  signal?: AbortSignal,
+): Promise<boolean> {
+  const { code, modelId, setModelId } = useEditorStore.getState()
+  const { viewMode, setCompiling, setLastError, clearSvgCache, setSvgForView } = useDiagramStore.getState()
+  const { setExecutionOutput } = useUiStore.getState()
+
+  if (!code.trim()) return false
+
+  setCompiling(true)
+  setLastError(null)
+  setExecutionOutput('')
+  clearSvgCache()
+
+  let success = false
+
+  try {
+    const res = await api.compile({ code, modelId: modelId ?? undefined }, signal)
+
+    if (res.modelId && !modelId) setModelId(res.modelId)
+
+    if (res.result) {
+      try {
+        const model: UmpleModel = JSON.parse(res.result)
+        callbacks.updateFromModel(model)
+        callbacks.updateStateDiagramFromModel(model)
+      } catch {}
+    }
+
+    if (res.errors) {
+      setLastError(res.errors)
+      setExecutionOutput('', res.errors)
+    } else {
+      success = true
+    }
+
+    // Fetch SVG for current view
+    const currentModelId = res.modelId || modelId
+    const gvType = VIEW_TO_GV_TYPE[viewMode]
+    if (currentModelId && gvType) {
+      try {
+        const svgRes = await api.diagram({ code, diagramType: gvType, modelId: currentModelId })
+        if (svgRes.svg) setSvgForView(viewMode, svgRes.svg)
+        if (svgRes.errors) {
+          setLastError(svgRes.errors)
+          setExecutionOutput('', svgRes.errors)
+          success = false
+        }
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.warn('Diagram SVG fetch failed:', err.message)
+        }
+      }
+    }
+  } catch (err: any) {
+    if (err.name === 'AbortError') throw err
+    const msg = err.message || 'Compilation failed'
+    setLastError(msg)
+    setExecutionOutput('', msg)
+  } finally {
+    setCompiling(false)
+  }
+
+  return success
+}
+
 export function useCompiler() {
   const code = useEditorStore((s) => s.code)
   const modelId = useEditorStore((s) => s.modelId)
-  const setModelId = useEditorStore((s) => s.setModelId)
   const viewMode = useDiagramStore((s) => s.viewMode)
-  const setCompiling = useDiagramStore((s) => s.setCompiling)
-  const setLastError = useDiagramStore((s) => s.setLastError)
   const setSvgForView = useDiagramStore((s) => s.setSvgForView)
-  const clearSvgCache = useDiagramStore((s) => s.clearSvgCache)
+  const setLastError = useDiagramStore((s) => s.setLastError)
   const { updateFromModel, updateStateDiagramFromModel } = useDiagram()
 
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const abortRef = useRef<AbortController>(undefined)
   const diagramAbortRef = useRef<AbortController>(undefined)
 
-  // Track the latest modelId in a ref so the viewMode effect can read it
-  const modelIdRef = useRef(modelId)
-  modelIdRef.current = modelId
   const codeRef = useRef(code)
   codeRef.current = code
+  const modelIdRef = useRef(modelId)
+  modelIdRef.current = modelId
   const viewModeRef = useRef(viewMode)
   viewModeRef.current = viewMode
 
-  // Main compile effect — triggers on code/modelId changes
-  // Always does JSON compile (for class diagram ReactFlow data)
-  // Then fetches the SVG for the current viewMode
+  // Main compile effect — debounced on code/modelId changes
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
 
     timerRef.current = setTimeout(async () => {
-      if (!code.trim()) return
-
-      // Abort previous in-flight request
       if (abortRef.current) abortRef.current.abort()
       abortRef.current = new AbortController()
 
-      setCompiling(true)
-      setLastError(null)
-      clearSvgCache()
-
       try {
-        const res = await api.compile({
-          code,
-          modelId: modelId ?? undefined,
-        }, abortRef.current.signal)
-
-        // Store the model ID for subsequent requests
-        if (res.modelId && !modelId) {
-          setModelId(res.modelId)
-        }
-
-        // Parse the JSON model result (for class diagram ReactFlow)
-        if (res.result) {
-          try {
-            const model: UmpleModel = JSON.parse(res.result)
-            updateFromModel(model)
-            updateStateDiagramFromModel(model)
-          } catch {
-            // Result might not be JSON yet
-          }
-        }
-
-        if (res.errors) {
-          setLastError(res.errors)
-        }
-
-        // After JSON compile, fetch SVG for current view
-        const currentModelId = res.modelId || modelId
-        if (currentModelId) {
-          fetchDiagramSvg(code, viewModeRef.current, currentModelId)
-        }
+        await compileAndRefresh(
+          { updateFromModel, updateStateDiagramFromModel },
+          abortRef.current.signal,
+        )
       } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          setLastError(err.message || 'Compilation failed')
-        }
-      } finally {
-        setCompiling(false)
+        if (err.name !== 'AbortError') throw err
       }
     }, DEBOUNCE_MS)
 
@@ -120,6 +152,7 @@ export function useCompiler() {
       }
       if (res.errors) {
         setLastError(res.errors)
+        useUiStore.getState().setExecutionOutput('', res.errors)
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {

@@ -1,6 +1,6 @@
 FROM golang:1.23-alpine
 
-RUN apk add --no-cache graphviz openjdk17-jre-headless
+RUN apk add --no-cache graphviz openjdk17-jdk
 RUN go install github.com/air-verse/air@v1.61.7
 
 WORKDIR /app

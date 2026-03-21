@@ -3,13 +3,38 @@ import { useUiStore } from '../../stores/uiStore'
 import { ChevronUp, ChevronDown } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 
+function Badges() {
+  const errorCount = useUiStore((s) => s.outputErrorCount)
+  const warningCount = useUiStore((s) => s.outputWarningCount)
+
+  if (!errorCount && !warningCount) return null
+
+  return (
+    <div className="flex items-center gap-1.5">
+      {errorCount > 0 && (
+        <span className="flex items-center gap-1 rounded-full bg-status-error/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-status-error">
+          {errorCount} {errorCount === 1 ? 'error' : 'errors'}
+        </span>
+      )}
+      {warningCount > 0 && (
+        <span className="flex items-center gap-1 rounded-full bg-ink-faint/15 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-ink-muted">
+          {warningCount} {warningCount === 1 ? 'warning' : 'warnings'}
+        </span>
+      )}
+    </div>
+  )
+}
+
 /** Collapsed banner — always visible at the bottom of the editor column. */
 export function OutputBanner() {
   const toggleExecutionPanel = useUiStore((s) => s.toggleExecutionPanel)
 
   return (
     <div className="flex h-[38px] items-center justify-between rounded-lg bg-surface-2 px-3">
-      <span className="text-xs font-semibold text-ink-muted">Output</span>
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold text-ink-muted">Output</span>
+        <Badges />
+      </div>
       <Tip content="Expand output" side="top">
         <button
           onClick={toggleExecutionPanel}
@@ -23,11 +48,13 @@ export function OutputBanner() {
   )
 }
 
-/** Expanded output panel — banner + scrollable content area. */
+/** Expanded output panel — banner + scrollable content area.
+ *  Shows compile errors, generation errors, and execution output. */
 export function ExecutionPanel() {
   const toggleExecutionPanel = useUiStore((s) => s.toggleExecutionPanel)
   const outputRef = useRef<HTMLPreElement>(null)
-  const { executionOutput, executionErrors } = useUiStore()
+  const executionOutput = useUiStore((s) => s.executionOutput)
+  const executionErrors = useUiStore((s) => s.executionErrors)
 
   useEffect(() => {
     if (outputRef.current) {
@@ -39,7 +66,10 @@ export function ExecutionPanel() {
     <div className="flex h-full flex-col">
       {/* Banner */}
       <div className="flex h-[38px] shrink-0 items-center justify-between border-b border-border bg-surface-2 px-3">
-        <span className="text-xs font-semibold text-ink-muted">Output</span>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold text-ink-muted">Output</span>
+          <Badges />
+        </div>
         <Tip content="Collapse" side="bottom">
           <button
             onClick={toggleExecutionPanel}
@@ -62,7 +92,7 @@ export function ExecutionPanel() {
         )}
         {!executionOutput && !executionErrors && (
           <span className="text-ink-faint">
-            Run to see output here.
+            Compile or generation messages will appear here.
           </span>
         )}
       </pre>

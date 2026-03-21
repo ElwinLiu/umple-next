@@ -1,5 +1,26 @@
 import { create } from 'zustand'
 
+/** Parse Umple JSON error string to count errors vs warnings.
+ *  Umple severity: 1 = error, 2 = warning, 3 = warning */
+function parseErrorCounts(raw: string | null | undefined): { errors: number; warnings: number } {
+  if (!raw) return { errors: 0, warnings: 0 }
+  try {
+    const parsed = JSON.parse(raw)
+    const results: { severity?: string }[] = parsed?.results ?? []
+    let errors = 0
+    let warnings = 0
+    for (const r of results) {
+      const sev = Number(r.severity)
+      if (sev === 1) errors++
+      else warnings++
+    }
+    return { errors, warnings }
+  } catch {
+    // Not JSON — treat the whole string as a single error
+    return { errors: 1, warnings: 0 }
+  }
+}
+
 interface UiState {
   showEditor: boolean
   showSidebar: boolean
@@ -9,6 +30,9 @@ interface UiState {
   showExecutionPanel: boolean
   executionOutput: string
   executionErrors: string | null
+  /** Parsed error/warning counts from Umple JSON error output */
+  outputErrorCount: number
+  outputWarningCount: number
   theme: 'light' | 'dark' | 'system'
 
   // Diagram display preferences
@@ -56,6 +80,8 @@ export const useUiStore = create<UiState>((set) => ({
   showExecutionPanel: false,
   executionOutput: '',
   executionErrors: null,
+  outputErrorCount: 0,
+  outputWarningCount: 0,
   theme: 'system',
   showAttributes: true,
   showMethods: true,
@@ -77,8 +103,17 @@ export const useUiStore = create<UiState>((set) => ({
   toggleTaskPanel: () => set((s) => ({ showTaskPanel: !s.showTaskPanel })),
   toggleAiPanel: () => set((s) => ({ showAiPanel: !s.showAiPanel })),
   toggleExecutionPanel: () => set((s) => ({ showExecutionPanel: !s.showExecutionPanel })),
-  setExecutionOutput: (executionOutput, executionErrors = null) =>
-    set({ executionOutput, executionErrors }),
+  setExecutionOutput: (executionOutput, executionErrors = null) => {
+    const { errors, warnings } = parseErrorCounts(executionErrors)
+    set((s) => ({
+      executionOutput,
+      executionErrors,
+      outputErrorCount: errors,
+      outputWarningCount: warnings,
+      // Auto-expand on errors, not warnings
+      ...(errors > 0 && !s.showExecutionPanel ? { showExecutionPanel: true } : {}),
+    }))
+  },
   setTheme: (theme) => set({ theme }),
   togglePreference: (key) => set((s) => ({ [key]: !s[key] })),
 

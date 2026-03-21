@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 import { useUiStore } from '../../stores/uiStore'
 import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
-import { useExecute } from '../../hooks/useExecute'
+import { useCompile } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
 import { UMPLE_TARGETS } from '../../api/types'
-import { Play, Loader2, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
+import { Hammer, Loader2, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -30,7 +30,7 @@ export function CanvasBanner() {
     generationRequested,
   } = useUiStore()
   const { viewMode, setViewMode } = useDiagramStore()
-  const { execute, running } = useExecute()
+  const { compile, compiling: manualCompiling } = useCompile()
   const handleGenerate = useGenerate()
 
   useEffect(() => {
@@ -38,7 +38,7 @@ export function CanvasBanner() {
       if ((e.metaKey || e.ctrlKey) && e.key === "'") {
         e.preventDefault()
         e.stopPropagation()
-        execute()
+        compile()
       }
       if ((e.metaKey || e.ctrlKey) && e.key === '1') {
         e.preventDefault()
@@ -55,25 +55,25 @@ export function CanvasBanner() {
     }
     window.addEventListener('keydown', handler, true)
     return () => window.removeEventListener('keydown', handler, true)
-  }, [execute])
+  }, [compile])
 
   return (
     <div className="relative flex items-center justify-between h-[38px] px-3 shrink-0 bg-surface-2 border-b border-border" data-testid="canvas-banner">
       <div className="flex items-center gap-2">
-        <Tip content="Run (Ctrl+')" side="bottom">
+        <Tip content="Compile (Ctrl+')" side="bottom">
           <button
-            onClick={execute}
-            disabled={running}
-            aria-label={running ? 'Running code' : "Run code (Ctrl+')"}
-            data-testid="run-code-button"
+            onClick={compile}
+            disabled={manualCompiling}
+            aria-label={manualCompiling ? 'Compiling' : "Compile (Ctrl+')"}
+            data-testid="compile-button"
             className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer rounded-md hover:bg-border text-ink disabled:cursor-not-allowed bg-surface-0/60"
           >
-            {running ? (
+            {manualCompiling ? (
               <Loader2 className="size-3.5 animate-spin text-ink-muted" />
             ) : (
-              <Play className="size-3 text-ink-muted" />
+              <Hammer className="size-3 text-ink-muted" />
             )}
-            {running ? 'Running...' : 'Run'}
+            {manualCompiling ? 'Compiling...' : 'Compile'}
           </button>
         </Tip>
 

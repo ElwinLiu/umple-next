@@ -74,7 +74,7 @@ func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	dir := h.store.ModelDir(modelID)
 
 	// First: compile/generate the target language
-	command := fmt.Sprintf("-generate %s %s/model.ump", req.Language, dir)
+	command := fmt.Sprintf("-generate %s %s/model.ump -cx", req.Language, dir)
 	compileResult, err := h.pool.Execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: dir,
