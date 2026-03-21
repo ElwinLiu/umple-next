@@ -5,7 +5,7 @@ import { basicSetup } from 'codemirror'
 import { java } from '@codemirror/lang-java'
 import { python } from '@codemirror/lang-python'
 import { getEditorTheme } from '../../codemirror/theme'
-import { useUiStore } from '../../stores/uiStore'
+import { useIsDark } from '../../hooks/useIsDark'
 
 interface CodeOutputProps {
   code: string
@@ -31,19 +31,11 @@ function getLanguageExtension(language: string) {
   }
 }
 
-function useResolvedDark() {
-  const theme = useUiStore((s) => s.theme)
-  if (theme === 'system') {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  }
-  return theme === 'dark'
-}
-
 export function CodeOutput({ code, language }: CodeOutputProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const [copied, setCopied] = useState(false)
-  const isDark = useResolvedDark()
+  const isDark = useIsDark()
 
   const handleCopy = useCallback(() => {
     navigator.clipboard.writeText(code).then(() => {
@@ -91,7 +83,7 @@ export function CodeOutput({ code, language }: CodeOutputProps) {
         onClick={handleCopy}
         className={`absolute top-2 right-3 z-10 px-2.5 py-1 text-[11px] border rounded cursor-pointer transition-colors ${
           copied
-            ? 'bg-green-50 text-green-700 border-green-300'
+            ? 'bg-surface-1 text-status-success border-status-success'
             : 'bg-surface-0 text-ink-muted border-border hover:bg-surface-1 hover:border-border-strong'
         }`}
       >

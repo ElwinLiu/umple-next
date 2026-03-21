@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { api } from '../../api/client'
 import { useEditorStore } from '../../stores/editorStore'
+import { Play, Loader2 } from 'lucide-react'
 
 export function ExecutionPanel() {
   const code = useEditorStore((s) => s.code)
@@ -45,15 +46,14 @@ export function ExecutionPanel() {
   }
 
   return (
-    <div className="flex h-full flex-col border-t border-gray-200 bg-[#1e1e1e]">
+    <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="flex shrink-0 items-center justify-between border-b border-[#444] bg-[#2d2d2d] px-2 py-1">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-surface-1 px-2.5 py-1">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-gray-400">
-            Output
-          </span>
+          <span className="text-xs font-semibold text-ink-muted">Output</span>
           {running && (
-            <span className="text-[11px] text-yellow-400">
+            <span className="flex items-center gap-1.5 text-[11px] text-status-warning">
+              <Loader2 className="size-3 animate-spin" />
               Running...
             </span>
           )}
@@ -62,17 +62,14 @@ export function ExecutionPanel() {
           <button
             onClick={handleRun}
             disabled={running}
-            className={`flex items-center gap-1 rounded-sm border px-2.5 py-0.5 text-[11px] transition-colors ${
-              running
-                ? 'cursor-not-allowed border-green-700 bg-[#333] text-gray-500'
-                : 'cursor-pointer border-green-600 bg-green-800 text-white hover:bg-green-700'
-            }`}
+            className="flex items-center gap-1 rounded px-2.5 py-0.5 text-[11px] font-medium transition-colors cursor-pointer bg-brand text-ink-inverse hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
           >
-            <span className="text-xs">&#9654;</span> Run
+            <Play className="size-3" />
+            Run
           </button>
           <button
             onClick={handleClear}
-            className="cursor-pointer rounded-sm border border-[#555] bg-transparent px-2.5 py-0.5 text-[11px] text-gray-400 transition-colors hover:border-[#777] hover:text-gray-300"
+            className="rounded px-2.5 py-0.5 text-[11px] text-ink-muted border border-border bg-surface-0 transition-colors cursor-pointer hover:bg-surface-2 hover:text-ink focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
           >
             Clear
           </button>
@@ -82,14 +79,14 @@ export function ExecutionPanel() {
       {/* Output area */}
       <pre
         ref={outputRef}
-        className="m-0 flex-1 overflow-auto whitespace-pre-wrap break-words p-2 font-mono text-xs leading-relaxed text-[#d4d4d4]"
+        className="m-0 flex-1 overflow-auto whitespace-pre-wrap break-words p-2.5 font-mono text-xs leading-relaxed text-ink bg-surface-0"
       >
         {output}
         {errors && (
-          <span className="text-red-400">{errors}</span>
+          <span className="text-status-error">{errors}</span>
         )}
         {!output && !errors && !running && (
-          <span className="text-[#555]">
+          <span className="text-ink-faint">
             Click "Run" to compile and execute your Umple model.
           </span>
         )}

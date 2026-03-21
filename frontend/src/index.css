@@ -30,6 +30,20 @@
   --color-status-warning: #b45309;
   --color-status-success: #67796c;
 
+  /* Diagram node semantic colors */
+  --color-node-class-bg: #eef2f8;
+  --color-node-class-fg: #2d5a8a;
+  --color-node-interface-bg: #edf5ee;
+  --color-node-interface-fg: #2a6a3a;
+  --color-node-abstract-bg: #f5f0e8;
+  --color-node-abstract-fg: #8a5a2a;
+  --color-node-initial-bg: #edf5ee;
+  --color-node-initial-fg: #2a6a3a;
+  --color-node-final-bg: #f5eced;
+  --color-node-final-fg: #8a2a3a;
+  --color-action-entry: #2a6a3a;
+  --color-action-exit: #8a2a3a;
+
   /* Extended brand scale (for nuanced UI needs) */
   --color-garnet-900: #4a000d;
   --color-garnet-800: #6b0013;
@@ -128,6 +142,19 @@
   --color-garnet-200: #6b0013;
   --color-garnet-100: #4a000d;
   --color-garnet-50: #2a0008;
+
+  --color-node-class-bg: #1a2535;
+  --color-node-class-fg: #7ab0e0;
+  --color-node-interface-bg: #1a2e1e;
+  --color-node-interface-fg: #70c080;
+  --color-node-abstract-bg: #2e2418;
+  --color-node-abstract-fg: #d0a060;
+  --color-node-initial-bg: #1a2e1e;
+  --color-node-initial-fg: #70c080;
+  --color-node-final-bg: #2e1a1e;
+  --color-node-final-fg: #e07080;
+  --color-action-entry: #70c080;
+  --color-action-exit: #e07080;
 }
 
 /* ── Base Styles ── */
@@ -276,5 +303,17 @@ textarea:focus-visible {
 /* ── Hide default ReactFlow controls (we use custom DiagramControls) ── */
 .react-flow__controls {
   display: none;
+}
+
+/* ── Reduced Motion ── */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 

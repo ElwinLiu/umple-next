@@ -3,6 +3,7 @@ import { useEditorStore } from '../../stores/editorStore'
 import { useUiStore } from '../../stores/uiStore'
 import { api } from '../../api/client'
 import { RequirementsInput } from './RequirementsInput'
+import { X } from 'lucide-react'
 
 type AiMode = 'requirements' | 'explain'
 
@@ -73,26 +74,27 @@ export function AiPanel() {
   if (!showAiPanel) return null
 
   return (
-    <div className="fixed top-[44px] right-0 w-[400px] bottom-0 bg-slate-900 border-l border-slate-700 flex flex-col z-[100] text-slate-300">
+    <div className="fixed top-14 right-0 w-full sm:w-[400px] bottom-0 bg-surface-0 border-l border-border flex flex-col z-[100] text-ink">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-700">
-        <span className="font-semibold text-sm text-slate-200">AI Assistant</span>
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-1">
+        <span className="font-semibold text-sm">AI Assistant</span>
         <button
           onClick={toggleAiPanel}
-          className="bg-transparent border-none text-slate-500 cursor-pointer text-lg px-1 hover:text-slate-300 transition-colors"
+          className="p-1 rounded-md text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
+          aria-label="Close AI panel"
         >
-          x
+          <X className="size-4" />
         </button>
       </div>
 
       {/* Mode tabs */}
-      <div className="flex border-b border-slate-700">
+      <div className="flex border-b border-border">
         <button
           onClick={() => setMode('requirements')}
           className={`flex-1 px-3 py-2 text-xs border-none cursor-pointer transition-colors ${
             mode === 'requirements'
-              ? 'font-semibold border-b-2 border-b-garnet-400 bg-transparent text-garnet-400'
-              : 'font-normal border-b-2 border-b-transparent bg-transparent text-slate-500 hover:text-slate-300'
+              ? 'font-semibold border-b-2 border-b-brand bg-surface-0 text-brand'
+              : 'font-normal border-b-2 border-b-transparent bg-transparent text-ink-muted hover:text-ink'
           }`}
         >
           Generate from Requirements
@@ -101,8 +103,8 @@ export function AiPanel() {
           onClick={() => setMode('explain')}
           className={`flex-1 px-3 py-2 text-xs border-none cursor-pointer transition-colors ${
             mode === 'explain'
-              ? 'font-semibold border-b-2 border-b-garnet-400 bg-transparent text-garnet-400'
-              : 'font-normal border-b-2 border-b-transparent bg-transparent text-slate-500 hover:text-slate-300'
+              ? 'font-semibold border-b-2 border-b-brand bg-surface-0 text-brand'
+              : 'font-normal border-b-2 border-b-transparent bg-transparent text-ink-muted hover:text-ink'
           }`}
         >
           Explain Model
@@ -112,7 +114,7 @@ export function AiPanel() {
       {/* Content */}
       <div className="flex-1 p-4 overflow-auto">
         {error && (
-          <div className="px-3 py-2 mb-3 bg-red-950 border border-red-900 rounded text-red-400 text-xs">
+          <div className="px-3 py-2 mb-3 bg-brand-light border border-status-error rounded text-status-error text-xs">
             {error}
           </div>
         )}
@@ -123,32 +125,28 @@ export function AiPanel() {
 
         {mode === 'explain' && (
           <div className="flex flex-col gap-3">
-            <p className="text-[13px] text-slate-500 m-0">
+            <p className="text-[13px] text-ink-muted m-0">
               Send the current editor code to AI for explanation.
             </p>
             <button
               onClick={handleExplain}
               disabled={loading || !code.trim()}
-              className={`px-4 py-2 text-[13px] font-semibold border-none rounded self-start transition-colors ${
-                loading || !code.trim()
-                  ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
-                  : 'bg-garnet-600 text-white cursor-pointer hover:bg-garnet-500 active:bg-garnet-700'
-              }`}
+              className="px-4 py-2 text-[13px] font-semibold border-none rounded self-start transition-colors bg-brand text-ink-inverse cursor-pointer hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
             >
               {loading ? 'Analyzing...' : 'Explain Current Model'}
             </button>
 
             {(loading && !explanation) && (
-              <div className="text-[13px] text-slate-500">
+              <div className="text-[13px] text-ink-muted">
                 Analyzing your model...
               </div>
             )}
 
             {displayedText && (
-              <div className="p-3 bg-slate-800 border border-slate-600 rounded text-[13px] leading-relaxed whitespace-pre-wrap">
+              <div className="p-3 bg-surface-1 border border-border rounded text-[13px] leading-relaxed whitespace-pre-wrap text-ink">
                 {displayedText}
                 {displayedText.length < (explanation?.length ?? 0) && (
-                  <span className="opacity-50">|</span>
+                  <span className="text-ink-faint">|</span>
                 )}
               </div>
             )}

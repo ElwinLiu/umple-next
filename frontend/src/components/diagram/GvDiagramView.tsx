@@ -81,6 +81,41 @@ export function GvDiagramView({ svg }: GvDiagramViewProps) {
     setTransform((prev) => ({ ...prev, scale: Math.max(prev.scale * 0.8, 0.1) }))
   }, [])
 
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const step = 30
+    switch (e.key) {
+      case 'ArrowUp':
+        e.preventDefault()
+        setTransform((prev) => ({ ...prev, y: prev.y + step }))
+        break
+      case 'ArrowDown':
+        e.preventDefault()
+        setTransform((prev) => ({ ...prev, y: prev.y - step }))
+        break
+      case 'ArrowLeft':
+        e.preventDefault()
+        setTransform((prev) => ({ ...prev, x: prev.x + step }))
+        break
+      case 'ArrowRight':
+        e.preventDefault()
+        setTransform((prev) => ({ ...prev, x: prev.x - step }))
+        break
+      case '+':
+      case '=':
+        e.preventDefault()
+        handleZoomIn()
+        break
+      case '-':
+        e.preventDefault()
+        handleZoomOut()
+        break
+      case '0':
+        e.preventDefault()
+        fitToView()
+        break
+    }
+  }, [handleZoomIn, handleZoomOut, fitToView])
+
   if (!svg) {
     return (
       <div className="p-6 text-ink-faint text-[13px] font-mono">
@@ -92,13 +127,17 @@ export function GvDiagramView({ svg }: GvDiagramViewProps) {
   return (
     <div
       ref={containerRef}
-      className="w-full h-full overflow-hidden relative bg-surface-1"
+      className="w-full h-full overflow-hidden relative bg-surface-1 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]"
       style={{ cursor: dragging ? 'grabbing' : 'grab' }}
+      tabIndex={0}
+      role="application"
+      aria-label="GraphViz diagram viewer — use arrow keys to pan, +/- to zoom"
       onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
+      onKeyDown={handleKeyDown}
     >
       {/* Zoom controls */}
       <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-0.5 bg-surface-0 border border-border rounded-lg shadow-sm p-0.5">
@@ -140,7 +179,7 @@ function GvControlButton({
       onClick={onClick}
       title={title}
       {...rest}
-      className="flex items-center justify-center w-7 h-7 rounded-md transition-colors cursor-pointer text-ink-muted hover:text-ink hover:bg-surface-1"
+      className="flex items-center justify-center w-7 h-7 rounded-md transition-colors cursor-pointer text-ink-muted hover:text-ink hover:bg-surface-1 focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
     >
       {children}
     </button>

@@ -28,38 +28,27 @@ interface FeatureNodeData {
 const FeatureNode = memo(function FeatureNode({ data }: NodeProps) {
   const d = data as FeatureNodeData
 
-  const isDark = document.documentElement.classList.contains('dark')
-  const borderColor = d.isMandatory
-    ? (isDark ? '#9a9490' : '#333')
-    : (isDark ? '#5a5a5a' : '#999')
-  const bg = d.isMandatory
-    ? (isDark ? '#152a3e' : '#e3f2fd')
-    : (isDark ? '#242424' : '#fff')
-  const indicator = d.isMandatory ? '\u25CF' : '\u25CB' // filled / hollow circle
+  const indicator = d.isMandatory ? '\u25CF' : '\u25CB'
+  const nodeClasses = d.isMandatory
+    ? 'bg-node-class-bg border-border-strong'
+    : 'bg-surface-0 border-border'
 
   return (
     <div
-      className="rounded-md min-w-[120px] text-xs font-mono shadow-sm text-center"
-      style={{
-        background: bg,
-        border: `2px solid ${borderColor}`,
-      }}
+      className={`rounded-md min-w-[120px] text-xs font-mono shadow-sm text-center border-2 ${nodeClasses}`}
     >
       <Handle type="target" position={Position.Top} className="!invisible" />
 
       <div className="px-3 py-1.5 font-semibold text-ink flex items-center justify-center gap-1.5">
-        <span
-          className="text-[8px]"
-          style={{ color: d.isMandatory ? (isDark ? '#6cb6ff' : '#1565c0') : (isDark ? '#5a5a5a' : '#999') }}
-        >
+        <span className={`text-[8px] ${d.isMandatory ? 'text-node-class-fg' : 'text-ink-faint'}`}>
           {indicator}
         </span>
         {d.name}
         {d.isOr && (
-          <span className="text-[9px] text-orange-800 font-normal">(OR)</span>
+          <span className="text-[9px] text-status-warning font-normal">(OR)</span>
         )}
         {d.isXor && (
-          <span className="text-[9px] text-purple-800 font-normal">(XOR)</span>
+          <span className="text-[9px] text-brand font-normal">(XOR)</span>
         )}
       </div>
 

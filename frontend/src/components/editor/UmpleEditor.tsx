@@ -6,20 +6,12 @@ import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
 import { umple } from '../../codemirror/lang-umple'
 import { getEditorTheme } from '../../codemirror/theme'
-import { useUiStore } from '../../stores/uiStore'
+import { useIsDark } from '../../hooks/useIsDark'
 
 interface UmpleEditorProps {
   code: string
   onChange: (code: string) => void
   readOnly?: boolean
-}
-
-function useResolvedDark() {
-  const theme = useUiStore((s) => s.theme)
-  if (theme === 'system') {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches
-  }
-  return theme === 'dark'
 }
 
 export function UmpleEditor({ code, onChange, readOnly = false }: UmpleEditorProps) {
@@ -28,7 +20,7 @@ export function UmpleEditor({ code, onChange, readOnly = false }: UmpleEditorPro
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const themeCompartment = useRef(new Compartment())
-  const isDark = useResolvedDark()
+  const isDark = useIsDark()
 
   // Track whether the last change was external (from props) to avoid echo
   const isExternalUpdate = useRef(false)

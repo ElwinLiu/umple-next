@@ -62,7 +62,7 @@ export function Header() {
           <img src="/umple-logo.svg" alt="" className="h-8 w-auto" />
           <span className="font-semibold text-[17px] tracking-tight">UmpleOnline</span>
         </a>
-        <span className="text-ink-faint text-[9px] font-semibold uppercase tracking-widest">next</span>
+        <span className="text-ink-faint text-[10px] font-semibold uppercase tracking-widest">next</span>
       </div>
 
       {/* Center: Run button + diagram view dropdown */}
@@ -125,7 +125,7 @@ export function Header() {
         {/* Command palette trigger */}
         <button
           onClick={openCommandPalette}
-          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-ink-muted bg-surface-1 rounded-lg hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] text-ink-muted bg-surface-1 rounded-lg hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
           title="Command palette"
         >
           <kbd className="text-[10px] font-mono">Ctrl K</kbd>

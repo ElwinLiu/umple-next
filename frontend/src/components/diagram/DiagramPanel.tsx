@@ -87,7 +87,7 @@ export function DiagramPanel() {
       const ctx = canvas.getContext('2d')
       if (!ctx) return
       ctx.scale(2, 2)
-      ctx.fillStyle = '#fff'
+      ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#1a1a1a' : '#ffffff'
       ctx.fillRect(0, 0, width, height)
       ctx.drawImage(img, 0, 0, width, height)
       canvas.toBlob((blob) => {
@@ -236,7 +236,7 @@ function ToolbarButton({
     <button
       onClick={onClick}
       title={title}
-      className={`px-1.5 py-0.5 text-[11px] cursor-pointer transition-colors rounded ${
+      className={`px-1.5 py-0.5 text-[11px] cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 ${
         active
           ? 'text-brand font-semibold bg-brand-light'
           : 'text-ink-muted hover:text-ink hover:bg-surface-2'

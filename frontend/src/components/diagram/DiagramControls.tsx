@@ -49,7 +49,7 @@ function ControlButton({
       title={title}
       disabled={disabled}
       {...rest}
-      className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed ${
+      className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 ${
         active
           ? 'text-brand bg-brand-light'
           : 'text-ink-muted hover:text-ink hover:bg-surface-1'

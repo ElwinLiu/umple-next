@@ -12,17 +12,11 @@ export interface ClassNodeData {
 
 export const ClassNode = memo(function ClassNode({ data }: NodeProps) {
   const d = data as ClassNodeData
-  const isDark = document.documentElement.classList.contains('dark')
-  const headerBg = d.isInterface
-    ? (isDark ? '#1b3a20' : '#e8f5e9')
+  const headerClasses = d.isInterface
+    ? 'bg-node-interface-bg text-node-interface-fg'
     : d.isAbstract
-      ? (isDark ? '#3a2a10' : '#fff3e0')
-      : (isDark ? '#152a3e' : '#e3f2fd')
-  const headerColor = d.isInterface
-    ? (isDark ? '#6fcf76' : '#2e7d32')
-    : d.isAbstract
-      ? (isDark ? '#f0a050' : '#e65100')
-      : (isDark ? '#6cb6ff' : '#1565c0')
+      ? 'bg-node-abstract-bg text-node-abstract-fg'
+      : 'bg-node-class-bg text-node-class-fg'
   const label = d.isInterface ? `<<interface>> ${d.name}` : d.isAbstract ? `<<abstract>> ${d.name}` : d.name
 
   return (
@@ -31,12 +25,8 @@ export const ClassNode = memo(function ClassNode({ data }: NodeProps) {
 
       {/* Class name header */}
       <div
-        className="px-2.5 py-1.5 font-bold text-center border-b border-border-strong"
-        style={{
-          background: headerBg,
-          color: headerColor,
-          fontStyle: d.isAbstract ? 'italic' : 'normal',
-        }}
+        className={`px-2.5 py-1.5 font-bold text-center border-b border-border-strong ${headerClasses}`}
+        style={{ fontStyle: d.isAbstract ? 'italic' : 'normal' }}
       >
         {label}
       </div>

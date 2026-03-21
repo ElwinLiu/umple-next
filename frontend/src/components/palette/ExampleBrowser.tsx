@@ -57,6 +57,7 @@ export function ExampleBrowser() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           data-testid="example-search"
+          aria-label="Search examples"
           className="w-full px-2 py-1.5 text-xs border border-border rounded box-border outline-none focus:border-brand transition-colors"
         />
       </div>
@@ -65,17 +66,17 @@ export function ExampleBrowser() {
           <div className="p-3 text-ink-faint text-xs">Loading examples...</div>
         )}
         {error && (
-          <div className="p-3 text-red-400 text-xs">{error}</div>
+          <div className="p-3 text-status-error text-xs">{error}</div>
         )}
         {!loading && !error && filtered.length === 0 && (
           <div className="p-3 text-ink-faint text-xs">No examples found.</div>
         )}
         {filtered.map((ex) => (
-          <div
+          <button
             key={ex.name}
             onClick={() => handleSelect(ex.name)}
             data-testid={`example-item-${toTestId(ex.name)}`}
-            className={`px-3 py-1.5 text-xs border-b border-border transition-colors ${
+            className={`w-full text-left px-3 py-1.5 text-xs border-x-0 border-t-0 border-b border-border bg-transparent transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px] ${
               loadingExample === ex.name
                 ? 'cursor-default text-ink-faint bg-brand-light'
                 : 'cursor-pointer text-ink hover:bg-brand-light'
@@ -85,7 +86,7 @@ export function ExampleBrowser() {
             {ex.category && (
               <div className="text-[10px] text-ink-muted mt-px">{ex.category}</div>
             )}
-          </div>
+          </button>
         ))}
       </div>
     </div>
