@@ -4,26 +4,26 @@ import { useUiStore } from '../stores/uiStore'
 import { useDiagramStore, VIEW_TO_GV_TYPE, type DiagramView } from '../stores/diagramStore'
 import { useDiagram } from './useDiagram'
 import { api } from '../api/client'
-import type { UmpleModel } from '../api/types'
+import type { UmpleModel, GvLayout } from '../api/types'
 
 const DEBOUNCE_MS = 1500
 
 interface CompileCallbacks {
-  updateFromModel: (model: UmpleModel) => void
+  updateFromModel: (model: UmpleModel, gvLayout?: GvLayout) => void
   updateStateDiagramFromModel: (model: UmpleModel) => void
 }
 
 /** Core compile + diagram refresh. Shared by auto-compile and manual compile.
- *  Returns true if no errors. */
+ *  Returns { success, model } so callers can cache the parsed model. */
 export async function compileAndRefresh(
   callbacks: CompileCallbacks,
   signal?: AbortSignal,
-): Promise<boolean> {
+): Promise<{ success: boolean; model: UmpleModel | null }> {
   const { code, modelId, setModelId } = useEditorStore.getState()
   const { viewMode, setCompiling, setLastError, clearSvgCache, setSvgForView } = useDiagramStore.getState()
   const { setExecutionOutput } = useUiStore.getState()
 
-  if (!code.trim()) return false
+  if (!code.trim()) return { success: false, model: null }
 
   setCompiling(true)
   setLastError(null)
@@ -31,17 +31,17 @@ export async function compileAndRefresh(
   clearSvgCache()
 
   let success = false
+  let model: UmpleModel | null = null
 
   try {
     const res = await api.compile({ code, modelId: modelId ?? undefined }, signal)
 
     if (res.modelId && !modelId) setModelId(res.modelId)
-
     if (res.result) {
       try {
-        const model: UmpleModel = JSON.parse(res.result)
-        callbacks.updateFromModel(model)
-        callbacks.updateStateDiagramFromModel(model)
+        model = JSON.parse(res.result)
+        // State diagram doesn't use GV layout — update immediately
+        callbacks.updateStateDiagramFromModel(model!)
       } catch {}
     }
 
@@ -52,13 +52,15 @@ export async function compileAndRefresh(
       success = true
     }
 
-    // Fetch SVG for current view
+    // Fetch diagram SVG + layout
+    let gvLayout: GvLayout | undefined
     const currentModelId = res.modelId || modelId
     const gvType = VIEW_TO_GV_TYPE[viewMode]
     if (currentModelId && gvType) {
       try {
         const svgRes = await api.diagram({ code, diagramType: gvType, modelId: currentModelId })
         if (svgRes.svg) setSvgForView(viewMode, svgRes.svg)
+        gvLayout = svgRes.layout
         if (svgRes.errors) {
           setLastError(svgRes.errors)
           setExecutionOutput('', svgRes.errors)
@@ -70,6 +72,9 @@ export async function compileAndRefresh(
         }
       }
     }
+
+    // Update class diagram with GV positions (or grid fallback if no layout)
+    if (model) callbacks.updateFromModel(model, gvLayout)
   } catch (err: any) {
     if (err.name === 'AbortError') throw err
     const msg = err.message || 'Compilation failed'
@@ -79,7 +84,7 @@ export async function compileAndRefresh(
     setCompiling(false)
   }
 
-  return success
+  return { success, model }
 }
 
 export function useCompiler() {
@@ -93,6 +98,7 @@ export function useCompiler() {
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const abortRef = useRef<AbortController>(undefined)
   const diagramAbortRef = useRef<AbortController>(undefined)
+  const lastModelRef = useRef<UmpleModel | null>(null)
 
   const codeRef = useRef(code)
   codeRef.current = code
@@ -110,10 +116,11 @@ export function useCompiler() {
       abortRef.current = new AbortController()
 
       try {
-        await compileAndRefresh(
+        const result = await compileAndRefresh(
           { updateFromModel, updateStateDiagramFromModel },
           abortRef.current.signal,
         )
+        if (result.model) lastModelRef.current = result.model
       } catch (err: any) {
         if (err.name !== 'AbortError') throw err
       }
@@ -149,6 +156,10 @@ export function useCompiler() {
       })
       if (res.svg) {
         setSvgForView(view, res.svg)
+      }
+      // Update class diagram positions with new GV layout for this view
+      if (res.layout && lastModelRef.current) {
+        updateFromModel(lastModelRef.current, res.layout)
       }
       if (res.errors) {
         setLastError(res.errors)

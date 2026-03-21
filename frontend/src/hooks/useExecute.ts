@@ -47,8 +47,8 @@ export function useCompile() {
     setCompiling(true)
 
     try {
-      const ok = await compileAndRefresh({ updateFromModel, updateStateDiagramFromModel })
-      if (ok) useUiStore.getState().setExecutionOutput('Compiled successfully.')
+      const { success } = await compileAndRefresh({ updateFromModel, updateStateDiagramFromModel })
+      if (success) useUiStore.getState().setExecutionOutput('Compiled successfully.')
     } catch {
       // compileAndRefresh handles error reporting
     } finally {

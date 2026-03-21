@@ -83,6 +83,20 @@ export interface Position {
   height: number
 }
 
+export interface GvNodeLayout {
+  name: string
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+export interface GvLayout {
+  bboxWidth: number
+  bboxHeight: number
+  nodes: GvNodeLayout[]
+}
+
 export interface ExampleEntry {
   name: string
   filename: string

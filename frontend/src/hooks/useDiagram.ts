@@ -1,16 +1,19 @@
 import { useCallback } from 'react'
 import type { Node, Edge } from '@xyflow/react'
-import type { UmpleModel } from '../api/types'
+import type { UmpleModel, GvLayout } from '../api/types'
 import type { ClassNodeData } from '../components/diagram/nodes/ClassNode'
 import type { AssociationEdgeData } from '../components/diagram/edges/AssociationEdge'
 import type { StateNodeData } from '../components/diagram/nodes/StateNode'
 import type { TransitionEdgeData } from '../components/diagram/edges/TransitionEdge'
 import { useDiagramStore } from '../stores/diagramStore'
-import type { Position, UmpleAttribute, UmpleMethod } from '../api/types'
-import dagre from '@dagrejs/dagre'
+import type { Position, UmpleAttribute } from '../api/types'
 
 const DEFAULT_WIDTH = 180
 const DEFAULT_HEIGHT = 120
+
+const GRID_COLS = 3
+const GRID_X_GAP = 250
+const GRID_Y_GAP = 200
 
 const STATE_GRID_COLS = 3
 const STATE_X_GAP = 200
@@ -70,89 +73,55 @@ function resolveNodeMetrics(
 function estimateClassMetrics(
   name: string,
   attributes: UmpleAttribute[] = [],
-  methods: UmpleMethod[] = [],
-  flags: { isAbstract: boolean; isInterface: boolean },
 ): DiagramNodeMetrics {
-  const headerLabel = flags.isInterface
-    ? `<<interface>> ${name}`
-    : flags.isAbstract
-      ? `<<abstract>> ${name}`
-      : name
-
+  // Match GV output: just the class name + attributes, no prefixes or methods
   const lines = [
-    headerLabel,
-    ...(attributes.length > 0
-      ? attributes.map((attr) => (attr.type ? `${attr.name}: ${attr.type}` : attr.name))
-      : [' ']),
-    ...(methods.length > 0
-      ? methods.map((method) => `${method.name}(${method.parameters || ''}): ${method.type || 'void'}`)
-      : []),
+    name,
+    ...attributes.map((attr) => (attr.type ? `${attr.name}: ${attr.type}` : attr.name)),
   ]
 
   const widestLine = lines.reduce((max, line) => Math.max(max, estimateTextWidth(line)), 0)
-  const attributeRows = Math.max(attributes.length, 1)
-  const methodRows = methods.length
 
   return {
     width: clamp(Math.round(widestLine + 40), DEFAULT_WIDTH, 420),
     height: clamp(
-      38 + attributeRows * 18 + (methodRows > 0 ? 10 + methodRows * 18 : 0),
-      DEFAULT_HEIGHT,
+      38 + (attributes.length > 0 ? attributes.length * 18 : 0),
+      50,
       420,
     ),
   }
 }
 
-interface DagreEdge {
-  source: string
-  target: string
-}
-
-function buildDagrePositions(
+function buildGvPositions(
+  layout: GvLayout,
   entries: LayoutEntry[],
-  edges: DagreEdge[],
 ) {
   const positions = new Map<string, { x: number; y: number }>()
-  if (entries.length === 0) return positions
-
-  const g = new dagre.graphlib.Graph()
-  g.setGraph({
-    rankdir: 'TB',
-    nodesep: 80,
-    marginx: 50,
-    marginy: 50,
-  })
-  g.setDefaultEdgeLabel(() => ({}))
+  const nodeMap = new Map(layout.nodes.map((n) => [n.name, n]))
 
   for (const entry of entries) {
-    g.setNode(entry.name, {
-      width: entry.metrics.width,
-      height: entry.metrics.height,
-    })
-  }
-
-  const nodeSet = new Set(entries.map((e) => e.name))
-  for (const edge of edges) {
-    // Skip self-edges — dagre doesn't support them; they're rendered as loops by the edge component
-    if (edge.source === edge.target) continue
-    if (nodeSet.has(edge.source) && nodeSet.has(edge.target)) {
-      g.setEdge(edge.source, edge.target)
-    }
-  }
-
-  dagre.layout(g)
-
-  for (const entry of entries) {
-    const node = g.node(entry.name)
-    if (node) {
-      // dagre positions are center-based; convert to top-left for ReactFlow
+    const gvNode = nodeMap.get(entry.name)
+    if (gvNode) {
+      // GV positions are center-based (already in pixels, Y-flipped by backend).
+      // Convert to top-left using estimated node metrics.
       positions.set(entry.name, {
-        x: node.x - entry.metrics.width / 2,
-        y: node.y - entry.metrics.height / 2,
+        x: gvNode.x - entry.metrics.width / 2,
+        y: gvNode.y - entry.metrics.height / 2,
       })
     }
   }
 
+  return positions
+}
+
+function buildGridPositions(entries: LayoutEntry[]) {
+  const positions = new Map<string, { x: number; y: number }>()
+  for (let i = 0; i < entries.length; i++) {
+    positions.set(entries[i].name, {
+      x: (i % GRID_COLS) * GRID_X_GAP + 50,
+      y: Math.floor(i / GRID_COLS) * GRID_Y_GAP + 50,
+    })
+  }
   return positions
 }
 
@@ -166,23 +135,18 @@ function asBoolean(value: string | boolean | undefined, defaultValue: boolean) {
 export function useDiagram() {
   const { setNodes, setEdges, setStateNodes, setStateEdges } = useDiagramStore()
 
-  const updateFromModel = useCallback((model: UmpleModel) => {
+  const updateFromModel = useCallback((model: UmpleModel, gvLayout?: GvLayout) => {
     const classes = model.umpleClasses || []
     const associations = model.umpleAssociations || []
     const interfaces = model.umpleInterfaces || []
 
-    // Always run dagre for all nodes — the backend's positions were designed
-    // for the old UmpleOnline UI and are too cramped for our larger ReactFlow nodes.
     const layoutEntries: LayoutEntry[] = [
       ...classes
         .map((cls) => ({
           name: cls.name,
           metrics: resolveNodeMetrics(
             cls.position,
-            estimateClassMetrics(cls.name, cls.attributes, cls.methods, {
-              isAbstract: cls.isAbstract || false,
-              isInterface: false,
-            }),
+            estimateClassMetrics(cls.name, cls.attributes),
           ),
         })),
       ...interfaces
@@ -190,39 +154,14 @@ export function useDiagram() {
           name: iface.name,
           metrics: resolveNodeMetrics(
             iface.position,
-            estimateClassMetrics(iface.name, [], iface.methods, {
-              isAbstract: false,
-              isInterface: true,
-            }),
+            estimateClassMetrics(iface.name),
           ),
         })),
     ]
 
-    // Collect all relationship edges for dagre to consider
-    const dagreEdges: DagreEdge[] = [
-      ...associations
-        .filter((a) => (a.classOneId && a.classTwoId) || (a.end1 && a.end2))
-        .map((a) => ({
-          source: a.classOneId ?? a.end1!.className,
-          target: a.classTwoId ?? a.end2!.className,
-        })),
-      ...classes
-        .filter((cls) => cls.extendsClass)
-        .map((cls) => ({
-          source: cls.name,
-          target: cls.extendsClass!,
-        })),
-      ...classes
-        .filter((cls) => cls.implementedInterfaces?.length)
-        .flatMap((cls) =>
-          cls.implementedInterfaces!.map((iface) => ({
-            source: cls.name,
-            target: iface,
-          }))
-        ),
-    ]
-
-    const defaultPositions = buildDagrePositions(layoutEntries, dagreEdges)
+    const defaultPositions = gvLayout
+      ? buildGvPositions(gvLayout, layoutEntries)
+      : buildGridPositions(layoutEntries)
 
     // Create nodes from classes
     const classNodes: Node[] = classes.map((cls): Node => {

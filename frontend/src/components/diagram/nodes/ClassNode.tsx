@@ -17,11 +17,12 @@ export const ClassNode = memo(function ClassNode({ data }: NodeProps) {
     : d.isAbstract
       ? 'bg-node-abstract-bg text-node-abstract-fg'
       : 'bg-node-class-bg text-node-class-fg'
-  const label = d.isInterface ? `<<interface>> ${d.name}` : d.isAbstract ? `<<abstract>> ${d.name}` : d.name
+  const label = d.name
 
   return (
     <div className="bg-surface-0 border-2 border-border-strong rounded min-w-40 text-xs font-mono shadow-md" data-testid={`class-node-${d.name}`}>
-      <Handle type="target" position={Position.Top} className="!invisible" />
+      {/* BT layout: edges go upward, so source exits from top, target enters from bottom */}
+      <Handle type="source" position={Position.Top} className="!invisible" />
 
       {/* Class name header */}
       <div
@@ -31,35 +32,18 @@ export const ClassNode = memo(function ClassNode({ data }: NodeProps) {
         {label}
       </div>
 
-      {/* Attributes */}
-      <div
-        className="px-2.5 py-1 min-h-5"
-        style={{
-          borderBottom: d.methods.length > 0 ? '1px solid var(--color-border)' : 'none',
-        }}
-      >
-        {d.attributes.length === 0 && (
-          <div className="text-ink-faint italic">&nbsp;</div>
-        )}
-        {d.attributes.map((attr, i) => (
-          <div key={i} className="py-px">
-            {attr.type ? `${attr.name}: ${attr.type}` : attr.name}
-          </div>
-        ))}
-      </div>
-
-      {/* Methods */}
-      {d.methods.length > 0 && (
-        <div className="px-2.5 py-1 min-h-5">
-          {d.methods.map((m, i) => (
+      {/* Attributes — matches GV output which only shows attributes, not methods */}
+      {d.attributes.length > 0 && (
+        <div className="px-2.5 py-1">
+          {d.attributes.map((attr, i) => (
             <div key={i} className="py-px">
-              {m.name}({m.params}): {m.returnType}
+              {attr.type ? `${attr.name}: ${attr.type}` : attr.name}
             </div>
           ))}
         </div>
       )}
 
-      <Handle type="source" position={Position.Bottom} className="!invisible" />
+      <Handle type="target" position={Position.Bottom} className="!invisible" />
       {/* Right-side handles for self-loop edges */}
       <Handle type="source" position={Position.Right} id="right-source" className="!invisible" style={{ top: '20%' }} />
       <Handle type="target" position={Position.Right} id="right-target" className="!invisible" style={{ top: '80%' }} />
