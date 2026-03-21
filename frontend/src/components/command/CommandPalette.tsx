@@ -3,7 +3,7 @@ import { useUiStore } from '../../stores/uiStore'
 import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
 import { useEditorStore } from '../../stores/editorStore'
 import { api } from '../../api/client'
-import type { ExampleEntry } from '../../api/types'
+import { UMPLE_TARGETS, type ExampleEntry } from '../../api/types'
 import {
   CommandDialog,
   CommandInput,
@@ -13,11 +13,6 @@ import {
   CommandItem,
   CommandSeparator,
 } from '@/components/ui/command'
-
-const UMPLE_TARGETS = [
-  'Java', 'Php', 'Python', 'Ruby', 'Cpp', 'RTCpp', 'SimpleCpp',
-  'Json', 'Sql', 'Alloy', 'NuSMV', 'USE', 'Ecore', 'TextUml', 'Umlet', 'SimulateJava',
-] as const
 
 export function CommandPalette() {
   const {

@@ -30,37 +30,10 @@ export function useModel() {
       useDiagramStore.getState().setViewMode(diagramType as DiagramView)
     }
 
-    // Auto-open generate panel with a default language: ?generateDefault=Java
-    const generateDefault = params.get('generateDefault')
-    if (generateDefault) {
-      const uiState = useUiStore.getState()
-      if (!uiState.showGeneratePanel) {
-        uiState.toggleGeneratePanel()
-      }
-    }
-
-    // Chrome-less mode: ?nochrome hides the header area (palette + menu)
-    if (params.has('nochrome')) {
-      const uiState = useUiStore.getState()
-      if (uiState.showPalette) uiState.togglePalette()
-    }
-
-    // Hide diagram: ?nodiagram
-    if (params.has('nodiagram')) {
-      const uiState = useUiStore.getState()
-      if (uiState.showDiagram) uiState.toggleDiagram()
-    }
-
     // Hide text editor: ?notext
     if (params.has('notext')) {
       const uiState = useUiStore.getState()
       if (uiState.showEditor) uiState.toggleEditor()
-    }
-
-    // Hide palette/menu: ?nomenu
-    if (params.has('nomenu')) {
-      const uiState = useUiStore.getState()
-      if (uiState.showPalette) uiState.togglePalette()
     }
 
     // Load content from URL params

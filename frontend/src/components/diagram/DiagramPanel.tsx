@@ -16,11 +16,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-
-const UMPLE_TARGETS = [
-  'Java', 'Php', 'Python', 'Ruby', 'Cpp', 'RTCpp', 'SimpleCpp',
-  'Json', 'Sql', 'Alloy', 'NuSMV', 'USE', 'Ecore', 'TextUml', 'Umlet', 'SimulateJava',
-] as const
+import { UMPLE_TARGETS } from '../../api/types'
 
 export function DiagramPanel() {
   const { viewMode, renderMode, svgCache, stateNodes, compiling, setRenderMode } = useDiagramStore()

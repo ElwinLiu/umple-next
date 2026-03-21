@@ -2,9 +2,6 @@ import { create } from 'zustand'
 
 interface UiState {
   showEditor: boolean
-  showDiagram: boolean
-  showGeneratePanel: boolean
-  showPalette: boolean
   showTaskPanel: boolean
   showAiPanel: boolean
   showExecutionPanel: boolean
@@ -26,9 +23,6 @@ interface UiState {
   generatedError: string | null
 
   toggleEditor: () => void
-  toggleDiagram: () => void
-  toggleGeneratePanel: () => void
-  togglePalette: () => void
   toggleTaskPanel: () => void
   toggleAiPanel: () => void
   toggleExecutionPanel: () => void
@@ -47,9 +41,6 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   showEditor: true,
-  showDiagram: true,
-  showGeneratePanel: false,
-  showPalette: false,
   showTaskPanel: false,
   showAiPanel: false,
   showExecutionPanel: false,
@@ -68,9 +59,6 @@ export const useUiStore = create<UiState>((set) => ({
   generatedError: null,
 
   toggleEditor: () => set((s) => ({ showEditor: !s.showEditor })),
-  toggleDiagram: () => set((s) => ({ showDiagram: !s.showDiagram })),
-  toggleGeneratePanel: () => set((s) => ({ showGeneratePanel: !s.showGeneratePanel })),
-  togglePalette: () => set((s) => ({ showPalette: !s.showPalette })),
   toggleTaskPanel: () => set((s) => ({ showTaskPanel: !s.showTaskPanel })),
   toggleAiPanel: () => set((s) => ({ showAiPanel: !s.showAiPanel })),
   toggleExecutionPanel: () => set((s) => ({ showExecutionPanel: !s.showExecutionPanel })),

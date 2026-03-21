@@ -5,34 +5,10 @@
     node [ratio="auto" shape=record margin=0; href="javascript:Action.selectClass(&quot;\N&quot;);"];
      edge [minlen=1 headclip="true"];
 
-  // Class: Student
-  "Student" [shape=plaintext margin=0 label=<<table border="1" cellspacing="0" cellborder="0" cellpadding="2"><tr><td cellpadding="10">    Student </td></tr><hr/><tr><td align="left" href="" title="String name&#13;">  name : String  </td></tr><tr><td align="left" href="" title="String id&#13;">  id : String  </td></tr></table>>,
-   tooltip="class Student
-Umple model&#13;"];
-
-  // Class: Course
-  "Course" [shape=plaintext margin=0 label=<<table border="1" cellspacing="0" cellborder="0" cellpadding="2"><tr><td cellpadding="10">    Course </td></tr><hr/><tr><td align="left" href="" title="String title&#13;">  title : String  </td></tr><tr><td align="left" href="" title="String code&#13;">  code : String  </td></tr></table>>,
-   tooltip="class Course
+  // Class: Account
+  "Account" [shape=plaintext margin=0 label=<<table border="1" cellspacing="0" cellborder="0" cellpadding="2"><tr><td cellpadding="10">    Account </td></tr><hr/><tr><td align="left" href="" title="String balance&#13;">  balance : String  </td></tr></table>>,
+   tooltip="class Account
 "];
 
   // All associations
-  "Student" -> "Course" [dir="none", taillabel="* ", headlabel="* ", tooltip="Student *  -- *  Course
-
-A Course has some Students. It can have none, and there is no upper bound defined.
-
-A Student has some Courses. It can have none, and there is no upper bound defined.
-
-" headtooltip="Student *  -- *  Course
-
-A Course has some Students. It can have none, and there is no upper bound defined.
-
-A Student has some Courses. It can have none, and there is no upper bound defined.
-
-" tailtooltip="Student *  -- *  Course
-
-A Course has some Students. It can have none, and there is no upper bound defined.
-
-A Student has some Courses. It can have none, and there is no upper bound defined.
-
-" URL="javascript:Action.selectAssociation('Student,Course,* ,* ')" ];
 }
