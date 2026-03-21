@@ -263,6 +263,11 @@ textarea:focus-visible {
   outline-offset: 1px;
 }
 
+/* cmdk input handles its own focus styling */
+[data-slot="command-input"]:focus-visible {
+  outline: none;
+}
+
 /* ── Scrollbar Styling ── */
 
 .scrollbar-thin {

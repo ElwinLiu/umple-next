@@ -5,14 +5,27 @@ import { useEditorStore } from '../../stores/editorStore'
 import { api } from '../../api/client'
 import { UMPLE_TARGETS, type ExampleEntry } from '../../api/types'
 import {
+  LayoutGrid, Workflow, GitBranch, Network,
+  Code, Layers, Maximize2, Minimize2,
+  Terminal, Sparkles, ClipboardList, FileCode,
+} from 'lucide-react'
+import {
   CommandDialog,
   CommandInput,
   CommandList,
   CommandEmpty,
   CommandGroup,
   CommandItem,
+  CommandShortcut,
   CommandSeparator,
 } from '@/components/ui/command'
+
+const DIAGRAM_VIEWS: { value: DiagramView; label: string; icon: React.ReactNode }[] = [
+  { value: 'class', label: 'Class Diagram', icon: <LayoutGrid /> },
+  { value: 'state', label: 'State Diagram', icon: <Workflow /> },
+  { value: 'feature', label: 'Feature Diagram', icon: <GitBranch /> },
+  { value: 'structure', label: 'Structure Diagram', icon: <Network /> },
+]
 
 export function CommandPalette() {
   const {
@@ -89,12 +102,7 @@ export function CommandPalette() {
         <CommandEmpty>No results found</CommandEmpty>
 
         <CommandGroup heading="Diagram">
-          {([
-            { value: 'class' as DiagramView, label: 'Class Diagram' },
-            { value: 'state' as DiagramView, label: 'State Diagram' },
-            { value: 'feature' as DiagramView, label: 'Feature Diagram' },
-            { value: 'structure' as DiagramView, label: 'Structure Diagram' },
-          ]).map((dt) => (
+          {DIAGRAM_VIEWS.map((dt) => (
             <CommandItem
               key={dt.value}
               onSelect={() => {
@@ -104,6 +112,7 @@ export function CommandPalette() {
               }}
               data-testid={`command-item-diagram-${dt.value}`}
             >
+              {dt.icon}
               {dt.label}
             </CommandItem>
           ))}
@@ -117,31 +126,30 @@ export function CommandPalette() {
               onSelect={() => handleGenerate(target)}
               data-testid={`command-item-gen-${target}`}
             >
-              Generate {target}
+              <Code />
+              {target}
             </CommandItem>
           ))}
-        </CommandGroup>
-
-        <CommandSeparator />
-        <CommandGroup heading="Actions">
-          <CommandItem
-            onSelect={() => {
-              setRenderMode(renderMode === 'reactflow' ? 'graphviz' : 'reactflow')
-              closeCommandPalette()
-            }}
-          >
-            Switch to {renderMode === 'reactflow' ? 'GraphViz' : 'ReactFlow'} Rendering
-          </CommandItem>
         </CommandGroup>
 
         <CommandSeparator />
         <CommandGroup heading="View">
           <CommandItem
             onSelect={() => {
+              setRenderMode(renderMode === 'reactflow' ? 'graphviz' : 'reactflow')
+              closeCommandPalette()
+            }}
+          >
+            <Layers />
+            Switch to {renderMode === 'reactflow' ? 'GraphViz' : 'ReactFlow'} Rendering
+          </CommandItem>
+          <CommandItem
+            onSelect={() => {
               setDiagramOnly(!diagramOnly)
               closeCommandPalette()
             }}
           >
+            {diagramOnly ? <Minimize2 /> : <Maximize2 />}
             {diagramOnly ? 'Exit Diagram Only Mode' : 'Diagram Only Mode'}
           </CommandItem>
           <CommandItem
@@ -150,31 +158,27 @@ export function CommandPalette() {
               closeCommandPalette()
             }}
           >
+            <Terminal />
             Toggle Output Panel
+            <CommandShortcut>Ctrl+'</CommandShortcut>
           </CommandItem>
-        </CommandGroup>
-
-        <CommandSeparator />
-        <CommandGroup heading="AI">
           <CommandItem
             onSelect={() => {
               toggleAiPanel()
               closeCommandPalette()
             }}
           >
-            Open AI Assistant
+            <Sparkles />
+            AI Assistant
           </CommandItem>
-        </CommandGroup>
-
-        <CommandSeparator />
-        <CommandGroup heading="Tasks">
           <CommandItem
             onSelect={() => {
               toggleTaskPanel()
               closeCommandPalette()
             }}
           >
-            Open Task Panel
+            <ClipboardList />
+            Task Panel
           </CommandItem>
         </CommandGroup>
 
@@ -188,6 +192,7 @@ export function CommandPalette() {
                   onSelect={() => handleLoadExample(ex.name)}
                   data-testid={`command-item-example-${ex.name}`}
                 >
+                  <FileCode />
                   {ex.name}
                 </CommandItem>
               ))}
