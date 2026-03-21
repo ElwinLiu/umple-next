@@ -1,0 +1,30 @@
+# Dependencies
+frontend/node_modules/
+frontend/package-lock.json
+collab/node_modules/
+code-exec/node_modules/
+
+# Build
+frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
+
+# Data
+data/models/tmp*
+data/models/tasks/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+
+# Temp
+.tmp/
+
+# Jars (downloaded via make fetch-jar)
+jars/*.jar
+
+# Environment
+.env

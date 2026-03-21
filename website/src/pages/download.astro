@@ -1,0 +1,290 @@
+---
+import Base from '../layouts/Base.astro'
+
+const jarSnippet = `# Download the JAR
+curl -O https://cruise.umple.org/scripts/umple.jar
+
+# Compile an Umple file to Java
+java -jar umple.jar mymodel.ump
+
+# Generate to a specific language
+java -jar umple.jar -g Python mymodel.ump`
+
+const vscodeSnippet = `code --install-extension umple.umple-language`
+
+const dockerSnippet = `docker pull umple/umpleonline
+docker run -p 8080:8080 umple/umpleonline`
+
+const brewSnippet = `brew install umple`
+
+const chocoSnippet = `choco install umple`
+---
+
+<Base title="Download Umple" description="Download Umple tools: command-line JAR, VS Code extension, Eclipse plugin, Docker image, and package managers.">
+  <section class="page-header">
+    <div class="container">
+      <h1>Download Umple</h1>
+      <p class="page-subtitle">Get Umple for your preferred development environment</p>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="container">
+      <div class="download-grid">
+        <!-- Command Line -->
+        <div class="download-card">
+          <div class="download-card-header">
+            <span class="download-icon" aria-hidden="true">{'\u{1F4E6}'}</span>
+            <h2>Command Line (JAR)</h2>
+          </div>
+          <p>Download the Umple JAR for command-line use. Requires Java 11 or later.</p>
+          <div class="download-actions">
+            <a href="https://cruise.umple.org/scripts/umple.jar" class="btn-download">
+              Download Latest JAR
+            </a>
+          </div>
+          <div class="install-instructions">
+            <h3>Quick Start</h3>
+            <pre><code set:text={jarSnippet} /></pre>
+          </div>
+        </div>
+
+        <!-- VS Code -->
+        <div class="download-card">
+          <div class="download-card-header">
+            <span class="download-icon" aria-hidden="true">{'\u{1F4DD}'}</span>
+            <h2>VS Code Extension</h2>
+          </div>
+          <p>Syntax highlighting, code completion, and diagram preview for Umple in Visual Studio Code.</p>
+          <div class="download-actions">
+            <a href="https://marketplace.visualstudio.com/items?itemName=umple.umple-language" class="btn-download" target="_blank" rel="noopener noreferrer">
+              VS Code Marketplace
+            </a>
+          </div>
+          <div class="install-instructions">
+            <h3>Install via CLI</h3>
+            <pre><code set:text={vscodeSnippet} /></pre>
+          </div>
+        </div>
+
+        <!-- Eclipse -->
+        <div class="download-card">
+          <div class="download-card-header">
+            <span class="download-icon" aria-hidden="true">{'\u{1F319}'}</span>
+            <h2>Eclipse Plugin</h2>
+          </div>
+          <p>Full Umple development environment within Eclipse IDE, including diagram editing and code generation.</p>
+          <div class="download-actions">
+            <a href="https://cruise.umple.org/umple/UmpleTools.html" class="btn-download" target="_blank" rel="noopener noreferrer">
+              Installation Guide
+            </a>
+          </div>
+        </div>
+
+        <!-- Docker -->
+        <div class="download-card">
+          <div class="download-card-header">
+            <span class="download-icon" aria-hidden="true">{'\u{1F433}'}</span>
+            <h2>Docker Image</h2>
+          </div>
+          <p>Run UmpleOnline locally with Docker. Includes the full web-based modeling environment.</p>
+          <div class="download-actions">
+            <a href="https://hub.docker.com/r/umple/umpleonline/" class="btn-download" target="_blank" rel="noopener noreferrer">
+              Docker Hub
+            </a>
+          </div>
+          <div class="install-instructions">
+            <h3>Quick Start</h3>
+            <pre><code set:text={dockerSnippet} /></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Package Managers -->
+      <div class="package-managers">
+        <h2 class="section-title">Package Managers</h2>
+        <div class="pm-grid">
+          <div class="pm-card">
+            <h3>Homebrew (macOS / Linux)</h3>
+            <pre><code set:text={brewSnippet} /></pre>
+            <a href="https://formulae.brew.sh/formula/umple" target="_blank" rel="noopener noreferrer">View formula</a>
+          </div>
+          <div class="pm-card">
+            <h3>Chocolatey (Windows)</h3>
+            <pre><code set:text={chocoSnippet} /></pre>
+            <a href="https://community.chocolatey.org/packages?q=umple" target="_blank" rel="noopener noreferrer">View package</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- GitHub Releases -->
+      <div class="releases-section">
+        <h2 class="section-title">All Releases</h2>
+        <p class="releases-text">
+          Browse all past releases with changelogs and downloadable assets on GitHub.
+        </p>
+        <div class="releases-action">
+          <a href="https://github.com/umple/umple/releases" class="btn-download" target="_blank" rel="noopener noreferrer">
+            View All Releases on GitHub
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .page-header {
+    background: linear-gradient(135deg, var(--color-navy) 0%, var(--color-navy-light) 100%);
+    color: white;
+    padding: var(--space-2xl) var(--space-md);
+    text-align: center;
+  }
+
+  .page-header h1 {
+    color: white;
+    margin: 0 0 var(--space-xs);
+    font-size: clamp(1.75rem, 4vw, 2.5rem);
+  }
+
+  .page-subtitle {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 1.1rem;
+    margin: 0;
+  }
+
+  .download-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: var(--space-lg);
+    margin-bottom: var(--space-3xl);
+  }
+
+  .download-card {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: var(--space-xl);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .download-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+  }
+
+  .download-icon {
+    font-size: 1.75rem;
+  }
+
+  .download-card-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+  }
+
+  .download-card p {
+    color: var(--color-text-light);
+    font-size: 0.95rem;
+    margin: 0 0 var(--space-md);
+    flex: 1;
+  }
+
+  .download-actions {
+    margin-bottom: var(--space-md);
+  }
+
+  .btn-download {
+    display: inline-block;
+    padding: var(--space-sm) var(--space-lg);
+    background: var(--color-accent);
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+
+  .btn-download:hover {
+    background: var(--color-accent-hover);
+    text-decoration: none;
+  }
+
+  .install-instructions {
+    background: var(--color-bg-alt);
+    border-radius: 8px;
+    padding: var(--space-md);
+    margin-top: auto;
+  }
+
+  .install-instructions h3 {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin: 0 0 var(--space-xs);
+    color: var(--color-text-light);
+  }
+
+  .install-instructions pre {
+    margin: 0;
+    font-size: 0.82rem;
+    padding: var(--space-sm);
+  }
+
+  .package-managers {
+    margin-bottom: var(--space-3xl);
+  }
+
+  .pm-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-lg);
+    max-width: 700px;
+    margin: 0 auto;
+  }
+
+  .pm-card {
+    background: var(--color-bg-alt);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: var(--space-lg);
+    text-align: center;
+  }
+
+  .pm-card h3 {
+    margin: 0 0 var(--space-sm);
+    font-size: 1rem;
+  }
+
+  .pm-card pre {
+    font-size: 0.85rem;
+    margin: 0 0 var(--space-sm);
+    padding: var(--space-sm);
+  }
+
+  .pm-card a {
+    font-size: 0.85rem;
+  }
+
+  .releases-section {
+    text-align: center;
+  }
+
+  .releases-text {
+    color: var(--color-text-light);
+    margin: 0 0 var(--space-lg);
+  }
+
+  .releases-action {
+    margin-bottom: var(--space-md);
+  }
+
+  @media (max-width: 768px) {
+    .download-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>

@@ -1,0 +1,26 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./backend:/app
+      - ./data/models:/data/models
+      - ./jars:/jars:ro
+      - ./examples:/examples:ro
+    environment:
+      - UMPLE_JAR=/jars/umple.jar
+      - MODEL_STORE_PATH=/data/models
+      - EXAMPLE_PATH=/examples
+      - EXECUTION_URL=http://code-exec:4400
+      - PORT=3001
+
+  code-exec:
+    build:
+      context: ./code-exec
+    ports:
+      - "4400:4400"
+    volumes:
+      - ./data/models:/data/models

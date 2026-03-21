@@ -1,0 +1,30 @@
+services:
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    volumes:
+      - ./data/models:/data/models
+      - ./jars:/jars:ro
+      - ./examples:/examples:ro
+    environment:
+      - UMPLE_JAR=/jars/umple.jar
+      - MODEL_STORE_PATH=/data/models
+      - EXAMPLE_PATH=/examples
+      - EXECUTION_URL=http://code-exec:4400
+      - PORT=3001
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "3100:80"
+    depends_on:
+      - backend
+
+  code-exec:
+    build:
+      context: ./code-exec
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data/models:/data/models

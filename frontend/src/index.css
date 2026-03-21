@@ -1,0 +1,280 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+/* ── uOttawa Brand Design Tokens ── */
+
+@theme {
+  /* Brand (Garnet) */
+  --color-brand: #8f001a;
+  --color-brand-hover: #9c1c30;
+  --color-brand-light: #fdf0f2;
+
+  /* Surfaces */
+  --color-surface-0: #ffffff;
+  --color-surface-tab: #f9f9f9;
+  --color-surface-1: #f2f2f2;
+  --color-surface-2: #e5e2df;
+
+  /* Ink (text) */
+  --color-ink: #2d2d2c;
+  --color-ink-muted: #80746c;
+  --color-ink-faint: #908681;
+  --color-ink-inverse: #ffffff;
+
+  /* Borders */
+  --color-border: #d4d0cd;
+  --color-border-strong: #80746c;
+
+  /* Status */
+  --color-status-error: #8f001a;
+  --color-status-warning: #b45309;
+  --color-status-success: #67796c;
+
+  /* Extended brand scale (for nuanced UI needs) */
+  --color-garnet-900: #4a000d;
+  --color-garnet-800: #6b0013;
+  --color-garnet-700: #8f001a;
+  --color-garnet-600: #9c1c30;
+  --color-garnet-500: #bf2035;
+  --color-garnet-400: #d44a60;
+  --color-garnet-300: #e47d90;
+  --color-garnet-200: #f0b0bb;
+  --color-garnet-100: #f8d8dd;
+  --color-garnet-50: #fdf0f2;
+
+  /* Typography */
+  --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+/* ── shadcn/ui Semantic Layer ── */
+/* Map design tokens to variable names shadcn components expect */
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius: 0.5rem;
+}
+
+:root {
+  --background: var(--color-surface-0);
+  --foreground: var(--color-ink);
+  --card: var(--color-surface-0);
+  --card-foreground: var(--color-ink);
+  --popover: var(--color-surface-0);
+  --popover-foreground: var(--color-ink);
+  --primary: var(--color-brand);
+  --primary-foreground: var(--color-ink-inverse);
+  --secondary: var(--color-surface-1);
+  --secondary-foreground: var(--color-ink);
+  --muted: var(--color-surface-1);
+  --muted-foreground: var(--color-ink-muted);
+  --accent: var(--color-surface-1);
+  --accent-foreground: var(--color-ink);
+  --destructive: var(--color-status-error);
+  --destructive-foreground: var(--color-ink-inverse);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-brand);
+}
+
+/* ── Dark Mode Token Overrides ── */
+
+.dark {
+  --color-brand: #d44a60;
+  --color-brand-hover: #e47d90;
+  --color-brand-light: #3a1520;
+
+  --color-surface-0: #1a1a1a;
+  --color-surface-tab: #1f1f1f;
+  --color-surface-1: #242424;
+  --color-surface-2: #2e2e2e;
+
+  --color-ink: #e4e2df;
+  --color-ink-muted: #9a9490;
+  --color-ink-faint: #6e6964;
+  --color-ink-inverse: #1a1a1a;
+
+  --color-border: #3a3a3a;
+  --color-border-strong: #5a5a5a;
+
+  --color-status-error: #e47d90;
+  --color-status-warning: #e5a04b;
+  --color-status-success: #8fb897;
+
+  --color-garnet-900: #fdf0f2;
+  --color-garnet-800: #f8d8dd;
+  --color-garnet-700: #f0b0bb;
+  --color-garnet-600: #e47d90;
+  --color-garnet-500: #d44a60;
+  --color-garnet-400: #bf2035;
+  --color-garnet-300: #9c1c30;
+  --color-garnet-200: #6b0013;
+  --color-garnet-100: #4a000d;
+  --color-garnet-50: #2a0008;
+}
+
+/* ── Base Styles ── */
+
+html, body, #root {
+  @apply h-full w-full overflow-hidden;
+}
+
+body {
+  @apply m-0 p-0 font-sans antialiased;
+  color: var(--color-ink);
+  background-color: var(--color-surface-0);
+}
+
+/* ── Chrome-style Tab Ears ── */
+/* Uses box-shadow + clip-path: inset() — theme-agnostic because the
+   transparent circle reveals the strip color behind it, while the
+   shadow color (surface-0) only fills the content-boundary corner. */
+
+.chrome-tab-active {
+  position: relative;
+  z-index: 2;
+}
+
+.chrome-tab-active::before,
+.chrome-tab-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 100%;
+  box-shadow: 0 0 0 40px var(--color-surface-0);
+  pointer-events: none;
+}
+
+.chrome-tab-active::before {
+  left: -8px;
+  clip-path: inset(50% -10px 0 50%);
+}
+
+.chrome-tab-active::after {
+  right: -8px;
+  clip-path: inset(50% 50% 0 -10px);
+}
+
+/* ── ReactFlow ── */
+@import "@xyflow/react/dist/style.css";
+
+/* ── Resize Handles ── */
+
+[data-panel-resize-handle-id] {
+  position: relative;
+  background-color: transparent;
+}
+
+[data-panel-resize-handle-id]::after {
+  content: '';
+  position: absolute;
+  border-radius: 9999px;
+  background-color: transparent;
+  @apply transition-colors duration-150;
+}
+
+/* Vertical handles (between left/right panels) */
+[data-panel-resize-handle-id][data-panel-group-direction="horizontal"]::after {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+}
+
+/* Horizontal handles (between top/bottom panels) */
+[data-panel-resize-handle-id][data-panel-group-direction="vertical"]::after {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+}
+
+[data-panel-resize-handle-id]:hover::after,
+[data-panel-resize-handle-id]:active::after,
+[data-panel-resize-handle-id][data-resize-handle-state="drag"]::after {
+  background-color: var(--color-brand);
+}
+
+/* ── Spin animation for pending buttons ── */
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* ── Focus Rings ── */
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-brand);
+  outline-offset: 1px;
+}
+
+/* ── Scrollbar Styling ── */
+
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-border);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-border-strong);
+}
+
+/* ── Selection Color ── */
+
+::selection {
+  background-color: var(--color-garnet-200);
+  color: var(--color-garnet-900);
+}
+
+/* Dark mode: ensure color-scheme for native UI elements */
+.dark {
+  color-scheme: dark;
+}
+
+/* ── Hide default ReactFlow controls (we use custom DiagramControls) ── */
+.react-flow__controls {
+  display: none;
+}
+

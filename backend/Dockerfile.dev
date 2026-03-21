@@ -1,0 +1,11 @@
+FROM golang:1.23-alpine
+
+RUN apk add --no-cache graphviz openjdk17-jre-headless
+RUN go install github.com/air-verse/air@v1.61.7
+
+WORKDIR /app
+
+# go.mod and source are mounted via volumes at runtime
+# Air will handle building on file changes
+EXPOSE 3001
+CMD ["sh", "-c", "go mod tidy && air -c .air.toml"]

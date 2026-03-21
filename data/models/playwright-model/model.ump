@@ -1,0 +1,14 @@
+// Umple model
+class Student {
+  name;
+  id;
+}
+
+class Course {
+  title;
+  code;
+}
+
+association {
+  * Student -- * Course;
+}

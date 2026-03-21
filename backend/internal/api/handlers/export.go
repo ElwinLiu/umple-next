@@ -1,0 +1,167 @@
+package handlers
+
+import (
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
+	"github.com/umple/umple-next/backend/internal/compiler"
+	"github.com/umple/umple-next/backend/internal/model"
+)
+
+type ExportHandler struct {
+	pool  *compiler.Pool
+	store *model.Store
+}
+
+func NewExportHandler(pool *compiler.Pool, store *model.Store) *ExportHandler {
+	return &ExportHandler{pool: pool, store: store}
+}
+
+type ExportRequest struct {
+	Code    string `json:"code"`
+	Format  string `json:"format"`
+	ModelID string `json:"modelId,omitempty"`
+}
+
+// validExportFormats lists the supported export formats.
+var validExportFormats = map[string]bool{
+	"svg":     true,
+	"png":     true,
+	"yuml":    true,
+	"mermaid": true,
+}
+
+func (h *ExportHandler) Export(w http.ResponseWriter, r *http.Request) {
+	var req ExportRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	if req.Code == "" {
+		writeError(w, http.StatusBadRequest, "code is required")
+		return
+	}
+	if req.Format == "" {
+		writeError(w, http.StatusBadRequest, "format is required")
+		return
+	}
+	if !validExportFormats[req.Format] {
+		writeError(w, http.StatusBadRequest, fmt.Sprintf("unsupported format: %s", req.Format))
+		return
+	}
+
+	// Ensure model directory exists
+	modelID := req.ModelID
+	if modelID == "" {
+		m, err := h.store.Create(req.Code)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to create model")
+			return
+		}
+		modelID = m.ID
+	} else {
+		dir := h.store.ModelDir(modelID)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to create model dir")
+			return
+		}
+		if err := os.WriteFile(filepath.Join(dir, "model.ump"), []byte(req.Code), 0644); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to write model")
+			return
+		}
+	}
+
+	dir := h.store.ModelDir(modelID)
+
+	switch req.Format {
+	case "svg":
+		h.exportGraphviz(w, dir, modelID, "svg")
+	case "png":
+		h.exportGraphviz(w, dir, modelID, "png")
+	case "yuml":
+		h.exportUmple(w, dir, modelID, "Yuml")
+	case "mermaid":
+		h.exportUmple(w, dir, modelID, "Mermaid")
+	}
+}
+
+// exportGraphviz generates a GvClassDiagram .gv file, then converts via dot.
+func (h *ExportHandler) exportGraphviz(w http.ResponseWriter, dir, modelID, format string) {
+	// Generate .gv via umple
+	command := fmt.Sprintf("-generate GvClassDiagram %s/model.ump", dir)
+	result, err := h.pool.Execute(compiler.CompileRequest{
+		Command: command,
+		WorkDir: dir,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("generation failed: %v", err))
+		return
+	}
+
+	// Find the generated .gv file
+	gvFile := ""
+	entries, _ := os.ReadDir(dir)
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".gv") {
+			gvFile = filepath.Join(dir, e.Name())
+			break
+		}
+	}
+
+	if gvFile == "" {
+		writeError(w, http.StatusInternalServerError, "no diagram output generated")
+		return
+	}
+
+	// Run dot to convert
+	outFile := filepath.Join(dir, "export."+format)
+	dotCmd := exec.Command("dot", "-T"+format, "-o", outFile, gvFile)
+	dotCmd.Dir = dir
+	if dotOutput, err := dotCmd.CombinedOutput(); err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("dot conversion failed: %v: %s", err, string(dotOutput)))
+		return
+	}
+
+	data, err := os.ReadFile(outFile)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to read export output")
+		return
+	}
+
+	switch format {
+	case "svg":
+		w.Header().Set("Content-Type", "image/svg+xml")
+		w.Write(data)
+	case "png":
+		w.Header().Set("Content-Type", "image/png")
+		w.Write(data)
+	}
+
+	_ = result // errors already checked
+}
+
+// exportUmple generates output directly via umple.jar (Yuml, Mermaid, etc.).
+func (h *ExportHandler) exportUmple(w http.ResponseWriter, dir, modelID, generator string) {
+	command := fmt.Sprintf("-generate %s %s/model.ump", generator, dir)
+	result, err := h.pool.Execute(compiler.CompileRequest{
+		Command: command,
+		WorkDir: dir,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("generation failed: %v", err))
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"output":  result.Output,
+		"errors":  result.Errors,
+		"modelId": modelID,
+	})
+}
