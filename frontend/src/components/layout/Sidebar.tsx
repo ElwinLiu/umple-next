@@ -4,7 +4,6 @@ import { useEditorStore } from '../../stores/editorStore'
 import { useDiagramStore, type DiagramView, type DisplayPrefKey, type GvLayoutAlgorithm } from '../../stores/diagramStore'
 import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
-import { useIsDark } from '../../hooks/useIsDark'
 import { UMPLE_TARGETS, type ExampleCategory } from '../../api/types'
 import { Combobox } from '@/components/ui/combobox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -113,7 +112,6 @@ const SECTION_KEYS = ['diagramType', 'diagramDisplay', 'generateCode', 'ai'] as 
 type SectionKey = (typeof SECTION_KEYS)[number]
 
 function SidebarContent() {
-  const dark = useIsDark()
   const openCommandPalette = useUiStore((s) => s.openCommandPalette)
   const [allExpanded, setAllExpanded] = useState(false)
   const [overrides, setOverrides] = useState<Partial<Record<SectionKey, boolean>>>({ diagramType: true })
@@ -136,7 +134,7 @@ function SidebarContent() {
       {/* Row 1: logo + title left, layout right */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
         <a href="/" className="flex items-center gap-2.5 no-underline text-ink" aria-label="UmpleOnline home">
-          <img src={dark ? '/umple-logo-light.svg' : '/umple-logo.svg'} alt="" className="h-6 w-auto" />
+          <img src="/umple-logo.svg" alt="" className="h-6 w-auto" />
           <span className="text-lg font-semibold tracking-tight">UmpleOnline</span>
         </a>
 

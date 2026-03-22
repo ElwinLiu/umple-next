@@ -58,7 +58,7 @@ export function CanvasBanner() {
       if ((e.metaKey || e.ctrlKey) && e.key === "'") {
         e.preventDefault()
         e.stopPropagation()
-        useUiStore.getState().toggleExecutionPanel()
+        useUiStore.getState().toggleOutputPanel()
       }
     }
     window.addEventListener('keydown', handler, true)

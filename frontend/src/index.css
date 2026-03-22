@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
 
 /* ── uOttawa Brand Design Tokens ── */
 
@@ -279,6 +280,23 @@ body {
 
 .animate-sidebar-peek-out {
   animation: sidebar-peek-out 200ms ease-in forwards;
+}
+
+/* ── Output strip slide-in ── */
+
+@keyframes strip-slide-in {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-strip-in {
+  animation: strip-slide-in 120ms ease-out;
 }
 
 /* ── Spin animation for pending buttons ── */

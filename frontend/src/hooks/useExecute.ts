@@ -16,8 +16,8 @@ export function useExecute() {
     runningRef.current = true
     setRunning(true)
 
-    const { showExecutionPanel, toggleExecutionPanel, setExecutionOutput } = useUiStore.getState()
-    if (!showExecutionPanel) toggleExecutionPanel()
+    const { setExecutionOutput, setOutputView } = useUiStore.getState()
+    setOutputView('panel')
     setExecutionOutput('')
 
     const code = useEditorStore.getState().code
@@ -50,7 +50,16 @@ export function useCompile() {
 
     try {
       const { success } = await compileAndRefresh({ updateFromModel, updateStateDiagramFromGv }, isDark)
-      if (success) useUiStore.getState().setExecutionOutput('Compiled successfully.')
+      if (success) {
+        useUiStore.getState().setExecutionOutput('Compiled successfully.')
+        useUiStore.setState({ outputView: 'strip' })
+      } else {
+        // Show strip for warnings-only (errors auto-open panel via setExecutionOutput)
+        const { outputWarningCount, outputErrorCount } = useUiStore.getState()
+        if (outputWarningCount > 0 && outputErrorCount === 0) {
+          useUiStore.setState({ outputView: 'strip' })
+        }
+      }
     } catch {
       // compileAndRefresh handles error reporting
     } finally {

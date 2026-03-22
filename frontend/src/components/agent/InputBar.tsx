@@ -67,7 +67,7 @@ export function InputBar({
         placeholder="Ask anything..."
         rows={1}
         style={{ maxHeight: textareaMaxHeight }}
-        className="min-h-[20px] flex-1 resize-none bg-transparent text-sm text-ink outline-none placeholder:text-ink-faint"
+        className="min-h-[36px] flex-1 resize-none bg-transparent py-2 text-sm text-ink outline-none placeholder:text-ink-faint"
       />
       <div className="flex shrink-0 items-center gap-1">
         {children}

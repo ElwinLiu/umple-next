@@ -3,6 +3,7 @@ import { useEditorStore, type Tab } from '../../stores/editorStore'
 import { useUiStore } from '../../stores/uiStore'
 import { Plus, X, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
+import { OutputBadges } from './ExecutionPanel'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ContextMenu,
@@ -163,6 +164,9 @@ export function TabBar() {
             <ChevronRight className="size-3.5" />
           </button>
         )}
+
+        {/* Error/warning badges (right-aligned) */}
+        <OutputBadges />
       </div>
     </Tabs>
   )

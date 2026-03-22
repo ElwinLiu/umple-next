@@ -87,7 +87,7 @@ function AgentPanel() {
   function handleSend() {
     const text = input.trim()
     if (!text || isStreaming) return
-    if (!expanded) openAgentPanel()
+    if (!expanded) handleExpandPanel(true)
     send(text)
     setInput('')
     /* Always scroll to bottom on explicit user send */

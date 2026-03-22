@@ -21,12 +21,14 @@ function parseErrorCounts(raw: string | null | undefined): { errors: number; war
   }
 }
 
+type OutputView = 'hidden' | 'strip' | 'panel'
+
 interface UiState {
   showEditor: boolean
   showSidebar: boolean
   sidebarWidth: number
   showTaskPanel: boolean
-  showExecutionPanel: boolean
+  outputView: OutputView
   showAgentPanel: boolean
   executionOutput: string
   executionErrors: string | null
@@ -49,7 +51,8 @@ interface UiState {
   toggleSidebar: () => void
   setSidebarWidth: (width: number) => void
   toggleTaskPanel: () => void
-  toggleExecutionPanel: () => void
+  setOutputView: (view: OutputView) => void
+  toggleOutputPanel: () => void
   openAgentPanel: () => void
   closeAgentPanel: () => void
   toggleAgentPanel: () => void
@@ -66,12 +69,22 @@ interface UiState {
   clearGenerated: () => void
 }
 
+const SIDEBAR_KEY = 'umple:sidebar'
+
+function loadSidebarPref(): boolean {
+  try {
+    const v = localStorage.getItem(SIDEBAR_KEY)
+    if (v === 'true' || v === 'false') return v === 'true'
+  } catch { /* SSR / private browsing */ }
+  return true // default: expanded
+}
+
 export const useUiStore = create<UiState>((set) => ({
   showEditor: true,
-  showSidebar: false,
+  showSidebar: loadSidebarPref(),
   sidebarWidth: 280,
   showTaskPanel: false,
-  showExecutionPanel: false,
+  outputView: 'hidden',
   showAgentPanel: false,
   executionOutput: '',
   executionErrors: null,
@@ -89,10 +102,15 @@ export const useUiStore = create<UiState>((set) => ({
   generationRequested: false,
 
   toggleEditor: () => set((s) => ({ showEditor: !s.showEditor })),
-  toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
+  toggleSidebar: () => set((s) => {
+    const next = !s.showSidebar
+    try { localStorage.setItem(SIDEBAR_KEY, String(next)) } catch { /* noop */ }
+    return { showSidebar: next }
+  }),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.min(480, Math.max(200, sidebarWidth)) }),
   toggleTaskPanel: () => set((s) => ({ showTaskPanel: !s.showTaskPanel })),
-  toggleExecutionPanel: () => set((s) => ({ showExecutionPanel: !s.showExecutionPanel })),
+  setOutputView: (outputView) => set({ outputView }),
+  toggleOutputPanel: () => set((s) => ({ outputView: s.outputView === 'panel' ? 'hidden' : 'panel' })),
   openAgentPanel: () => set({ showAgentPanel: true }),
   closeAgentPanel: () => set({ showAgentPanel: false }),
   toggleAgentPanel: () => set((s) => ({ showAgentPanel: !s.showAgentPanel })),
@@ -103,8 +121,8 @@ export const useUiStore = create<UiState>((set) => ({
       executionErrors,
       outputErrorCount: errors,
       outputWarningCount: warnings,
-      // Auto-expand on errors unless the agent dialog is active.
-      ...(errors > 0 && !s.showExecutionPanel && !s.showAgentPanel ? { showExecutionPanel: true } : {}),
+      // Auto-expand to full panel on errors (unless the agent panel is active).
+      ...(errors > 0 && !s.showAgentPanel ? { outputView: 'panel' as const } : {}),
     }))
   },
   setTheme: (theme) => set({ theme }),

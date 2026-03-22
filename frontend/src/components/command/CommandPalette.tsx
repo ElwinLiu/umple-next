@@ -39,7 +39,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 export function CommandPalette() {
   const {
     commandPaletteOpen, closeCommandPalette,
-    toggleTaskPanel, setDiagramOnly, diagramOnly, toggleExecutionPanel,
+    toggleTaskPanel, setDiagramOnly, diagramOnly, toggleOutputPanel,
   } = useUiStore()
   const { setViewMode, setRenderMode, renderMode } = useDiagramStore()
   const loadExample = useEditorStore((s) => s.loadExample)
@@ -216,7 +216,7 @@ export function CommandPalette() {
               </CommandItem>
               <CommandItem
                 onSelect={() => {
-                  toggleExecutionPanel()
+                  toggleOutputPanel()
                   closeCommandPalette()
                 }}
               >

@@ -1,7 +1,7 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Sidebar } from './Sidebar'
 import { EditorPanel } from '../editor/EditorPanel'
-import { ExecutionPanel, OutputBanner } from '../editor/ExecutionPanel'
+import { OutputPanel, CompileStatusStrip } from '../editor/ExecutionPanel'
 import { DiagramPanel } from '../diagram/DiagramPanel'
 import { TaskPanel } from '../task/TaskPanel'
 import { CommandPalette } from '../command/CommandPalette'
@@ -10,7 +10,7 @@ import { useCompiler } from '../../hooks/useCompiler'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 export function AppShell() {
-  const { showEditor, diagramOnly, showExecutionPanel, showTaskPanel } = useUiStore()
+  const { showEditor, diagramOnly, outputView, showTaskPanel } = useUiStore()
   useCompiler()
 
   const editorVisible = showEditor && !diagramOnly
@@ -28,7 +28,7 @@ export function AppShell() {
             {editorVisible && (
               <>
                 <Panel defaultSize={50} minSize={20}>
-                  {showExecutionPanel ? (
+                  {outputView === 'panel' ? (
                     <PanelGroup direction="vertical" className="h-full">
                       <Panel defaultSize={65} minSize={20}>
                         <div className="h-full rounded-lg overflow-hidden bg-surface-0">
@@ -38,18 +38,16 @@ export function AppShell() {
                       <PanelResizeHandle className="h-2.5 cursor-row-resize" />
                       <Panel defaultSize={35} minSize={10}>
                         <div className="h-full rounded-lg overflow-hidden bg-surface-0">
-                          <ExecutionPanel />
+                          <OutputPanel />
                         </div>
                       </Panel>
                     </PanelGroup>
                   ) : (
-                    <div className="h-full flex flex-col gap-2.5">
-                      <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-surface-0">
+                    <div className="h-full rounded-lg overflow-hidden bg-surface-0 flex flex-col">
+                      <div className="flex-1 min-h-0">
                         <EditorPanel />
                       </div>
-                      <div className="shrink-0 rounded-lg overflow-hidden bg-surface-0">
-                        <OutputBanner />
-                      </div>
+                      <CompileStatusStrip />
                     </div>
                   )}
                 </Panel>
