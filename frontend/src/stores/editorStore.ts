@@ -32,7 +32,17 @@ interface EditorState {
   closeOtherTabs: (id: string) => void
 }
 
-const DEFAULT_CODE = ''
+const DEFAULT_CODE = `class Student {
+  name;
+  id;
+  1 -- * Course;
+}
+
+class Course {
+  title;
+  code;
+}
+`
 
 function nextTabNumber(tabs: Tab[]): number {
   const used = new Set(

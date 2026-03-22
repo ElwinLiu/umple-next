@@ -5,10 +5,43 @@
     node [ratio="auto" shape=record margin=0; href="javascript:Action.selectClass(&quot;\N&quot;);"];
      edge [minlen=1 headclip="true"];
 
-  // Class: Account
-  "Account" [shape=plaintext margin=0 label=<<table border="1" cellspacing="0" cellborder="0" cellpadding="2"><tr><td cellpadding="10">    Account </td></tr><hr/><tr><td align="left" href="" title="String balance&#13;">  balance : String  </td></tr></table>>,
-   tooltip="class Account
+  // Class: Student
+  "Student" [shape=plaintext margin=0 label=<<table border="1" cellspacing="0" cellborder="0" cellpadding="2"><tr><td cellpadding="10">    Student </td></tr><hr/><tr><td align="left" href="" title="String name&#13;">  name : String  </td></tr><tr><td align="left" href="" title="String id&#13;">  id : String  </td></tr></table>>,
+   tooltip="class Student
+"];
+
+  // Class: Course
+  "Course" [shape=plaintext margin=0 label=<<table border="1" cellspacing="0" cellborder="0" cellpadding="2"><tr><td cellpadding="10">    Course </td></tr><hr/><tr><td align="left" href="" title="String title&#13;">  title : String  </td></tr><tr><td align="left" href="" title="String code&#13;">  code : String  </td></tr></table>>,
+   tooltip="class Course
 "];
 
   // All associations
+  "Student" -> "Course" [dir="none", taillabel="1 ", headlabel="* ", tooltip="Student 1  -- *  Course
+
+A Course has A Student. It must always have exactly, one, and can never have none. And there is an upper bound of at most one Student.
+
+A Student has some Courses. It can have none, and there is no upper bound defined.
+
+When a Course is created, its Student must be assigned.
+When a Course is deleted, its Student is not deleted and its list of Courses is decreased.
+When a Student is deleted, its Courses are not deleted. They are assigned to another Student.
+" headtooltip="Student 1  -- *  Course
+
+A Course has A Student. It must always have exactly, one, and can never have none. And there is an upper bound of at most one Student.
+
+A Student has some Courses. It can have none, and there is no upper bound defined.
+
+When a Course is created, its Student must be assigned.
+When a Course is deleted, its Student is not deleted and its list of Courses is decreased.
+When a Student is deleted, its Courses are not deleted. They are assigned to another Student.
+" tailtooltip="Student 1  -- *  Course
+
+A Course has A Student. It must always have exactly, one, and can never have none. And there is an upper bound of at most one Student.
+
+A Student has some Courses. It can have none, and there is no upper bound defined.
+
+When a Course is created, its Student must be assigned.
+When a Course is deleted, its Student is not deleted and its list of Courses is decreased.
+When a Student is deleted, its Courses are not deleted. They are assigned to another Student.
+" URL="javascript:Action.selectAssociation('Student,Course,* ,1 ')" ];
 }

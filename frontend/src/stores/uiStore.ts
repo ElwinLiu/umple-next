@@ -68,7 +68,7 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   showEditor: true,
-  showSidebar: true,
+  showSidebar: false,
   sidebarWidth: 280,
   showTaskPanel: false,
   showExecutionPanel: false,

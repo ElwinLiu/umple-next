@@ -1,3 +1,10 @@
-class Account {
-  balance;
+class Student {
+  name;
+  id;
+  1 -- * Course;
+}
+
+class Course {
+  title;
+  code;
 }

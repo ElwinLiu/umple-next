@@ -48,12 +48,11 @@ test('renders empty editor and compiles when an example is loaded', async ({ pag
   await page.goto('/')
 
   await expect(page.getByTestId('app-shell')).toBeVisible()
-  await expect(page.getByTestId('sidebar')).toBeVisible()
   await expect(page.getByTestId('editor-panel')).toBeVisible()
   await expect(page.getByTestId('diagram-panel')).toBeVisible()
 
-  // Navigate through hierarchical example palette
-  await page.getByLabel('Command palette').click()
+  // Navigate through hierarchical example palette (sidebar collapsed by default, use Ctrl+K)
+  await page.keyboard.press('Control+k')
   await expect(page.getByTestId('command-palette')).toBeVisible()
   await page.getByTestId('command-item-examples-browse').click()
   await page.getByTestId('command-item-category-Samples').click()
@@ -80,8 +79,8 @@ test('uses the selected diagram type for the first diagram request', async ({ pa
 
   await page.goto('/')
 
-  // Load an example via hierarchical navigation
-  await page.getByLabel('Command palette').click()
+  // Load an example via hierarchical navigation (sidebar collapsed by default, use Ctrl+K)
+  await page.keyboard.press('Control+k')
   await page.getByTestId('command-item-examples-browse').click()
   await page.getByTestId('command-item-category-Samples').click()
   await page.getByTestId('command-item-example-Banking').click()

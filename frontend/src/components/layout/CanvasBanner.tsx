@@ -38,7 +38,7 @@ export function CanvasBanner() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "'") {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
         e.preventDefault()
         e.stopPropagation()
         compile()
@@ -55,6 +55,11 @@ export function CanvasBanner() {
           useUiStore.getState().setRightPanelView('generated')
         }
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === "'") {
+        e.preventDefault()
+        e.stopPropagation()
+        useUiStore.getState().toggleExecutionPanel()
+      }
     }
     window.addEventListener('keydown', handler, true)
     return () => window.removeEventListener('keydown', handler, true)
@@ -63,13 +68,13 @@ export function CanvasBanner() {
   return (
     <div className="relative flex items-center justify-between h-[38px] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
       <div className="flex items-center gap-2">
-        <Tip content="Compile (Ctrl+')" side="bottom">
+        <Tip content="Compile (Ctrl+Enter)" side="bottom">
           <button
             onClick={compile}
             disabled={compiling}
-            aria-label={compiling ? 'Compiling' : "Compile (Ctrl+')"}
+            aria-label={compiling ? 'Compiling' : 'Compile (Ctrl+Enter)'}
             data-testid="compile-button"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md bg-brand text-ink-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-70"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md text-ink-muted hover:text-ink hover:bg-surface-1 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {compiling ? (
               <Loader2 className="size-3.5 animate-spin" />
