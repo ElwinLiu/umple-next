@@ -61,8 +61,8 @@
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
 
   /* Type scale (extends Tailwind defaults) */
-  --font-size-2xs: 0.625rem;
-  --font-size-2xs--line-height: 0.875rem;
+  --text-xxs: 0.625rem;
+  --text-xxs--line-height: 0.875rem;
 }
 
 /* ── shadcn/ui Semantic Layer ── */

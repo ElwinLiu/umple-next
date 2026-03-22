@@ -1,4 +1,6 @@
 import { useCallback } from 'react'
+import { Download } from 'lucide-react'
+import { toSvg, toPng } from 'html-to-image'
 import { ClassDiagram } from './ClassDiagram'
 import { StateDiagram } from './StateDiagram'
 import { FeatureDiagram } from './FeatureDiagram'
@@ -7,10 +9,20 @@ import { GvDiagramView } from './GvDiagramView'
 import { CodeOutput } from '../generation/CodeOutput'
 import { CanvasBanner } from '../layout/CanvasBanner'
 import { useDiagramStore } from '../../stores/diagramStore'
+import { useEditorStore } from '../../stores/editorStore'
 import { useUiStore } from '../../stores/uiStore'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
 import { ErrorBanner } from '@/components/ui/error-banner'
 import { cn } from '@/lib/utils'
+import { api } from '@/api/client'
+
+function triggerDownload(href: string, filename: string) {
+  const link = document.createElement('a')
+  link.href = href
+  link.download = filename
+  link.click()
+}
 
 export function DiagramPanel() {
   const { viewMode, renderMode, svgCache, stateNodes, setRenderMode } = useDiagramStore()
@@ -20,59 +32,34 @@ export function DiagramPanel() {
     generationRequested,
   } = useUiStore()
 
+  const { code, modelId } = useEditorStore()
+
   const currentSvg = svgCache[viewMode] ?? ''
   const hasReactFlowData = viewMode === 'class' || (viewMode === 'state' && stateNodes.length > 0)
   const showGv = currentSvg && (renderMode === 'graphviz' || (!hasReactFlowData && viewMode !== 'structure'))
 
-  const handleExportSvg = useCallback(() => {
-    const rfEl = document.querySelector('.react-flow') as HTMLElement | null
-    if (!rfEl) return
-    const viewport = rfEl.querySelector('.react-flow__viewport')
-    if (!viewport) return
-    const { width, height } = rfEl.getBoundingClientRect()
-    const svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">${viewport.innerHTML}</svg>`
-    const blob = new Blob([svgData], { type: 'image/svg+xml' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `umple-${viewMode}-diagram.svg`
-    link.click()
-    URL.revokeObjectURL(url)
-  }, [viewMode])
+  const handleExport = useCallback(async (format: string) => {
+    const filename = `umple-${viewMode}-diagram.${format}`
 
-  const handleExportPng = useCallback(() => {
-    const rfEl = document.querySelector('.react-flow') as HTMLElement | null
-    if (!rfEl) return
-    const viewport = rfEl.querySelector('.react-flow__viewport')
-    if (!viewport) return
-    const { width, height } = rfEl.getBoundingClientRect()
-    const svgData = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">${viewport.innerHTML}</svg>`
-    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' })
-    const url = URL.createObjectURL(svgBlob)
-    const img = new Image()
-    img.onload = () => {
-      const canvas = document.createElement('canvas')
-      canvas.width = width * 2
-      canvas.height = height * 2
-      const ctx = canvas.getContext('2d')
-      if (!ctx) return
-      ctx.scale(2, 2)
-      ctx.fillStyle = document.documentElement.classList.contains('dark') ? '#1a1a1a' : '#ffffff'
-      ctx.fillRect(0, 0, width, height)
-      ctx.drawImage(img, 0, 0, width, height)
-      canvas.toBlob((blob) => {
-        if (!blob) return
-        const pngUrl = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = pngUrl
-        link.download = `umple-${viewMode}-diagram.png`
-        link.click()
-        URL.revokeObjectURL(pngUrl)
-      }, 'image/png')
-      URL.revokeObjectURL(url)
+    // When showing ReactFlow, capture the canvas client-side
+    if (!showGv) {
+      const viewport = document.querySelector('.react-flow__viewport') as HTMLElement | null
+      if (viewport) {
+        const convert = format === 'png' ? toPng : toSvg
+        const dataUrl = await convert(viewport, {
+          backgroundColor: document.documentElement.classList.contains('dark') ? '#1a1a1a' : '#ffffff',
+        })
+        triggerDownload(dataUrl, filename)
+        return
+      }
     }
-    img.src = url
-  }, [viewMode])
+
+    // GV mode or fallback: use backend export
+    const blob = await api.export({ code, format, modelId: modelId ?? undefined })
+    const url = URL.createObjectURL(blob)
+    triggerDownload(url, filename)
+    URL.revokeObjectURL(url)
+  }, [code, modelId, viewMode, showGv])
 
   return (
     <div className="h-full flex flex-col" data-testid="diagram-panel">
@@ -80,8 +67,20 @@ export function DiagramPanel() {
       <div className="flex-1 relative" data-testid="diagram-canvas">
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
           <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
-            <ToolbarButton onClick={handleExportSvg} label="Export SVG">SVG</ToolbarButton>
-            <ToolbarButton onClick={handleExportPng} label="Export PNG">PNG</ToolbarButton>
+            <DropdownMenu>
+              <Tip content="Export diagram" side="bottom">
+                <DropdownMenuTrigger asChild>
+                  <button className={`${toolbarBtnBase} text-ink-muted hover:text-ink hover:bg-surface-2 flex items-center gap-1`}>
+                    <Download className="size-3" />
+                    Export
+                  </button>
+                </DropdownMenuTrigger>
+              </Tip>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport('svg')}>SVG</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('png')}>PNG</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             {hasReactFlowData && (
               <>
                 <div className="w-px h-3.5 bg-border mx-0.5" />
@@ -135,6 +134,8 @@ export function DiagramPanel() {
   )
 }
 
+const toolbarBtnBase = 'px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1'
+
 function ToolbarButton({
   onClick,
   label,
@@ -150,7 +151,7 @@ function ToolbarButton({
     <Tip content={label} side="bottom">
       <button
         onClick={onClick}
-        className={`px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 ${
+        className={`${toolbarBtnBase} ${
           active
             ? 'text-brand font-semibold bg-brand-light'
             : 'text-ink-muted hover:text-ink hover:bg-surface-2'

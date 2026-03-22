@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { BaseEdge, getStraightPath, type EdgeProps } from '@xyflow/react'
+import { BaseEdge, EdgeLabelRenderer, getStraightPath, type EdgeProps } from '@xyflow/react'
 
 export type AssociationDecoration = 'none' | 'arrow' | 'triangle' | 'diamond-filled' | 'diamond'
 
@@ -33,6 +33,54 @@ function markerForDecoration(decoration: AssociationDecoration | undefined) {
   }
 }
 
+const haloShadow = [
+  '-1px -1px 0 var(--color-surface-0)',
+  ' 1px -1px 0 var(--color-surface-0)',
+  '-1px  1px 0 var(--color-surface-0)',
+  ' 1px  1px 0 var(--color-surface-0)',
+  ' 0   -1px 0 var(--color-surface-0)',
+  ' 0    1px 0 var(--color-surface-0)',
+  '-1px  0   0 var(--color-surface-0)',
+  ' 1px  0   0 var(--color-surface-0)',
+].join(',')
+
+function anchorToTranslateX(anchor: string): string {
+  switch (anchor) {
+    case 'end': return '-100%'
+    case 'middle': return '-50%'
+    default: return '0%'
+  }
+}
+
+function EdgeLabel({ testId, x, y, fontSize, color, children, translateX = '0%' }: {
+  testId: string
+  x: number
+  y: number
+  fontSize: number
+  color: string
+  children: React.ReactNode
+  translateX?: string
+}) {
+  return (
+    <div
+      data-testid={testId}
+      className="nodrag nopan"
+      style={{
+        position: 'absolute',
+        transform: `translate(${x}px, ${y}px) translateX(${translateX}) translateY(-50%)`,
+        fontSize,
+        fontFamily: 'var(--font-sans)',
+        color,
+        textShadow: haloShadow,
+        pointerEvents: 'none',
+        zIndex: 1,
+      }}
+    >
+      {children}
+    </div>
+  )
+}
+
 export const AssociationEdge = memo(function AssociationEdge(props: EdgeProps) {
   const { id, source, target, sourceX, sourceY, targetX, targetY, data } = props
   const d = data as AssociationEdgeData | undefined
@@ -60,14 +108,6 @@ export const AssociationEdge = memo(function AssociationEdge(props: EdgeProps) {
     }
   }
 
-  const labelCommonProps = {
-    dominantBaseline: 'central' as const,
-    paintOrder: 'stroke' as const,
-    pointerEvents: 'none' as const,
-    stroke: 'var(--color-surface-0)',
-    strokeWidth: 3,
-  }
-
   // Self-loop: source and target are the same node
   if (source === target) {
     // Right-side handles: source at 20% (upper), target at 80% (lower)
@@ -86,38 +126,20 @@ export const AssociationEdge = memo(function AssociationEdge(props: EdgeProps) {
           markerStart={markerForDecoration(sourceDecoration)}
           style={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
         />
-        {d?.sourceMultiplicity && (
-          <text
-            data-testid={`edge-label-${id}-source-multiplicity`}
-            x={labelX} y={labelY - 10}
-            fontSize={12} fontFamily="var(--font-sans)" fill="var(--color-ink-muted)"
-            textAnchor="start" {...labelCommonProps}
-          >{d.sourceMultiplicity}</text>
-        )}
-        {d?.targetMultiplicity && (
-          <text
-            data-testid={`edge-label-${id}-target-multiplicity`}
-            x={labelX} y={labelY + 10}
-            fontSize={12} fontFamily="var(--font-sans)" fill="var(--color-ink-muted)"
-            textAnchor="start" {...labelCommonProps}
-          >{d.targetMultiplicity}</text>
-        )}
-        {d?.sourceRole && (
-          <text
-            data-testid={`edge-label-${id}-source-role`}
-            x={labelX} y={labelY - 24}
-            fontSize={10} fontFamily="var(--font-sans)" fill="var(--color-ink-faint)"
-            textAnchor="start" {...labelCommonProps}
-          >{d.sourceRole}</text>
-        )}
-        {d?.targetRole && (
-          <text
-            data-testid={`edge-label-${id}-target-role`}
-            x={labelX} y={labelY + 24}
-            fontSize={10} fontFamily="var(--font-sans)" fill="var(--color-ink-faint)"
-            textAnchor="start" {...labelCommonProps}
-          >{d.targetRole}</text>
-        )}
+        <EdgeLabelRenderer>
+          {d?.sourceMultiplicity && (
+            <EdgeLabel testId={`edge-label-${id}-source-multiplicity`} x={labelX} y={labelY - 10} fontSize={12} color="var(--color-ink-muted)">{d.sourceMultiplicity}</EdgeLabel>
+          )}
+          {d?.targetMultiplicity && (
+            <EdgeLabel testId={`edge-label-${id}-target-multiplicity`} x={labelX} y={labelY + 10} fontSize={12} color="var(--color-ink-muted)">{d.targetMultiplicity}</EdgeLabel>
+          )}
+          {d?.sourceRole && (
+            <EdgeLabel testId={`edge-label-${id}-source-role`} x={labelX} y={labelY - 24} fontSize={10} color="var(--color-ink-faint)">{d.sourceRole}</EdgeLabel>
+          )}
+          {d?.targetRole && (
+            <EdgeLabel testId={`edge-label-${id}-target-role`} x={labelX} y={labelY + 24} fontSize={10} color="var(--color-ink-faint)">{d.targetRole}</EdgeLabel>
+          )}
+        </EdgeLabelRenderer>
       </>
     )
   }
@@ -163,65 +185,20 @@ export const AssociationEdge = memo(function AssociationEdge(props: EdgeProps) {
         style={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
       />
 
-      {/* Multiplicity labels */}
-      {d?.sourceMultiplicity && (
-        <text
-          data-testid={`edge-label-${id}-source-multiplicity`}
-          x={sourceBaseX + normalX * 12}
-          y={sourceBaseY + normalY * 12}
-          fontSize={12}
-          fontFamily="var(--font-sans)"
-          fill="var(--color-ink-muted)"
-          textAnchor={sourceAnchor}
-          {...labelCommonProps}
-        >
-          {d.sourceMultiplicity}
-        </text>
-      )}
-      {d?.targetMultiplicity && (
-        <text
-          data-testid={`edge-label-${id}-target-multiplicity`}
-          x={targetBaseX + normalX * 12}
-          y={targetBaseY + normalY * 12}
-          fontSize={12}
-          fontFamily="var(--font-sans)"
-          fill="var(--color-ink-muted)"
-          textAnchor={targetAnchor}
-          {...labelCommonProps}
-        >
-          {d.targetMultiplicity}
-        </text>
-      )}
-
-      {/* Role labels */}
-      {d?.sourceRole && (
-        <text
-          data-testid={`edge-label-${id}-source-role`}
-          x={sourceBaseX + normalX * 28}
-          y={sourceBaseY + normalY * 28}
-          fontSize={10}
-          fontFamily="var(--font-sans)"
-          fill="var(--color-ink-faint)"
-          textAnchor={sourceAnchor}
-          {...labelCommonProps}
-        >
-          {d.sourceRole}
-        </text>
-      )}
-      {d?.targetRole && (
-        <text
-          data-testid={`edge-label-${id}-target-role`}
-          x={targetBaseX + normalX * 28}
-          y={targetBaseY + normalY * 28}
-          fontSize={10}
-          fontFamily="var(--font-sans)"
-          fill="var(--color-ink-faint)"
-          textAnchor={targetAnchor}
-          {...labelCommonProps}
-        >
-          {d.targetRole}
-        </text>
-      )}
+      <EdgeLabelRenderer>
+        {d?.sourceMultiplicity && (
+          <EdgeLabel testId={`edge-label-${id}-source-multiplicity`} x={sourceBaseX + normalX * 12} y={sourceBaseY + normalY * 12} fontSize={12} color="var(--color-ink-muted)" translateX={anchorToTranslateX(sourceAnchor)}>{d.sourceMultiplicity}</EdgeLabel>
+        )}
+        {d?.targetMultiplicity && (
+          <EdgeLabel testId={`edge-label-${id}-target-multiplicity`} x={targetBaseX + normalX * 12} y={targetBaseY + normalY * 12} fontSize={12} color="var(--color-ink-muted)" translateX={anchorToTranslateX(targetAnchor)}>{d.targetMultiplicity}</EdgeLabel>
+        )}
+        {d?.sourceRole && (
+          <EdgeLabel testId={`edge-label-${id}-source-role`} x={sourceBaseX + normalX * 28} y={sourceBaseY + normalY * 28} fontSize={10} color="var(--color-ink-faint)" translateX={anchorToTranslateX(sourceAnchor)}>{d.sourceRole}</EdgeLabel>
+        )}
+        {d?.targetRole && (
+          <EdgeLabel testId={`edge-label-${id}-target-role`} x={targetBaseX + normalX * 28} y={targetBaseY + normalY * 28} fontSize={10} color="var(--color-ink-faint)" translateX={anchorToTranslateX(targetAnchor)}>{d.targetRole}</EdgeLabel>
+        )}
+      </EdgeLabelRenderer>
     </>
   )
 })

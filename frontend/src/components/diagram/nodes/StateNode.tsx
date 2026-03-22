@@ -59,7 +59,7 @@ export const StateNode = memo(function StateNode({ data }: NodeProps) {
       {/* Entry/Exit actions */}
       {hasActions && (
         <div
-          className={cn('px-2.5 py-1 text-ink-muted text-2xs', hasNested && 'border-b border-border')}
+          className={cn('px-2.5 py-1 text-ink-muted text-xxs', hasNested && 'border-b border-border')}
         >
           {d.entryActions.map((action, i) => (
             <div key={`entry-${i}`} className="py-px">
@@ -76,7 +76,7 @@ export const StateNode = memo(function StateNode({ data }: NodeProps) {
 
       {/* Nested states (collapsed indicator) */}
       {hasNested && (
-        <div className="px-2.5 py-1 text-ink-faint text-2xs italic">
+        <div className="px-2.5 py-1 text-ink-faint text-xxs italic">
           {d.isCollapsed
             ? `[${d.nestedStates.length} nested state${d.nestedStates.length > 1 ? 's' : ''}]`
             : d.nestedStates.map((ns, i) => (

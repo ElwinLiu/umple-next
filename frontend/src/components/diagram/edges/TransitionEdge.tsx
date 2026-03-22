@@ -1,5 +1,5 @@
 import { memo } from 'react'
-import { BaseEdge, getBezierPath, type EdgeProps } from '@xyflow/react'
+import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react'
 
 export interface TransitionEdgeData {
   event: string
@@ -37,28 +37,32 @@ export const TransitionEdge = memo(function TransitionEdge(props: EdgeProps) {
       />
 
       {label && (
-        <g transform={`translate(${labelX}, ${labelY})`}>
-          <rect
-            x={-4}
-            y={-12}
-            width={label.length * 7 + 8}
-            height={16}
-            rx={3}
-            fill="var(--color-surface-0)"
-            fillOpacity={0.85}
-            stroke="var(--color-border)"
-            strokeWidth={0.5}
-          />
-          <text
-            fontSize={10}
-            fill="var(--color-ink)"
-            fontFamily="monospace"
-            dominantBaseline="central"
-            textAnchor="start"
+        <EdgeLabelRenderer>
+          <div
+            className="nodrag nopan"
+            style={{
+              position: 'absolute',
+              transform: `translate(${labelX}px, ${labelY}px) translate(-50%, -50%)`,
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
           >
-            {label}
-          </text>
-        </g>
+            <div
+              style={{
+                background: 'color-mix(in srgb, var(--color-surface-0) 85%, transparent)',
+                border: '0.5px solid var(--color-border)',
+                borderRadius: 3,
+                padding: '2px 6px',
+                fontSize: 10,
+                fontFamily: 'var(--font-mono)',
+                color: 'var(--color-ink)',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {label}
+            </div>
+          </div>
+        </EdgeLabelRenderer>
       )}
     </>
   )

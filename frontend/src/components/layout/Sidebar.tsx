@@ -17,6 +17,14 @@ import {
   Columns2,
   Play,
   Loader2,
+  BookOpen,
+  MessageCircleQuestion,
+  Github,
+  Bug,
+  Globe,
+  GraduationCap,
+  Shield,
+  ExternalLink,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -25,6 +33,9 @@ import {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuLabel,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
@@ -137,6 +148,9 @@ function SidebarContent() {
         <ShowHideSection open={isOpen('diagramDisplay')} onToggle={() => toggleSection('diagramDisplay')} />
         <GenerateCodeSection open={isOpen('generateCode')} onToggle={() => toggleSection('generateCode')} />
       </div>
+
+      {/* Footer */}
+      <SidebarFooter />
     </>
   )
 }
@@ -457,6 +471,70 @@ const CATEGORY_TO_VIEW: Record<string, DiagramView> = {
   'Feature Diagrams': 'feature',
 }
 
+// ── Footer links data ──
+
+const FOOTER_LINKS = [
+  {
+    items: [
+      { label: 'User Manual', href: 'https://manual.umple.org', icon: BookOpen },
+      { label: 'Ask a Question', href: 'https://umple.org/questions', icon: MessageCircleQuestion },
+    ],
+  },
+  {
+    items: [
+      { label: 'GitHub Repository', href: 'https://github.com/umple/umple', icon: Github },
+      { label: 'Report an Issue', href: 'https://github.com/umple/umple/issues/new', icon: Bug },
+      { label: 'Umple Website', href: 'https://umple.org', icon: Globe },
+    ],
+  },
+  {
+    items: [
+      { label: 'University of Ottawa', href: 'https://www.uottawa.ca', icon: GraduationCap },
+      { label: 'Privacy Policy', href: 'https://umple.org/privacy', icon: Shield },
+    ],
+  },
+]
+
+// ── Sidebar footer ──
+
+function SidebarFooter() {
+  return (
+    <div className="shrink-0 border-t border-border p-2" data-testid="sidebar-footer">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          className="flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer hover:bg-surface-2 data-[state=open]:bg-surface-2"
+          aria-label="University of Ottawa resources"
+          data-testid="sidebar-footer-menu"
+        >
+          <img src="/uottawa-logo.svg" alt="" className="h-8 w-auto shrink-0 dark:invert" />
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-medium text-ink truncate">University of Ottawa</div>
+            <div className="text-xxs text-ink-muted">Resources & help</div>
+          </div>
+          <ChevronsUpDown className="size-3.5 text-ink-faint shrink-0" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="start" className="w-56">
+          {FOOTER_LINKS.map((group, gi) => (
+            <DropdownMenuGroup key={gi}>
+              {gi > 0 && <DropdownMenuSeparator />}
+              {group.items.map((item) => (
+                <DropdownMenuItem
+                  key={item.href}
+                  onSelect={() => window.open(item.href, '_blank', 'noopener,noreferrer')}
+                >
+                  <item.icon className="size-3.5" />
+                  {item.label}
+                  <ExternalLink className="ml-auto size-3 text-ink-faint" />
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
 // ── Settings dropdown ──
 
 function SettingsDropdown() {
@@ -473,7 +551,7 @@ function SettingsDropdown() {
         </DropdownMenuTrigger>
       </Tip>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuLabel className="text-2xs uppercase tracking-wider text-ink-muted font-semibold">
+        <DropdownMenuLabel className="text-xxs uppercase tracking-wider text-ink-muted font-semibold">
           Theme
         </DropdownMenuLabel>
         <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as 'light' | 'dark' | 'system')}>

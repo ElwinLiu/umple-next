@@ -32,7 +32,8 @@ export function CanvasBanner() {
     generationRequested,
   } = useUiStore()
   const { viewMode, setViewMode } = useDiagramStore()
-  const { compile, compiling: manualCompiling } = useCompile()
+  const { compile } = useCompile()
+  const compiling = useDiagramStore((s) => s.compiling)
   const handleGenerate = useGenerate()
 
   useEffect(() => {
@@ -65,17 +66,17 @@ export function CanvasBanner() {
         <Tip content="Compile (Ctrl+')" side="bottom">
           <button
             onClick={compile}
-            disabled={manualCompiling}
-            aria-label={manualCompiling ? 'Compiling' : "Compile (Ctrl+')"}
+            disabled={compiling}
+            aria-label={compiling ? 'Compiling' : "Compile (Ctrl+')"}
             data-testid="compile-button"
             className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md hover:bg-border text-ink disabled:cursor-not-allowed bg-surface-0/60"
           >
-            {manualCompiling ? (
+            {compiling ? (
               <Loader2 className="size-3.5 animate-spin text-ink-muted" />
             ) : (
-              <Hammer className="size-3 text-ink-muted" />
+              <Hammer className="size-3.5 text-ink-muted" />
             )}
-            {manualCompiling ? 'Compiling...' : 'Compile'}
+            {compiling ? 'Compiling...' : 'Compile'}
           </button>
         </Tip>
 
