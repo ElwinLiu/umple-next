@@ -69,12 +69,12 @@ export function CanvasBanner() {
             disabled={compiling}
             aria-label={compiling ? 'Compiling' : "Compile (Ctrl+')"}
             data-testid="compile-button"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md hover:bg-border text-ink disabled:cursor-not-allowed bg-surface-1"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md bg-brand text-ink-inverse hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-70"
           >
             {compiling ? (
-              <Loader2 className="size-3.5 animate-spin text-ink-muted" />
+              <Loader2 className="size-3.5 animate-spin" />
             ) : (
-              <Hammer className="size-3.5 text-ink-muted" />
+              <Hammer className="size-3.5" />
             )}
             {compiling ? 'Compiling...' : 'Compile'}
           </button>

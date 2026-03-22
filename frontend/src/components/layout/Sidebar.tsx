@@ -4,6 +4,7 @@ import { useEditorStore } from '../../stores/editorStore'
 import { useDiagramStore, type DiagramView, type DisplayPrefKey, type GvLayoutAlgorithm } from '../../stores/diagramStore'
 import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
+import { useIsDark } from '../../hooks/useIsDark'
 import { UMPLE_TARGETS, type ExampleCategory } from '../../api/types'
 import { Combobox } from '@/components/ui/combobox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -88,17 +89,17 @@ function Section({
     <div>
       <button
         onClick={onToggle}
-        className="flex items-center gap-2 w-full px-4 py-1.5 text-sm font-medium text-ink hover:bg-surface-2 transition-colors cursor-pointer text-left"
+        className="flex items-center gap-2 w-full px-4 pt-2.5 pb-1.5 text-[13px] font-medium text-ink hover:bg-surface-2/60 transition-colors cursor-pointer text-left"
       >
         {open ? (
-          <ChevronDown className="size-3.5 text-ink-muted shrink-0" />
+          <ChevronDown className="size-3.5 text-ink-faint shrink-0" />
         ) : (
-          <ChevronRight className="size-3.5 text-ink-muted shrink-0" />
+          <ChevronRight className="size-3.5 text-ink-faint shrink-0" />
         )}
         {title}
       </button>
       {open && (
-        <div className="px-4 pb-2 pt-1 ml-5.5">
+        <div className="px-4 pb-3 pt-0.5 ml-5.5">
           {children}
         </div>
       )}
@@ -112,6 +113,7 @@ const SECTION_KEYS = ['diagramType', 'diagramDisplay', 'generateCode', 'ai'] as 
 type SectionKey = (typeof SECTION_KEYS)[number]
 
 function SidebarContent() {
+  const dark = useIsDark()
   const openCommandPalette = useUiStore((s) => s.openCommandPalette)
   const [allExpanded, setAllExpanded] = useState(true)
   const [overrides, setOverrides] = useState<Partial<Record<SectionKey, boolean>>>({})
@@ -134,7 +136,7 @@ function SidebarContent() {
       {/* Row 1: logo + title left, layout right */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
         <a href="/" className="flex items-center gap-2.5 no-underline text-ink" aria-label="UmpleOnline home">
-          <img src="/umple-logo.svg" alt="" className="h-6 w-auto" />
+          <img src={dark ? '/umple-logo-light.svg' : '/umple-logo.svg'} alt="" className="h-6 w-auto" />
           <span className="text-lg font-semibold tracking-tight">UmpleOnline</span>
         </a>
 
@@ -142,7 +144,7 @@ function SidebarContent() {
       </div>
 
       {/* Row 2: fold/expand all left, search + settings right */}
-      <div className="flex items-center justify-between px-4 pb-2.5 shrink-0 border-b border-border">
+      <div className="flex items-center justify-between px-4 pb-2.5 shrink-0 border-b border-border/60">
         <Tip content={anyOpen ? 'Collapse all' : 'Expand all'} side="bottom">
           <button
             onClick={toggleAll}
@@ -167,7 +169,7 @@ function SidebarContent() {
       </div>
 
       {/* Scrollable sections */}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin pt-1 divide-y divide-border">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin py-1 space-y-1">
         <DiagramTypeSection open={isOpen('diagramType')} onToggle={() => toggleSection('diagramType')} />
         <ShowHideSection open={isOpen('diagramDisplay')} onToggle={() => toggleSection('diagramDisplay')} />
         <GenerateCodeSection open={isOpen('generateCode')} onToggle={() => toggleSection('generateCode')} />
@@ -357,7 +359,7 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
             {v.label}
           </label>
         ))}
-        <div className="border-t border-border mt-2 pt-2">
+        <div className="mt-3">
           <label className="flex items-center gap-2 py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors">
             <input
               type="checkbox"
@@ -369,7 +371,7 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
           </label>
         </div>
         {exampleOptions.length > 0 && (
-          <div className="border-t border-border mt-2 pt-2">
+          <div className="mt-2.5">
             <Combobox
               key={viewMode}
               options={exampleOptions}
@@ -422,7 +424,7 @@ function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => vo
         ) : (
           <p className="text-xxs text-ink-faint">No display options for this diagram type.</p>
         )}
-        <div className="border-t border-border mt-2 pt-2">
+        <div className="mt-3">
           <div className="text-xxs font-medium text-ink-muted mb-1.5">Layout Algorithm</div>
           <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
             <SelectTrigger>
@@ -561,7 +563,7 @@ const FOOTER_LINKS = [
 
 function SidebarFooter() {
   return (
-    <div className="shrink-0 border-t border-border p-2" data-testid="sidebar-footer">
+    <div className="shrink-0 border-t border-border/60 p-2" data-testid="sidebar-footer">
       <DropdownMenu>
         <DropdownMenuTrigger
           className="flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer hover:bg-surface-2 data-[state=open]:bg-surface-2"

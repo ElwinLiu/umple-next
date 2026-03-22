@@ -89,17 +89,17 @@ export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: (
     <div>
       <button
         onClick={onToggle}
-        className="flex items-center gap-2 w-full px-4 py-1.5 text-sm font-medium text-ink hover:bg-surface-2 transition-colors cursor-pointer text-left"
+        className="flex items-center gap-2 w-full px-4 pt-2.5 pb-1.5 text-[13px] font-medium text-ink hover:bg-surface-2/60 transition-colors cursor-pointer text-left"
       >
         {open ? (
-          <ChevronDown className="size-3.5 text-ink-muted shrink-0" />
+          <ChevronDown className="size-3.5 text-ink-faint shrink-0" />
         ) : (
-          <ChevronRight className="size-3.5 text-ink-muted shrink-0" />
+          <ChevronRight className="size-3.5 text-ink-faint shrink-0" />
         )}
         AI Assistant
       </button>
       {open && (
-        <div className="px-4 pb-2 pt-1 ml-5.5">
+        <div className="px-4 pb-3 pt-0.5 ml-5.5">
           <div className="space-y-3">
             {/* Provider */}
             <div>

@@ -17,7 +17,7 @@ function Badges() {
         </span>
       )}
       {warningCount > 0 && (
-        <span className="flex items-center gap-1 rounded-full bg-ink-faint/15 px-1.5 py-0.5 text-xxs font-semibold leading-none text-ink-muted">
+        <span className="flex items-center gap-1 rounded-full bg-status-warning/15 px-1.5 py-0.5 text-xxs font-semibold leading-none text-status-warning">
           {warningCount} {warningCount === 1 ? 'warning' : 'warnings'}
         </span>
       )}
