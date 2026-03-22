@@ -51,7 +51,7 @@ export function TaskCreator() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder="Task title"
-          className="px-2.5 py-2 text-[13px] border border-border rounded bg-surface-0 text-ink placeholder:text-ink-faint focus:border-brand outline-none transition-colors"
+          className="px-2.5 py-2 text-sm border border-border rounded bg-surface-0 text-ink placeholder:text-ink-faint focus:border-brand outline-none transition-colors"
         />
 
         <label className="sr-only" htmlFor="task-description">Task description</label>
@@ -60,7 +60,7 @@ export function TaskCreator() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Task description (instructions for the student)"
-          className="px-2.5 py-2 text-[13px] font-[inherit] border border-border rounded bg-surface-0 text-ink min-h-[80px] resize-y placeholder:text-ink-faint focus:border-brand outline-none transition-colors"
+          className="px-2.5 py-2 text-sm border border-border rounded bg-surface-0 text-ink min-h-[80px] resize-y placeholder:text-ink-faint focus:border-brand outline-none transition-colors"
         />
 
         <div className="text-xs text-ink-muted">
@@ -71,7 +71,7 @@ export function TaskCreator() {
           onClick={handleCreate}
           disabled={creating || !title.trim()}
           size="sm"
-          className="self-start text-[13px]"
+          className="self-start text-sm"
         >
           {creating ? 'Creating...' : 'Create Task'}
         </Button>

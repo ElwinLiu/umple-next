@@ -39,7 +39,7 @@ export function Combobox({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          'flex w-full items-center justify-between gap-1 rounded-md border border-surface-2 bg-surface-0 px-2 py-1 text-[12px] text-ink outline-none hover:bg-surface-1 transition-colors cursor-pointer',
+          'flex w-full items-center justify-between gap-1 rounded-md border border-surface-2 bg-surface-0 px-2 py-1 text-xs text-ink outline-none hover:bg-surface-1 transition-colors cursor-pointer',
           !selected && 'text-ink-muted',
           className
         )}
@@ -55,10 +55,10 @@ export function Combobox({
       >
         <Command shouldFilter={searchable}>
           {searchable && (
-            <CommandInput placeholder={searchPlaceholder} className="h-7 text-[12px]" />
+            <CommandInput placeholder={searchPlaceholder} className="h-7 text-xs" />
           )}
           <CommandList className="max-h-[180px]">
-            <CommandEmpty className="py-3 text-center text-[11px] text-ink-faint">
+            <CommandEmpty className="py-3 text-center text-xs text-ink-faint">
               {emptyText}
             </CommandEmpty>
             <CommandGroup>
@@ -70,7 +70,7 @@ export function Combobox({
                     onSelect(option.value)
                     setOpen(false)
                   }}
-                  className="gap-1.5 px-2 py-1 text-[12px]"
+                  className="gap-1.5 px-2 py-1 text-xs"
                 >
                   <CheckIcon className={cn('size-3 shrink-0', option.value === value ? 'opacity-100' : 'opacity-0')} />
                   <span className="truncate">{option.label}</span>

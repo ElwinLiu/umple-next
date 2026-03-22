@@ -105,26 +105,26 @@ export function AiPanel() {
 
         {mode === 'explain' && (
           <div className="flex flex-col gap-3">
-            <p className="text-[13px] text-ink-muted m-0">
+            <p className="text-sm text-ink-muted m-0">
               Send the current editor code to AI for explanation.
             </p>
             <Button
               onClick={handleExplain}
               disabled={loading || !code.trim()}
               size="sm"
-              className="self-start text-[13px]"
+              className="self-start text-sm"
             >
               {loading ? 'Analyzing...' : 'Explain Current Model'}
             </Button>
 
             {(loading && !explanation) && (
-              <div className="text-[13px] text-ink-muted">
+              <div className="text-sm text-ink-muted">
                 Analyzing your model...
               </div>
             )}
 
             {displayedText && (
-              <div className="p-3 bg-surface-1 border border-border rounded text-[13px] leading-relaxed whitespace-pre-wrap text-ink">
+              <div className="p-3 bg-surface-1 border border-border rounded text-sm leading-relaxed whitespace-pre-wrap text-ink">
                 {displayedText}
                 {displayedText.length < (explanation?.length ?? 0) && (
                   <span className="text-ink-faint">|</span>

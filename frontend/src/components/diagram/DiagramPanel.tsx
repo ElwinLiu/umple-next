@@ -150,7 +150,7 @@ function ToolbarButton({
     <Tip content={label} side="bottom">
       <button
         onClick={onClick}
-        className={`px-1.5 py-0.5 text-[11px] cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 ${
+        className={`px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 ${
           active
             ? 'text-brand font-semibold bg-brand-light'
             : 'text-ink-muted hover:text-ink hover:bg-surface-2'

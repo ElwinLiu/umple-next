@@ -254,7 +254,7 @@ function ChromeTab({ tab, isActive, isOnly, onActivate, onClose, onRename, onClo
           tabIndex={isActive ? 0 : -1}
           className={`
             group relative flex items-center h-[34px] pl-3 pr-1.5 shrink-0 cursor-pointer
-            select-none text-[13px] font-medium transition-colors rounded-t-[8px]
+            select-none text-sm font-medium transition-colors rounded-t-[8px]
             ${isActive
               ? 'chrome-tab-active bg-surface-0 text-ink mb-[-1px]'
               : 'text-ink-muted hover:text-ink hover:bg-surface-tab'
@@ -277,7 +277,7 @@ function ChromeTab({ tab, isActive, isOnly, onActivate, onClose, onRename, onClo
                 if (e.key === 'Enter') commitRename()
                 if (e.key === 'Escape') setEditing(false)
               }}
-              className="w-20 bg-transparent text-[13px] text-ink outline-none border-b border-brand"
+              className="w-20 bg-transparent text-sm text-ink outline-none border-b border-brand"
               onClick={(e) => e.stopPropagation()}
             />
           ) : (

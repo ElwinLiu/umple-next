@@ -5,7 +5,7 @@ export function StructureDiagram() {
 
   if (!structureText) {
     return (
-      <div className="p-6 text-ink-faint text-[13px] font-mono">
+      <div className="p-6 text-ink-faint text-sm font-mono">
         No structure diagram available. Compile a model to generate one.
       </div>
     )

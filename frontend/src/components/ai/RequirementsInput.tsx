@@ -24,7 +24,7 @@ export function RequirementsInput({ onGenerate, loading }: RequirementsInputProp
         value={requirements}
         onChange={(e) => setRequirements(e.target.value)}
         placeholder="Describe your system in natural language..."
-        className="w-full min-h-[120px] p-2.5 text-[13px] font-[inherit] border border-border rounded bg-surface-1 text-ink resize-y box-border placeholder:text-ink-faint focus:border-brand outline-none transition-colors"
+        className="w-full min-h-[120px] p-2.5 text-sm border border-border rounded bg-surface-1 text-ink resize-y box-border placeholder:text-ink-faint focus:border-brand outline-none transition-colors"
       />
 
       <div className="flex flex-wrap gap-1.5">
@@ -32,7 +32,7 @@ export function RequirementsInput({ onGenerate, loading }: RequirementsInputProp
           <button
             key={prompt}
             onClick={() => setRequirements(prompt)}
-            className="px-2.5 py-1 text-[11px] border border-border rounded-full bg-transparent text-ink-muted cursor-pointer whitespace-nowrap hover:border-border-strong hover:text-ink transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
+            className="px-2.5 py-1 text-xs border border-border rounded-full bg-transparent text-ink-muted cursor-pointer whitespace-nowrap hover:border-border-strong hover:text-ink transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
           >
             {prompt}
           </button>
@@ -43,7 +43,7 @@ export function RequirementsInput({ onGenerate, loading }: RequirementsInputProp
         onClick={() => onGenerate(requirements)}
         disabled={loading || !requirements.trim()}
         size="sm"
-        className="self-start text-[13px]"
+        className="self-start text-sm"
       >
         {loading ? 'Generating...' : 'Generate Umple Code'}
       </Button>

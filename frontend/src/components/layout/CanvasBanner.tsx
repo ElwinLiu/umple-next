@@ -68,7 +68,7 @@ export function CanvasBanner() {
             disabled={manualCompiling}
             aria-label={manualCompiling ? 'Compiling' : "Compile (Ctrl+')"}
             data-testid="compile-button"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer rounded-md hover:bg-border text-ink disabled:cursor-not-allowed bg-surface-0/60"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md hover:bg-border text-ink disabled:cursor-not-allowed bg-surface-0/60"
           >
             {manualCompiling ? (
               <Loader2 className="size-3.5 animate-spin text-ink-muted" />
@@ -81,7 +81,7 @@ export function CanvasBanner() {
 
         <DropdownMenu>
           <Tip content="Diagram view" side="bottom">
-            <DropdownMenuTrigger className="flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-0/60 transition-colors cursor-pointer outline-none" aria-label="Diagram view">
+            <DropdownMenuTrigger className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-0/60 transition-colors cursor-pointer outline-none" aria-label="Diagram view">
               {VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}
               <ChevronDown className="size-3" />
             </DropdownMenuTrigger>
@@ -102,7 +102,7 @@ export function CanvasBanner() {
         <Tip content="Diagram (Ctrl+1)" side="bottom">
           <button
             onClick={() => setRightPanelView('diagram')}
-            className={cn(lineTabClasses({ active: rightPanelView === 'diagram' }), 'text-[11px] px-2.5 py-1')}
+            className={cn(lineTabClasses({ active: rightPanelView === 'diagram' }), 'text-xs px-2.5 py-1')}
           >
             Diagram
           </button>
@@ -112,7 +112,7 @@ export function CanvasBanner() {
             <Tip content="Generated code (Ctrl+2)" side="bottom">
               <button
                 onClick={() => setRightPanelView('generated')}
-                className={cn(lineTabClasses({ active: rightPanelView === 'generated' }), 'text-[11px] px-2.5 py-1 flex items-center gap-1.5')}
+                className={cn(lineTabClasses({ active: rightPanelView === 'generated' }), 'text-xs px-2.5 py-1 flex items-center gap-1.5')}
               >
                 {generatingCode && <span className="w-1.5 h-1.5 rounded-full bg-status-warning animate-pulse" />}
                 {generatedLanguage}
@@ -121,7 +121,7 @@ export function CanvasBanner() {
             <DropdownMenu>
               <Tip content="Change language" side="bottom">
                 <DropdownMenuTrigger
-                  className="px-1 py-0.5 text-[11px] transition-colors cursor-pointer outline-none text-ink-faint hover:text-ink-muted"
+                  className="px-1 py-0.5 text-xs transition-colors cursor-pointer outline-none text-ink-faint hover:text-ink-muted"
                   aria-label="Change language"
                 >
                   <ChevronDown className="size-3" />

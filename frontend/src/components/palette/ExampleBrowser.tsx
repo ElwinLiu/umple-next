@@ -90,7 +90,7 @@ export function ExampleBrowser() {
             }`}
           >
             <div className="font-medium">{ex.name}</div>
-            <div className="text-[10px] text-ink-muted mt-px">{ex.category}</div>
+            <div className="text-2xs text-ink-muted mt-px">{ex.category}</div>
           </button>
         ))}
       </div>

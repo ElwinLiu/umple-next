@@ -53,7 +53,7 @@ function Section({
     <div>
       <button
         onClick={onToggle}
-        className="flex items-center gap-2 w-full px-4 py-1.5 text-[13px] font-medium text-ink hover:bg-surface-2 transition-colors cursor-pointer text-left"
+        className="flex items-center gap-2 w-full px-4 py-1.5 text-sm font-medium text-ink hover:bg-surface-2 transition-colors cursor-pointer text-left"
       >
         {open ? (
           <ChevronDown className="size-3.5 text-ink-muted shrink-0" />
@@ -100,7 +100,7 @@ function SidebarContent() {
       <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
         <a href="/" className="flex items-center gap-2.5 no-underline text-ink" aria-label="UmpleOnline home">
           <img src="/umple-logo.svg" alt="" className="h-6 w-auto" />
-          <span className="text-[17px] font-semibold tracking-tight">UmpleOnline</span>
+          <span className="text-lg font-semibold tracking-tight">UmpleOnline</span>
         </a>
 
         <LayoutToggle />
@@ -307,7 +307,7 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
     <Section title="Diagram Type" open={open} onToggle={onToggle}>
       <div className="space-y-1">
         {views.map((v) => (
-          <label key={v.value} className="flex items-center gap-2 py-0.5 text-[12px] text-ink cursor-pointer hover:text-ink-muted transition-colors">
+          <label key={v.value} className="flex items-center gap-2 py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors">
             <input
               type="radio"
               name="diagramType"
@@ -319,7 +319,7 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
           </label>
         ))}
         <div className="border-t border-border mt-2 pt-2">
-          <label className="flex items-center gap-2 py-0.5 text-[12px] text-ink cursor-pointer hover:text-ink-muted transition-colors">
+          <label className="flex items-center gap-2 py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors">
             <input
               type="checkbox"
               checked={renderMode === 'graphviz'}
@@ -356,7 +356,7 @@ function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => vo
     <Section title="Diagram Display" open={open} onToggle={onToggle}>
       <div className="space-y-1">
         {DIAGRAM_TOGGLES.map(({ key, label }) => (
-          <label key={key} className="flex items-center gap-2 py-0.5 text-[12px] text-ink cursor-pointer hover:text-ink-muted transition-colors">
+          <label key={key} className="flex items-center gap-2 py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors">
             <input
               type="checkbox"
               checked={values[key]}
@@ -419,7 +419,7 @@ function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () =
             onClick={handleGenerate}
             disabled={generatingCode}
             size="xs"
-            className="flex-1 text-[12px]"
+            className="flex-1 text-xs"
           >
             {generatingCode ? (
               <Loader2 className="size-3 animate-spin" />
@@ -433,7 +433,7 @@ function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () =
             disabled={running}
             variant="secondary"
             size="xs"
-            className="text-[12px]"
+            className="text-xs"
           >
             {running ? (
               <Loader2 className="size-3 animate-spin" />
@@ -473,7 +473,7 @@ function SettingsDropdown() {
         </DropdownMenuTrigger>
       </Tip>
       <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-ink-muted font-semibold">
+        <DropdownMenuLabel className="text-2xs uppercase tracking-wider text-ink-muted font-semibold">
           Theme
         </DropdownMenuLabel>
         <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as 'light' | 'dark' | 'system')}>

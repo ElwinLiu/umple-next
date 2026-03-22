@@ -81,7 +81,7 @@ export function CodeOutput({ code, language }: CodeOutputProps) {
     <div className="h-full relative">
       <button
         onClick={handleCopy}
-        className={`absolute top-2 right-3 z-10 px-2.5 py-1 text-[11px] border rounded cursor-pointer transition-colors ${
+        className={`absolute top-2 right-3 z-10 px-2.5 py-1 text-xs border rounded cursor-pointer transition-colors ${
           copied
             ? 'bg-surface-1 text-status-success border-status-success'
             : 'bg-surface-0 text-ink-muted border-border hover:bg-surface-1 hover:border-border-strong'
