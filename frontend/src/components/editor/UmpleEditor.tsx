@@ -1,5 +1,5 @@
 import { useEffect, useRef, useCallback } from 'react'
-import { EditorView, ViewUpdate } from '@codemirror/view'
+import { EditorView, ViewUpdate, scrollPastEnd } from '@codemirror/view'
 import { EditorState, Compartment } from '@codemirror/state'
 import { basicSetup } from 'codemirror'
 import { keymap } from '@codemirror/view'
@@ -47,6 +47,7 @@ export function UmpleEditor({ code, onChange, readOnly = false }: UmpleEditorPro
           '&': { height: '100%' },
           '.cm-scroller': { overflow: 'auto' },
         }),
+        scrollPastEnd(),
         ...(readOnly ? [EditorState.readOnly.of(true)] : []),
       ],
     })
