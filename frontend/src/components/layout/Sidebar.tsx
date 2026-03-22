@@ -4,7 +4,7 @@ import { useEditorStore } from '../../stores/editorStore'
 import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
 import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
-import { UMPLE_TARGETS, type ExampleEntry } from '../../api/types'
+import { UMPLE_TARGETS, type ExampleCategory } from '../../api/types'
 import { Combobox } from '@/components/ui/combobox'
 import {
   ChevronDown,
@@ -269,7 +269,7 @@ function ResizeHandle() {
 
 function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const { viewMode, setViewMode, renderMode, setRenderMode } = useDiagramStore()
-  const [allExamples, setAllExamples] = useState<ExampleEntry[]>([])
+  const [allCategories, setAllCategories] = useState<ExampleCategory[]>([])
   const [loaded, setLoaded] = useState(false)
   const loadExample = useEditorStore((s) => s.loadExample)
 
@@ -283,15 +283,16 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
   useEffect(() => {
     if (!loaded) {
       setLoaded(true)
-      api.listExamples().then(setAllExamples).catch(() => {})
+      api.listExamples().then(setAllCategories).catch(() => {})
     }
   }, [loaded])
 
   const exampleOptions = useMemo(
-    () => allExamples
-      .filter((ex) => getExampleCategory(ex.name) === viewMode)
+    () => allCategories
+      .filter((cat) => (CATEGORY_TO_VIEW[cat.name] ?? 'class') === viewMode)
+      .flatMap((cat) => cat.examples)
       .map((ex) => ({ value: ex.name, label: ex.name })),
-    [allExamples, viewMode]
+    [allCategories, viewMode]
   )
 
   const handleLoadExample = useCallback(async (name: string) => {
@@ -443,34 +444,13 @@ function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () =
   )
 }
 
-// ── Example category mapping (matches original UmpleOnline) ──
+// ── Map API category names to diagram view modes ──
 
-const STATE_EXAMPLES = new Set([
-  'AgentsCommunication', 'ApplicationProcessing', 'Auction', 'Booking',
-  'CanalLockStateMachine', 'CarTransmission', 'CollisionAvoidance',
-  'CollisionAvoidanceA1', 'CollisionAvoidanceA2', 'CollisionAvoidanceA3',
-  'ComplexStateMachine', 'CoordinationStateMachine', 'CourseSectionFlat',
-  'CourseSectionNested', 'DVD_Player', 'DigitalWatchFlat', 'DigitalWatchNested',
-  'Dishwasher', 'Elevator_State_Machine', 'GarageDoor', 'HomeHeater',
-  'LibraryLoanStateMachine', 'Lights', 'MicrowaveOven2', 'Ovens',
-  'ParliamentBill', 'Phone', 'Runway', 'SecurityLight', 'SpecificFlight',
-  'SpecificFlightFlat', 'TcpIpSimulation', 'TelephoneSystem2', 'TicTacToe',
-  'TimedCommands', 'TollBooth', 'TrafficLightsA', 'TrafficLightsB',
-])
-
-const FEATURE_EXAMPLES = new Set([
-  'BerkeleyDB_SPL', 'BerkeleyDB_SP_featureDepend', 'HelloWorld_SPL',
-])
-
-const STRUCTURE_EXAMPLES = new Set([
-  'PingPong',
-])
-
-function getExampleCategory(name: string): DiagramView {
-  if (STATE_EXAMPLES.has(name)) return 'state'
-  if (FEATURE_EXAMPLES.has(name)) return 'feature'
-  if (STRUCTURE_EXAMPLES.has(name)) return 'structure'
-  return 'class'
+const CATEGORY_TO_VIEW: Record<string, DiagramView> = {
+  'Class Diagrams': 'class',
+  'State Machines': 'state',
+  'Composite Structure': 'structure',
+  'Feature Diagrams': 'feature',
 }
 
 // ── Settings dropdown ──

@@ -85,7 +85,7 @@ export function DiagramPanel() {
                 <div className="w-px h-3.5 bg-border mx-0.5" />
                 <ToolbarButton
                   onClick={() => setRenderMode(renderMode === 'reactflow' ? 'graphviz' : 'reactflow')}
-                  label="Toggle render mode"
+                  label={renderMode === 'reactflow' ? 'Switch to Graphviz rendering' : 'Switch to React Flow rendering'}
                   active={renderMode === 'graphviz'}
                 >
                   {renderMode === 'reactflow' ? 'GV' : 'RF'}

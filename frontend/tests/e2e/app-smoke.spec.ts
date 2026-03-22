@@ -16,9 +16,10 @@ test.beforeEach(async ({ page }) => {
     await route.fulfill({
       json: [
         {
-          name: 'Banking',
-          filename: 'banking.ump',
-          category: 'Samples',
+          name: 'Samples',
+          examples: [
+            { name: 'Banking', filename: 'banking.ump' },
+          ],
         },
       ],
     })
@@ -51,10 +52,11 @@ test('renders empty editor and compiles when an example is loaded', async ({ pag
   await expect(page.getByTestId('editor-panel')).toBeVisible()
   await expect(page.getByTestId('diagram-panel')).toBeVisible()
 
-  // Default editor is empty — no model nodes until an example is loaded
+  // Navigate through hierarchical example palette
   await page.getByLabel('Command palette').click()
   await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId('command-palette-input').fill('Banking')
+  await page.getByTestId('command-item-examples-browse').click()
+  await page.getByTestId('command-item-category-Samples').click()
   await page.getByTestId('command-item-example-Banking').click()
 
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
@@ -78,9 +80,10 @@ test('uses the selected diagram type for the first diagram request', async ({ pa
 
   await page.goto('/')
 
-  // Load an example so the compiler has code to work with
+  // Load an example via hierarchical navigation
   await page.getByLabel('Command palette').click()
-  await page.getByTestId('command-palette-input').fill('Banking')
+  await page.getByTestId('command-item-examples-browse').click()
+  await page.getByTestId('command-item-category-Samples').click()
   await page.getByTestId('command-item-example-Banking').click()
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
 

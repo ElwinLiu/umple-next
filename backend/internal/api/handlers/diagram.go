@@ -168,6 +168,17 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 
 	dir := h.store.ModelDir(modelID)
 
+	// Remove stale .gv files so the directory scan after generation
+	// always picks the newly generated file, not a leftover from a
+	// previous diagram type.
+	if cleanEntries, err := os.ReadDir(dir); err == nil {
+		for _, e := range cleanEntries {
+			if strings.HasSuffix(e.Name(), ".gv") {
+				os.Remove(filepath.Join(dir, e.Name()))
+			}
+		}
+	}
+
 	// Generate .gv file using umple
 	command := fmt.Sprintf("-generate %s %s/model.ump", req.DiagramType, dir)
 	result, err := h.pool.Execute(compiler.CompileRequest{

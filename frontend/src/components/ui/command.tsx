@@ -36,6 +36,7 @@ function CommandDialog({
   className,
   showCloseButton = false,
   "data-testid": dataTestId,
+  onCommandKeyDown,
   ...props
 }: React.ComponentProps<typeof Dialog> & {
   title?: string
@@ -43,6 +44,7 @@ function CommandDialog({
   className?: string
   showCloseButton?: boolean
   "data-testid"?: string
+  onCommandKeyDown?: (e: React.KeyboardEvent<HTMLDivElement>) => void
 }) {
   return (
     <Dialog {...props}>
@@ -58,7 +60,7 @@ function CommandDialog({
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <Command className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-1.5">
+        <Command onKeyDown={onCommandKeyDown} className="[&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-muted-foreground [&_[cmdk-group]]:px-2 [&_[cmdk-group]:not([hidden])_~[cmdk-group]]:pt-0 [&_[cmdk-item]]:px-2 [&_[cmdk-item]]:py-1.5">
           {children}
         </Command>
       </DialogContent>

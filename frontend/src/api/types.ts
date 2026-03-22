@@ -100,7 +100,11 @@ export interface GvLayout {
 export interface ExampleEntry {
   name: string
   filename: string
-  category?: string
+}
+
+export interface ExampleCategory {
+  name: string
+  examples: ExampleEntry[]
 }
 
 export interface ModelResponse {

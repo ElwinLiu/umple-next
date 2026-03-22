@@ -157,8 +157,9 @@ export function useCompiler() {
       if (res.svg) {
         setSvgForView(view, res.svg)
       }
-      // Update class diagram positions with new GV layout for this view
-      if (res.layout && lastModelRef.current) {
+      // Only update ReactFlow class nodes when the layout is from a class diagram —
+      // state/feature layouts have different node names and would clobber positions.
+      if (res.layout && lastModelRef.current && view === 'class') {
         updateFromModel(lastModelRef.current, res.layout)
       }
       if (res.errors) {

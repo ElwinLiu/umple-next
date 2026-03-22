@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from '../../api/client'
 import { useEditorStore } from '../../stores/editorStore'
-import type { ExampleEntry } from '../../api/types'
+import type { ExampleCategory } from '../../api/types'
 
 function toTestId(value: string) {
   return value
@@ -12,7 +12,7 @@ function toTestId(value: string) {
 
 export function ExampleBrowser() {
   const loadExample = useEditorStore((s) => s.loadExample)
-  const [examples, setExamples] = useState<ExampleEntry[]>([])
+  const [categories, setCategories] = useState<ExampleCategory[]>([])
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
   const [loadingExample, setLoadingExample] = useState<string | null>(null)
@@ -21,22 +21,29 @@ export function ExampleBrowser() {
   useEffect(() => {
     setLoading(true)
     api.listExamples()
-      .then((list) => {
-        setExamples(list)
+      .then((cats) => {
+        setCategories(cats)
         setError(null)
       })
       .catch((err) => setError(err.message || 'Failed to load examples'))
       .finally(() => setLoading(false))
   }, [])
 
+  const allExamples = useMemo(
+    () => categories.flatMap((cat) =>
+      cat.examples.map((ex) => ({ ...ex, category: cat.name }))
+    ),
+    [categories]
+  )
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return examples
+    if (!search.trim()) return allExamples
     const term = search.toLowerCase()
-    return examples.filter((ex) =>
+    return allExamples.filter((ex) =>
       ex.name.toLowerCase().includes(term) ||
-      (ex.category && ex.category.toLowerCase().includes(term))
+      ex.category.toLowerCase().includes(term)
     )
-  }, [examples, search])
+  }, [allExamples, search])
 
   const handleSelect = useCallback((name: string) => {
     setLoadingExample(name)
@@ -73,7 +80,7 @@ export function ExampleBrowser() {
         )}
         {filtered.map((ex) => (
           <button
-            key={ex.name}
+            key={`${ex.category}-${ex.name}`}
             onClick={() => handleSelect(ex.name)}
             data-testid={`example-item-${toTestId(ex.name)}`}
             className={`w-full text-left px-3 py-1.5 text-xs border-x-0 border-t-0 border-b border-border bg-transparent transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px] ${
@@ -83,9 +90,7 @@ export function ExampleBrowser() {
             }`}
           >
             <div className="font-medium">{ex.name}</div>
-            {ex.category && (
-              <div className="text-[10px] text-ink-muted mt-px">{ex.category}</div>
-            )}
+            <div className="text-[10px] text-ink-muted mt-px">{ex.category}</div>
           </button>
         ))}
       </div>

@@ -1,5 +1,5 @@
 import type {
-  CompileRequest, CompileResponse, ExampleEntry, GenerateRequest, GenerateResponse, ModelResponse,
+  CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse, ModelResponse,
   TaskCreateRequest, TaskCreateResponse, TaskResponse, TaskSubmitResponse,
   AiRequirementsResponse, AiExplainResponse,
 } from './types'
@@ -39,7 +39,7 @@ export const api = {
     })
   },
 
-  listExamples(): Promise<ExampleEntry[]> {
+  listExamples(): Promise<ExampleCategory[]> {
     return request('/examples')
   },
 
