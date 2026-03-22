@@ -11,6 +11,8 @@ interface InputBarProps {
   isStreaming: boolean
   canSend: boolean
   textareaMaxHeight: number
+  autoFocus?: boolean
+  onAutoFocus?: () => void
   children?: React.ReactNode
 }
 
@@ -23,6 +25,8 @@ export function InputBar({
   isStreaming,
   canSend,
   textareaMaxHeight,
+  autoFocus = false,
+  onAutoFocus,
   children,
 }: InputBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -33,6 +37,12 @@ export function InputBar({
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, textareaMaxHeight)}px`
   }, [input, textareaMaxHeight])
+
+  useEffect(() => {
+    if (!autoFocus) return
+    textareaRef.current?.focus()
+    onAutoFocus?.()
+  }, [autoFocus, onAutoFocus])
 
   function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey) {

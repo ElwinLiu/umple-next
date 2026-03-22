@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, vi } from 'vitest'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AgentPanel from '../AgentPanel'
 import { createDefaultProviderConfigs, useAiConfigStore } from '@/stores/aiConfigStore'
@@ -178,5 +178,30 @@ describe('AgentPanel', () => {
     fireEvent.click(screen.getByTestId('agent-panel-collapsed'))
 
     expect(screen.queryByTestId('agent-panel')).toBeNull()
+  })
+
+  it('keeps focus on the input when expanding from the collapsed textarea', async () => {
+    const user = userEvent.setup()
+
+    mockAgentState = {
+      ...mockAgentState,
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          parts: [{ type: 'text', text: 'Hello' }],
+        },
+      ],
+    }
+
+    render(<AgentPanel />)
+
+    await user.click(screen.getByRole('textbox'))
+
+    expect(screen.getByTestId('agent-panel')).toBeDefined()
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toBe(document.activeElement)
+    })
   })
 })

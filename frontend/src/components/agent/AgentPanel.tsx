@@ -34,6 +34,7 @@ function AgentPanel() {
   const { showAgentPanel, openAgentPanel, closeAgentPanel } = useUiStore()
   const code = useEditorStore((s) => s.code)
   const expanded = showAgentPanel
+  const [focusExpandedInput, setFocusExpandedInput] = useState(false)
 
   /* ── Resize ── */
   const {
@@ -57,13 +58,23 @@ function AgentPanel() {
 
   const isStreaming = status === 'submitted' || status === 'streaming'
   const canSend = input.trim().length > 0 && !isStreaming
+  const userScrolledUp = useRef(false)
 
-  /* Auto-scroll — only if the user hasn't scrolled up */
+  /* Track whether the user has scrolled up */
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
-    const isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
-    if (isNearBottom) {
+    function onScroll() {
+      const gap = el!.scrollHeight - el!.scrollTop - el!.clientHeight
+      userScrolledUp.current = gap > 80
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => el.removeEventListener('scroll', onScroll)
+  }, [])
+
+  /* Auto-scroll on new messages — skip if the user has scrolled up */
+  useEffect(() => {
+    if (!userScrolledUp.current) {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }
   }, [messages])
@@ -79,7 +90,17 @@ function AgentPanel() {
     if (!expanded) openAgentPanel()
     send(text)
     setInput('')
+    /* Always scroll to bottom on explicit user send */
+    userScrolledUp.current = false
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    })
   }
+
+  const handleExpandPanel = useCallback((shouldFocusInput = false) => {
+    if (shouldFocusInput) setFocusExpandedInput(true)
+    openAgentPanel()
+  }, [openAgentPanel])
 
   const handleCollapsedClick = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
@@ -90,13 +111,13 @@ function AgentPanel() {
       }
 
       if (messages.length > 0) {
-        openAgentPanel()
+        handleExpandPanel(true)
         return
       }
 
       ;(e.currentTarget.querySelector('textarea') as HTMLTextAreaElement | null)?.focus()
     },
-    [messages.length, openAgentPanel, shouldSuppressClick],
+    [handleExpandPanel, messages.length, shouldSuppressClick],
   )
 
   const handleReset = useCallback(() => {
@@ -125,7 +146,7 @@ function AgentPanel() {
         >
           {messages.length > 0 && (
             <button
-              onClick={openAgentPanel}
+              onClick={() => handleExpandPanel(true)}
               className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
               aria-label="Expand chat"
             >
@@ -225,6 +246,8 @@ function AgentPanel() {
           isStreaming={isStreaming}
           canSend={canSend}
           textareaMaxHeight={100}
+          autoFocus={focusExpandedInput}
+          onAutoFocus={() => setFocusExpandedInput(false)}
         />
       </div>
     </div>

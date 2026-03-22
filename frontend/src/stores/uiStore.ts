@@ -103,8 +103,8 @@ export const useUiStore = create<UiState>((set) => ({
       executionErrors,
       outputErrorCount: errors,
       outputWarningCount: warnings,
-      // Auto-expand on errors, not warnings
-      ...(errors > 0 && !s.showExecutionPanel ? { showExecutionPanel: true } : {}),
+      // Auto-expand on errors unless the agent dialog is active.
+      ...(errors > 0 && !s.showExecutionPanel && !s.showAgentPanel ? { showExecutionPanel: true } : {}),
     }))
   },
   setTheme: (theme) => set({ theme }),

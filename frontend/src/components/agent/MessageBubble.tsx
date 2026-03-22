@@ -9,6 +9,8 @@ import {
   Check,
   XIcon,
 } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import type { ToolPreviewInfo } from '@/ai/editPreview'
 import { ActionRow } from './ActionRow'
@@ -71,6 +73,29 @@ function actionStatus(state: string): 'running' | 'done' | 'error' | 'approval' 
   }
 }
 
+/* ── DiffBlock ── */
+
+function DiffBlock({
+  text,
+  variant,
+}: {
+  text: string
+  variant: 'add' | 'remove' | 'neutral'
+}) {
+  return (
+    <pre
+      className={cn(
+        'whitespace-pre-wrap break-all px-2 py-1.5',
+        variant === 'add' && 'bg-status-success/8 text-status-success',
+        variant === 'remove' && 'bg-status-error/8 text-status-error line-through',
+        variant === 'neutral' && 'text-ink',
+      )}
+    >
+      {text || '\u00A0'}
+    </pre>
+  )
+}
+
 /* ── ToolActionRow ── */
 
 function ToolActionRow({
@@ -116,18 +141,18 @@ function ToolActionRow({
             {input.edits.map((edit: any, j: number) => (
               <div
                 key={j}
-                className="rounded border border-border bg-surface-0 p-2 font-mono text-xxs"
+                className="max-h-48 overflow-auto rounded border border-border bg-surface-0 font-mono text-xxs"
               >
-                <div className="text-status-error line-through">{edit.oldText}</div>
-                <div className="text-status-success">{edit.newText}</div>
+                <DiffBlock text={edit.oldText} variant="remove" />
+                <DiffBlock text={edit.newText} variant="add" />
               </div>
             ))}
           </div>
         )}
         {input?.code && (
-          <pre className="max-h-40 overflow-auto rounded border border-border bg-surface-0 p-2 font-mono text-xxs text-ink">
-            {input.code}
-          </pre>
+          <div className="max-h-48 overflow-auto rounded border border-border bg-surface-0 font-mono text-xxs">
+            <DiffBlock text={input.code} variant="neutral" />
+          </div>
         )}
         <div className="flex gap-2">
           <button
@@ -223,9 +248,9 @@ export function MessageBubble({
           ) : (
             <div
               key={i}
-              className="max-w-[calc(100%-2rem)] whitespace-pre-wrap px-1 text-sm text-ink"
+              className="prose prose-sm dark:prose-invert max-w-[calc(100%-2rem)] px-1 text-ink prose-p:my-1.5 prose-pre:bg-surface-1 prose-pre:text-ink prose-code:text-ink prose-headings:text-ink prose-strong:text-ink prose-a:text-brand prose-pre:border prose-pre:border-border"
             >
-              {part.text}
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text}</ReactMarkdown>
             </div>
           )
         }
