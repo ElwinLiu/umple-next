@@ -115,8 +115,8 @@ type SectionKey = (typeof SECTION_KEYS)[number]
 function SidebarContent() {
   const dark = useIsDark()
   const openCommandPalette = useUiStore((s) => s.openCommandPalette)
-  const [allExpanded, setAllExpanded] = useState(true)
-  const [overrides, setOverrides] = useState<Partial<Record<SectionKey, boolean>>>({})
+  const [allExpanded, setAllExpanded] = useState(false)
+  const [overrides, setOverrides] = useState<Partial<Record<SectionKey, boolean>>>({ diagramType: true })
 
   const isOpen = (key: SectionKey) => overrides[key] ?? allExpanded
 

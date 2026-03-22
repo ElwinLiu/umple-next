@@ -39,7 +39,7 @@ export function Combobox({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         className={cn(
-          'flex w-full items-center justify-between gap-1 rounded-md border border-surface-2 bg-surface-0 px-2 py-1 text-xs text-ink outline-none hover:bg-surface-1 transition-colors cursor-pointer',
+          'flex w-full items-center justify-between gap-1 rounded-md border border-surface-2 bg-surface-0 h-8 px-2.5 py-1.5 text-xs text-ink outline-none hover:bg-surface-1 focus:border-brand focus:ring-1 focus:ring-brand transition-colors cursor-pointer',
           !selected && 'text-ink-muted',
           className
         )}

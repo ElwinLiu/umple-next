@@ -47,7 +47,9 @@ export function AppShell() {
                       <div className="flex-1 min-h-0 rounded-lg overflow-hidden bg-surface-0">
                         <EditorPanel />
                       </div>
-                      <OutputBanner />
+                      <div className="shrink-0 rounded-lg overflow-hidden bg-surface-0">
+                        <OutputBanner />
+                      </div>
                     </div>
                   )}
                 </Panel>

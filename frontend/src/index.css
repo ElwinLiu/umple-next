@@ -174,38 +174,6 @@ body {
   background-color: var(--color-surface-0);
 }
 
-/* ── Chrome-style Tab Ears ── */
-/* Uses box-shadow + clip-path: inset() — theme-agnostic because the
-   transparent circle reveals the strip color behind it, while the
-   shadow color (surface-0) only fills the content-boundary corner. */
-
-.chrome-tab-active {
-  position: relative;
-  z-index: 2;
-}
-
-.chrome-tab-active::before,
-.chrome-tab-active::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 100%;
-  box-shadow: 0 0 0 40px var(--color-surface-0);
-  pointer-events: none;
-}
-
-.chrome-tab-active::before {
-  left: -8px;
-  clip-path: inset(50% -10px 0 50%);
-}
-
-.chrome-tab-active::after {
-  right: -8px;
-  clip-path: inset(50% 50% 0 -10px);
-}
-
 /* ── ReactFlow ── */
 @import "@xyflow/react/dist/style.css";
 

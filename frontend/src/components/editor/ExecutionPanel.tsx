@@ -30,7 +30,7 @@ export function OutputBanner() {
   const toggleExecutionPanel = useUiStore((s) => s.toggleExecutionPanel)
 
   return (
-    <div className="flex h-[38px] items-center justify-between rounded-lg bg-surface-2 px-3">
+    <div className="flex h-[38px] items-center justify-between px-3">
       <div className="flex items-center gap-2">
         <span className="text-xs font-semibold text-ink-muted">Output</span>
         <Badges />
@@ -65,7 +65,7 @@ export function ExecutionPanel() {
   return (
     <div className="flex h-full flex-col">
       {/* Banner */}
-      <div className="flex h-[38px] shrink-0 items-center justify-between border-b border-border bg-surface-2 px-3">
+      <div className="flex h-[38px] shrink-0 items-center justify-between border-b border-border px-3">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-ink-muted">Output</span>
           <Badges />
@@ -73,7 +73,7 @@ export function ExecutionPanel() {
         <Tip content="Collapse" side="bottom">
           <button
             onClick={toggleExecutionPanel}
-            className="flex items-center justify-center size-6 rounded-md text-ink-faint hover:text-ink-muted hover:bg-surface-0/60 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
+            className="flex items-center justify-center size-6 rounded-md text-ink-faint hover:text-ink-muted hover:bg-surface-1 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
             aria-label="Collapse output"
           >
             <ChevronDown className="size-3.5" />
