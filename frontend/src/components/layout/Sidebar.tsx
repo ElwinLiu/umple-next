@@ -167,7 +167,7 @@ function SidebarContent() {
       </div>
 
       {/* Scrollable sections */}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin pt-1">
+      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin pt-1 divide-y divide-border">
         <DiagramTypeSection open={isOpen('diagramType')} onToggle={() => toggleSection('diagramType')} />
         <ShowHideSection open={isOpen('diagramDisplay')} onToggle={() => toggleSection('diagramDisplay')} />
         <GenerateCodeSection open={isOpen('generateCode')} onToggle={() => toggleSection('generateCode')} />

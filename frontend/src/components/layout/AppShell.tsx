@@ -23,7 +23,7 @@ export function AppShell() {
 
       {/* Main content area */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <div className="relative flex-1 min-h-0 p-2.5">
+        <div className="relative flex-1 min-h-0 px-2.5 pb-2.5 pt-1.5">
           <PanelGroup direction="horizontal" className="h-full">
             {editorVisible && (
               <>

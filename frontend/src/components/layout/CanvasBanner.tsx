@@ -61,7 +61,7 @@ export function CanvasBanner() {
   }, [compile])
 
   return (
-    <div className="relative flex items-center justify-between h-[38px] px-3 shrink-0 bg-surface-2 border-b border-border" data-testid="canvas-banner">
+    <div className="relative flex items-center justify-between h-[38px] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
       <div className="flex items-center gap-2">
         <Tip content="Compile (Ctrl+')" side="bottom">
           <button
@@ -69,7 +69,7 @@ export function CanvasBanner() {
             disabled={compiling}
             aria-label={compiling ? 'Compiling' : "Compile (Ctrl+')"}
             data-testid="compile-button"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md hover:bg-border text-ink disabled:cursor-not-allowed bg-surface-0/60"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md hover:bg-border text-ink disabled:cursor-not-allowed bg-surface-1"
           >
             {compiling ? (
               <Loader2 className="size-3.5 animate-spin text-ink-muted" />
@@ -82,7 +82,7 @@ export function CanvasBanner() {
 
         <DropdownMenu>
           <Tip content="Diagram view" side="bottom">
-            <DropdownMenuTrigger className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-0/60 transition-colors cursor-pointer outline-none" aria-label="Diagram view">
+            <DropdownMenuTrigger className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer outline-none" aria-label="Diagram view">
               {VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}
               <ChevronDown className="size-3" />
             </DropdownMenuTrigger>
@@ -150,7 +150,7 @@ export function CanvasBanner() {
             onClick={() => setDiagramOnly(!diagramOnly)}
             className={cn(
               'p-1.5 transition-colors cursor-pointer rounded-md',
-              diagramOnly ? 'text-brand bg-brand-light' : 'text-ink-muted hover:text-ink hover:bg-surface-0/60'
+              diagramOnly ? 'text-brand bg-brand-light' : 'text-ink-muted hover:text-ink hover:bg-surface-1'
             )}
             aria-label={diagramOnly ? 'Show editor' : 'Diagram only'}
           >
