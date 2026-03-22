@@ -3,7 +3,6 @@ import { Sidebar } from './Sidebar'
 import { EditorPanel } from '../editor/EditorPanel'
 import { ExecutionPanel, OutputBanner } from '../editor/ExecutionPanel'
 import { DiagramPanel } from '../diagram/DiagramPanel'
-import { AiPanel } from '../ai/AiPanel'
 import { TaskPanel } from '../task/TaskPanel'
 import { CommandPalette } from '../command/CommandPalette'
 import { useUiStore } from '../../stores/uiStore'
@@ -11,8 +10,7 @@ import { useCompiler } from '../../hooks/useCompiler'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 export function AppShell() {
-  const { showEditor, diagramOnly, showExecutionPanel, showAiPanel, showTaskPanel } = useUiStore()
-
+  const { showEditor, diagramOnly, showExecutionPanel, showTaskPanel } = useUiStore()
   useCompiler()
 
   const editorVisible = showEditor && !diagramOnly
@@ -25,7 +23,7 @@ export function AppShell() {
 
       {/* Main content area */}
       <div className="flex-1 min-w-0 flex flex-col">
-        <div className="flex-1 min-h-0 p-2.5">
+        <div className="relative flex-1 min-h-0 p-2.5">
           <PanelGroup direction="horizontal" className="h-full">
             {editorVisible && (
               <>
@@ -62,9 +60,9 @@ export function AppShell() {
               </div>
             </Panel>
           </PanelGroup>
+
         </div>
 
-        {showAiPanel && <AiPanel />}
         {showTaskPanel && <TaskPanel />}
         <CommandPalette />
       </div>

@@ -10,6 +10,14 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  test: {
+    environment: 'node',
+    env: {
+      NODE_ENV: 'test',
+    },
+    setupFiles: [],
+    testTimeout: 30000,
+  },
   server: {
     port: 3100,
     host: true,

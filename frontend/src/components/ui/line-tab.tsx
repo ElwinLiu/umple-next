@@ -5,7 +5,7 @@ export const lineTabClasses = cva(
   {
     variants: {
       active: {
-        true: 'font-semibold border-b-brand text-brand',
+        true: 'font-semibold border-b-brand text-ink',
         false: 'font-normal border-b-transparent text-ink-muted hover:text-ink',
       },
     },

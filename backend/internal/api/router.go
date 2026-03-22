@@ -6,7 +6,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/umple/umple-next/backend/internal/ai"
 	"github.com/umple/umple-next/backend/internal/api/handlers"
 	"github.com/umple/umple-next/backend/internal/compiler"
 	"github.com/umple/umple-next/backend/internal/config"
@@ -23,7 +22,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   cfg.AllowedOrigins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowedHeaders:   []string{"Accept", "Content-Type", "Authorization"},
+		AllowedHeaders:   []string{"Accept", "Content-Type", "Authorization", "X-Api-Key", "X-Goog-Api-Key", "Anthropic-Version"},
 		AllowCredentials: true,
 		MaxAge:           300,
 	}))
@@ -42,8 +41,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 	execProxy := execution.NewProxy(cfg.ExecutionURL)
 	executeH := handlers.NewExecuteHandler(pool, store, execProxy)
 	taskH := handlers.NewTaskHandler(store)
-	aiService := ai.NewStubService()
-	aiH := handlers.NewAIHandler(aiService)
+	aiProxyH := handlers.NewAIProxyHandler()
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", healthH.Health)
@@ -70,9 +68,8 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 		r.Get("/tasks/{id}", taskH.Get)
 		r.Post("/tasks/{id}/submit", taskH.Submit)
 
-		// AI (stub — returns 501)
-		r.Post("/ai/requirements", aiH.Requirements)
-		r.Post("/ai/explain", aiH.Explain)
+		// AI provider proxy (browser → backend → provider)
+		r.Route("/ai", aiProxyH.Routes())
 	})
 
 	return r

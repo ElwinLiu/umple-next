@@ -333,7 +333,8 @@ textarea:focus-visible {
 }
 
 /* cmdk input handles its own focus styling */
-[data-slot="command-input"]:focus-visible {
+[data-slot="command-input"]:focus-visible,
+[data-slot="agent-input"]:focus-visible {
   outline: none;
 }
 

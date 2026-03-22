@@ -8,7 +8,7 @@ import { UMPLE_TARGETS, type ExampleCategory } from '../../api/types'
 import {
   LayoutGrid, Workflow, GitBranch, Network,
   Code, Layers, Maximize2, Minimize2,
-  Terminal, Sparkles, ClipboardList, FileCode,
+  Terminal, ClipboardList, FileCode,
   ChevronRight, ChevronLeft, BookOpen, FolderOpen,
 } from 'lucide-react'
 import {
@@ -39,7 +39,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 export function CommandPalette() {
   const {
     commandPaletteOpen, closeCommandPalette,
-    toggleAiPanel, toggleTaskPanel, setDiagramOnly, diagramOnly, toggleExecutionPanel,
+    toggleTaskPanel, setDiagramOnly, diagramOnly, toggleExecutionPanel,
   } = useUiStore()
   const { setViewMode, setRenderMode, renderMode } = useDiagramStore()
   const loadExample = useEditorStore((s) => s.loadExample)
@@ -223,15 +223,6 @@ export function CommandPalette() {
                 <Terminal />
                 Toggle Output Panel
                 <CommandShortcut>Ctrl+'</CommandShortcut>
-              </CommandItem>
-              <CommandItem
-                onSelect={() => {
-                  toggleAiPanel()
-                  closeCommandPalette()
-                }}
-              >
-                <Sparkles />
-                AI Assistant
               </CommandItem>
               <CommandItem
                 onSelect={() => {

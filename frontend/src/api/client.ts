@@ -1,7 +1,6 @@
 import type {
   CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse, ModelResponse,
   TaskCreateRequest, TaskCreateResponse, TaskResponse, TaskSubmitResponse,
-  AiRequirementsResponse, AiExplainResponse,
 } from './types'
 
 const API_BASE = '/api'
@@ -86,21 +85,6 @@ export const api = {
 
   submitTask(id: string, code: string): Promise<TaskSubmitResponse> {
     return request(`/tasks/${encodeURIComponent(id)}/submit`, {
-      method: 'POST',
-      body: JSON.stringify({ code }),
-    })
-  },
-
-  // AI endpoints
-  aiRequirements(requirements: string): Promise<AiRequirementsResponse> {
-    return request('/ai/requirements', {
-      method: 'POST',
-      body: JSON.stringify({ requirements }),
-    })
-  },
-
-  aiExplain(code: string): Promise<AiExplainResponse> {
-    return request('/ai/explain', {
       method: 'POST',
       body: JSON.stringify({ code }),
     })

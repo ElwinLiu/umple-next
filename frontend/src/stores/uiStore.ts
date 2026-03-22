@@ -26,8 +26,8 @@ interface UiState {
   showSidebar: boolean
   sidebarWidth: number
   showTaskPanel: boolean
-  showAiPanel: boolean
   showExecutionPanel: boolean
+  showAgentPanel: boolean
   executionOutput: string
   executionErrors: string | null
   /** Parsed error/warning counts from Umple JSON error output */
@@ -49,8 +49,10 @@ interface UiState {
   toggleSidebar: () => void
   setSidebarWidth: (width: number) => void
   toggleTaskPanel: () => void
-  toggleAiPanel: () => void
   toggleExecutionPanel: () => void
+  openAgentPanel: () => void
+  closeAgentPanel: () => void
+  toggleAgentPanel: () => void
   setExecutionOutput: (output: string, errors?: string | null) => void
   setTheme: (theme: 'light' | 'dark' | 'system') => void
 
@@ -69,8 +71,8 @@ export const useUiStore = create<UiState>((set) => ({
   showSidebar: true,
   sidebarWidth: 280,
   showTaskPanel: false,
-  showAiPanel: false,
   showExecutionPanel: false,
+  showAgentPanel: false,
   executionOutput: '',
   executionErrors: null,
   outputErrorCount: 0,
@@ -90,8 +92,10 @@ export const useUiStore = create<UiState>((set) => ({
   toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.min(480, Math.max(200, sidebarWidth)) }),
   toggleTaskPanel: () => set((s) => ({ showTaskPanel: !s.showTaskPanel })),
-  toggleAiPanel: () => set((s) => ({ showAiPanel: !s.showAiPanel })),
   toggleExecutionPanel: () => set((s) => ({ showExecutionPanel: !s.showExecutionPanel })),
+  openAgentPanel: () => set({ showAgentPanel: true }),
+  closeAgentPanel: () => set({ showAgentPanel: false }),
+  toggleAgentPanel: () => set((s) => ({ showAgentPanel: !s.showAgentPanel })),
   setExecutionOutput: (executionOutput, executionErrors = null) => {
     const { errors, warnings } = parseErrorCounts(executionErrors)
     set((s) => ({

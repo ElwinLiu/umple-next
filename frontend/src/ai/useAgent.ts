@@ -1,0 +1,163 @@
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { Chat, useChat } from '@ai-sdk/react'
+import {
+  DirectChatTransport,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  type InferUITools,
+  type UIMessage,
+} from 'ai'
+import { useAiConfigStore } from '@/stores/aiConfigStore'
+import { useEditorStore } from '@/stores/editorStore'
+import { createAgent } from './agent'
+import { agentTools } from './tools'
+
+type AgentUIMessage = UIMessage<unknown, never, InferUITools<typeof agentTools>>
+type Agent = Awaited<ReturnType<typeof createAgent>>
+
+/**
+ * Hook that connects the AI agent to the chat UI.
+ * Creates a ToolLoopAgent with DirectChatTransport (in-process, no HTTP).
+ *
+ * Provider SDKs are dynamically imported — only the selected provider's
+ * code is loaded, and agent creation is async as a result. The agent is
+ * stored in state, then the transport is derived synchronously. The chat
+ * instance must be recreated when transport changes or useChat keeps the
+ * initial default HTTP transport to `/api/chat`.
+ *
+ * DirectChatTransport cannot handle the SDK's built-in approval→execute
+ * flow (it converts approval responses but never executes the tool).
+ * So we execute approved tools manually and inject results via addToolOutput.
+ */
+export function useAgent() {
+  const provider = useAiConfigStore((state) => state.activeProvider)
+  const { model, apiKey } = useAiConfigStore((state) => state.configs[state.activeProvider])
+  const clearDiffPreview = useEditorStore((state) => state.clearDiffPreview)
+
+  const [agent, setAgent] = useState<Agent | null>(null)
+
+  useEffect(() => {
+    if (!apiKey.trim() || !model.trim()) {
+      setAgent(null)
+      return
+    }
+
+    let cancelled = false
+    createAgent(provider, model, apiKey).then((a) => {
+      if (!cancelled) setAgent(a)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [provider, model, apiKey])
+
+  // Derive transport synchronously so DirectChatTransport preserves the
+  // agent's tool generics — useState would erase them.
+  const transport = useMemo(
+    () => (agent ? new DirectChatTransport({ agent }) : undefined),
+    [agent],
+  )
+
+  /**
+   * Guard flag — only allow auto-resubmit right after we manually
+   * inject a tool result. Prevents infinite loops when the SDK also
+   * checks sendAutomaticallyWhen after every stream completion.
+   */
+  const pendingExec = useRef(false)
+  const chat = useMemo(
+    () =>
+      new Chat<AgentUIMessage>({
+        transport,
+        sendAutomaticallyWhen: ({ messages }) => {
+          if (!pendingExec.current) return false
+          pendingExec.current = false
+
+          return (
+            lastAssistantMessageIsCompleteWithToolCalls({ messages }) ||
+            lastAssistantMessageIsCompleteWithApprovalResponses({ messages })
+          )
+        },
+      }),
+    [transport],
+  )
+
+  const {
+    messages,
+    status,
+    error,
+    sendMessage,
+    stop,
+    setMessages,
+    addToolOutput,
+    addToolApprovalResponse,
+  } = useChat<AgentUIMessage>({ chat })
+
+  const send = useCallback(
+    (text: string) => {
+      if (!transport) return
+      sendMessage({ text })
+    },
+    [transport, sendMessage],
+  )
+
+  const reset = useCallback(() => {
+    clearDiffPreview()
+    setMessages([])
+  }, [clearDiffPreview, setMessages])
+
+  /** Approve a tool call — execute the tool ourselves, then inject the result. */
+  const approveToolCall = useCallback(
+    async (
+      approvalId: string,
+      toolCallId: string,
+      toolName: string,
+      input: any,
+    ) => {
+      const tool = (agentTools as Record<string, any>)[toolName]
+      if (!tool?.execute) return
+
+      try {
+        clearDiffPreview(toolCallId)
+        await addToolApprovalResponse({ id: approvalId, approved: true })
+        const result = await tool.execute(input, { messages: [], toolCallId })
+        pendingExec.current = true
+        addToolOutput({ tool: toolName as any, toolCallId, output: result })
+      } catch (err) {
+        pendingExec.current = true
+        addToolOutput({
+          tool: toolName as any,
+          toolCallId,
+          state: 'output-error',
+          errorText: String(err),
+        })
+      }
+    },
+    [addToolApprovalResponse, addToolOutput, clearDiffPreview],
+  )
+
+  /** Reject a tool call — inject an error so the agent can adjust. */
+  const rejectToolCall = useCallback(
+    (approvalId: string, _toolCallId: string, _toolName: string, reason?: string) => {
+      clearDiffPreview(_toolCallId)
+      pendingExec.current = true
+      addToolApprovalResponse({
+        id: approvalId,
+        approved: false,
+        reason: reason ?? 'User rejected this change',
+      })
+    },
+    [addToolApprovalResponse, clearDiffPreview],
+  )
+
+  return {
+    messages,
+    status,
+    error: error ?? undefined,
+    send,
+    stop,
+    reset,
+    approveToolCall,
+    rejectToolCall,
+  }
+}

@@ -170,23 +170,6 @@ export interface TaskSubmitResponse {
   status: string
 }
 
-// AI types
-export interface AiRequirementsRequest {
-  requirements: string
-}
-
-export interface AiRequirementsResponse {
-  code: string
-}
-
-export interface AiExplainRequest {
-  code: string
-}
-
-export interface AiExplainResponse {
-  explanation: string
-}
-
 export const UMPLE_TARGETS = [
   'Java', 'Php', 'Python', 'Ruby', 'Cpp', 'RTCpp', 'SimpleCpp',
   'Json', 'Sql', 'Alloy', 'NuSMV', 'USE', 'Ecore', 'TextUml', 'Umlet', 'SimulateJava',

@@ -6,6 +6,7 @@ import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
 import { UMPLE_TARGETS, type ExampleCategory } from '../../api/types'
 import { Combobox } from '@/components/ui/combobox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   ChevronDown,
   ChevronRight,
@@ -26,6 +27,7 @@ import {
   Shield,
   ExternalLink,
 } from 'lucide-react'
+import { AiConfigSection } from '@/components/sidebar/AiConfigSection'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -106,7 +108,7 @@ function Section({
 
 // ── Sidebar content (shared between pinned and floating) ──
 
-const SECTION_KEYS = ['diagramType', 'diagramDisplay', 'generateCode'] as const
+const SECTION_KEYS = ['diagramType', 'diagramDisplay', 'generateCode', 'ai'] as const
 type SectionKey = (typeof SECTION_KEYS)[number]
 
 function SidebarContent() {
@@ -169,6 +171,7 @@ function SidebarContent() {
         <DiagramTypeSection open={isOpen('diagramType')} onToggle={() => toggleSection('diagramType')} />
         <ShowHideSection open={isOpen('diagramDisplay')} onToggle={() => toggleSection('diagramDisplay')} />
         <GenerateCodeSection open={isOpen('generateCode')} onToggle={() => toggleSection('generateCode')} />
+        <AiConfigSection open={isOpen('ai')} onToggle={() => toggleSection('ai')} />
       </div>
 
       {/* Footer */}
@@ -421,12 +424,18 @@ function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => vo
         )}
         <div className="border-t border-border mt-2 pt-2">
           <div className="text-xxs font-medium text-ink-muted mb-1.5">Layout Algorithm</div>
-          <Combobox
-            options={LAYOUT_OPTIONS}
-            value={layoutAlgorithm}
-            onSelect={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}
-            searchable={false}
-          />
+          <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {LAYOUT_OPTIONS.map((opt) => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
     </Section>
@@ -469,13 +478,18 @@ function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () =
   return (
     <Section title="Generate Code" open={open} onToggle={onToggle}>
       <div className="space-y-2">
-        <Combobox
-          options={languageOptions}
-          value={language}
-          onSelect={setLanguage}
-          placeholder="Select language..."
-          searchable={false}
-        />
+        <Select value={language} onValueChange={setLanguage}>
+          <SelectTrigger>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {languageOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex gap-1.5">
           <Button
             onClick={handleGenerate}

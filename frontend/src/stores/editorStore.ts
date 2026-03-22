@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { DiffPreviewState } from '@/ai/editPreview'
 
 export interface Tab {
   id: string
@@ -14,9 +15,12 @@ interface EditorState {
   modelId: string | null
   tabs: Tab[]
   activeTabId: string
+  diffPreview: DiffPreviewState | null
 
   setCode: (code: string) => void
   setModelId: (id: string) => void
+  showDiffPreview: (preview: DiffPreviewState) => void
+  clearDiffPreview: (toolCallId?: string) => void
   markSaved: (id?: string) => void
   addTab: (tab: Omit<Tab, 'dirty' | 'savedCode'>) => void
   addNewTab: () => void
@@ -47,6 +51,7 @@ export const useEditorStore = create<EditorState>((set) => ({
   modelId: null,
   tabs: [{ id: 'main', name: 'model.ump', code: DEFAULT_CODE, dirty: false, savedCode: DEFAULT_CODE }],
   activeTabId: 'main',
+  diffPreview: null,
 
   setCode: (code) => set((s) => ({
     code,
@@ -58,6 +63,13 @@ export const useEditorStore = create<EditorState>((set) => ({
   })),
 
   setModelId: (modelId) => set({ modelId }),
+
+  showDiffPreview: (diffPreview) => set({ diffPreview }),
+
+  clearDiffPreview: (toolCallId) => set((s) => {
+    if (toolCallId && s.diffPreview?.toolCallId !== toolCallId) return s
+    return { diffPreview: null }
+  }),
 
   markSaved: (id) => set((s) => {
     const targetId = id ?? s.activeTabId
