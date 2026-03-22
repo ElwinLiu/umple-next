@@ -34,8 +34,17 @@ export const StateNode = memo(function StateNode({ data }: NodeProps) {
     <div
       className={`bg-surface-0 rounded-2xl min-w-[140px] text-xs font-mono shadow-md overflow-hidden border-border-strong ${borderClasses}`}
     >
+      {/* TB layout: forward edges go downward, source exits from bottom, target enters from top */}
+      <Handle type="source" position={Position.Bottom} className="!invisible" />
       <Handle type="target" position={Position.Top} className="!invisible" />
-      <Handle type="target" position={Position.Left} id="left-target" className="!invisible" />
+
+      {/* Back-edge handles: source exits from top, target enters from bottom */}
+      <Handle type="source" position={Position.Top} id="top-source" className="!invisible" />
+      <Handle type="target" position={Position.Bottom} id="bottom-target" className="!invisible" />
+
+      {/* Self-loop handles */}
+      <Handle type="source" position={Position.Right} id="right-source" className="!invisible" style={{ top: '20%' }} />
+      <Handle type="target" position={Position.Right} id="right-target" className="!invisible" style={{ top: '80%' }} />
 
       {/* State name header */}
       <div
@@ -82,8 +91,6 @@ export const StateNode = memo(function StateNode({ data }: NodeProps) {
         </div>
       )}
 
-      <Handle type="source" position={Position.Bottom} className="!invisible" />
-      <Handle type="source" position={Position.Right} id="right-source" className="!invisible" />
     </div>
   )
 })

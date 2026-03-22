@@ -1,0 +1,109 @@
+{
+  "name": "model",
+  "directed": true,
+  "strict": false,
+  "_draw_": 
+  [
+    {
+      "op": "c",
+      "grad": "none",
+      "color": "#fffffe00"
+    },
+    {
+      "op": "C",
+      "grad": "none",
+      "color": "#ffffff"
+    },
+    {
+      "op": "P",
+      "points": [[0.000,0.000],[0.000,62.000],[115.500,62.000],[115.500,0.000]]
+    }
+  ],
+  "bb": "0,0,115.5,62",
+  "rankdir": "BT",
+  "xdotversion": "1.7",
+  "_subgraph_cnt": 0,
+  "objects": [
+    {
+      "_gvid": 0,
+      "name": "Account",
+      "_ldraw_": 
+      [
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [24.380,37.700],
+          "align": "l",
+          "width": 66.750,
+          "text": "    Account "
+        },
+        {
+          "op": "F",
+          "size": 14.000,
+          "face": "Times-Roman"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "T",
+          "pt": [3.000,7.700],
+          "align": "l",
+          "width": 109.500,
+          "text": "  balance : String  "
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "C",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "P",
+          "points": [[0.000,23.000],[0.000,23.000],[115.500,23.000],[115.500,23.000]]
+        },
+        {
+          "op": "S",
+          "style": "solid"
+        },
+        {
+          "op": "c",
+          "grad": "none",
+          "color": "#000000"
+        },
+        {
+          "op": "p",
+          "points": [[0.000,0.000],[0.000,62.000],[115.500,62.000],[115.500,0.000]]
+        }
+      ],
+      "height": "0.86111",
+      "href": "javascript:Action.selectClass(&quot;\\N&quot;);",
+      "label": "<table border=\"1\" cellspacing=\"0\" cellborder=\"0\" cellpadding=\"2\"><tr><td cellpadding=\"10\">    Account <\/td><\/tr><hr\/><tr><td align=\"left\" href=\"\" title=\"String balance&#13;\">  balance : String  <\/td><\/tr><\/table>",
+      "margin": "0",
+      "pos": "57.75,31",
+      "ratio": "auto",
+      "shape": "plaintext",
+      "tooltip": "class Account\n",
+      "width": "1.6042"
+    }
+  ]
+}

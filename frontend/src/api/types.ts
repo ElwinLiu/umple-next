@@ -83,6 +83,29 @@ export interface Position {
   height: number
 }
 
+// State machine types (parsed from GV files by the backend)
+export interface UmpleStateMachine {
+  name: string
+  className: string
+  states: UmpleState[]
+}
+
+export interface UmpleState {
+  name: string
+  entryActions?: string[]
+  exitActions?: string[]
+  nestedStates?: UmpleState[]
+  transitions?: UmpleTransition[]
+  isInitial?: boolean
+}
+
+export interface UmpleTransition {
+  event: string
+  guard?: string
+  action?: string
+  nextState: string
+}
+
 export interface GvNodeLayout {
   name: string
   x: number

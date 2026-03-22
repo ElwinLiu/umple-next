@@ -39,7 +39,7 @@ export function useExecute() {
 export function useCompile() {
   const [compiling, setCompiling] = useState(false)
   const compilingRef = useRef(false)
-  const { updateFromModel, updateStateDiagramFromModel } = useDiagram()
+  const { updateFromModel, updateStateDiagramFromGv } = useDiagram()
 
   const compile = useCallback(async () => {
     if (compilingRef.current) return
@@ -47,7 +47,7 @@ export function useCompile() {
     setCompiling(true)
 
     try {
-      const { success } = await compileAndRefresh({ updateFromModel, updateStateDiagramFromModel })
+      const { success } = await compileAndRefresh({ updateFromModel, updateStateDiagramFromGv })
       if (success) useUiStore.getState().setExecutionOutput('Compiled successfully.')
     } catch {
       // compileAndRefresh handles error reporting
@@ -55,7 +55,7 @@ export function useCompile() {
       compilingRef.current = false
       setCompiling(false)
     }
-  }, [updateFromModel, updateStateDiagramFromModel])
+  }, [updateFromModel, updateStateDiagramFromGv])
 
   return { compile, compiling }
 }

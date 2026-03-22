@@ -4,13 +4,13 @@ import { useUiStore } from '../stores/uiStore'
 import { useDiagramStore, VIEW_TO_GV_TYPE, type DiagramView } from '../stores/diagramStore'
 import { useDiagram } from './useDiagram'
 import { api } from '../api/client'
-import type { UmpleModel, GvLayout } from '../api/types'
+import type { UmpleModel, UmpleStateMachine, GvLayout } from '../api/types'
 
 const DEBOUNCE_MS = 1500
 
 interface CompileCallbacks {
   updateFromModel: (model: UmpleModel, gvLayout?: GvLayout) => void
-  updateStateDiagramFromModel: (model: UmpleModel) => void
+  updateStateDiagramFromGv: (stateMachines: UmpleStateMachine[], gvLayout?: GvLayout) => void
 }
 
 /** Core compile + diagram refresh. Shared by auto-compile and manual compile.
@@ -40,8 +40,6 @@ export async function compileAndRefresh(
     if (res.result) {
       try {
         model = JSON.parse(res.result)
-        // State diagram doesn't use GV layout — update immediately
-        callbacks.updateStateDiagramFromModel(model!)
       } catch {}
     }
 
@@ -61,6 +59,10 @@ export async function compileAndRefresh(
         const svgRes = await api.diagram({ code, diagramType: gvType, modelId: currentModelId })
         if (svgRes.svg) setSvgForView(viewMode, svgRes.svg)
         gvLayout = svgRes.layout
+        // Update state diagram from GV-parsed data
+        if (viewMode === 'state' && svgRes.stateMachines) {
+          callbacks.updateStateDiagramFromGv(svgRes.stateMachines, svgRes.layout)
+        }
         if (svgRes.errors) {
           setLastError(svgRes.errors)
           setExecutionOutput('', svgRes.errors)
@@ -93,7 +95,7 @@ export function useCompiler() {
   const viewMode = useDiagramStore((s) => s.viewMode)
   const setSvgForView = useDiagramStore((s) => s.setSvgForView)
   const setLastError = useDiagramStore((s) => s.setLastError)
-  const { updateFromModel, updateStateDiagramFromModel } = useDiagram()
+  const { updateFromModel, updateStateDiagramFromGv } = useDiagram()
 
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const abortRef = useRef<AbortController>(undefined)
@@ -117,7 +119,7 @@ export function useCompiler() {
 
       try {
         const result = await compileAndRefresh(
-          { updateFromModel, updateStateDiagramFromModel },
+          { updateFromModel, updateStateDiagramFromGv },
           abortRef.current.signal,
         )
         if (result.model) lastModelRef.current = result.model
@@ -157,10 +159,11 @@ export function useCompiler() {
       if (res.svg) {
         setSvgForView(view, res.svg)
       }
-      // Only update ReactFlow class nodes when the layout is from a class diagram —
-      // state/feature layouts have different node names and would clobber positions.
-      if (res.layout && lastModelRef.current && view === 'class') {
+      // Update ReactFlow nodes from diagram response
+      if (view === 'class' && res.layout && lastModelRef.current) {
         updateFromModel(lastModelRef.current, res.layout)
+      } else if (view === 'state' && res.stateMachines?.length) {
+        updateStateDiagramFromGv(res.stateMachines, res.layout)
       }
       if (res.errors) {
         setLastError(res.errors)

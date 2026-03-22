@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import type { Node, Edge } from '@xyflow/react'
-import type { UmpleModel, GvLayout } from '../api/types'
+import type { UmpleModel, GvLayout, UmpleStateMachine, UmpleState } from '../api/types'
 import type { ClassNodeData } from '../components/diagram/nodes/ClassNode'
 import type { AssociationEdgeData } from '../components/diagram/edges/AssociationEdge'
 import type { StateNodeData } from '../components/diagram/nodes/StateNode'
@@ -18,26 +18,6 @@ const GRID_Y_GAP = 200
 const STATE_GRID_COLS = 3
 const STATE_X_GAP = 200
 const STATE_Y_GAP = 160
-
-interface UmpleState {
-  name: string
-  entryActions?: string[]
-  exitActions?: string[]
-  nestedStates?: UmpleState[]
-  transitions?: UmpleTransition[]
-}
-
-interface UmpleTransition {
-  event: string
-  guard?: string
-  action?: string
-  nextState: string
-}
-
-interface UmpleStateMachine {
-  name: string
-  states: UmpleState[]
-}
 
 interface DiagramNodeMetrics {
   width: number
@@ -87,6 +67,27 @@ function estimateClassMetrics(
     height: clamp(
       38 + (attributes.length > 0 ? attributes.length * 18 : 0),
       50,
+      420,
+    ),
+  }
+}
+
+function estimateStateMetrics(state: UmpleState): DiagramNodeMetrics {
+  const actionCount = (state.entryActions?.length ?? 0) + (state.exitActions?.length ?? 0)
+  const nestedCount = state.nestedStates?.length ?? 0
+  const allLines = [
+    state.name,
+    ...(state.entryActions ?? []).map((a) => `entry/ ${a}`),
+    ...(state.exitActions ?? []).map((a) => `exit/ ${a}`),
+    ...(state.nestedStates ?? []).map((ns) => ns.name),
+  ]
+  const widestLine = allLines.reduce((max, line) => Math.max(max, estimateTextWidth(line)), 0)
+
+  return {
+    width: clamp(Math.round(widestLine + 40), 140, 420),
+    height: clamp(
+      32 + (actionCount > 0 ? actionCount * 16 + 8 : 0) + (nestedCount > 0 ? nestedCount * 16 + 8 : 0),
+      40,
       420,
     ),
   }
@@ -308,27 +309,40 @@ export function useDiagram() {
     setEdges([...assocEdges, ...genEdges, ...implEdges])
   }, [setNodes, setEdges])
 
-  const updateStateDiagramFromModel = useCallback((model: UmpleModel) => {
-    const stateMachines: UmpleStateMachine[] = (model as Record<string, unknown>).umpleStateMachines as UmpleStateMachine[] || []
+  const updateStateDiagramFromGv = useCallback((
+    stateMachines: UmpleStateMachine[],
+    gvLayout?: GvLayout,
+  ) => {
+    if (!stateMachines?.length) {
+      setStateNodes([])
+      setStateEdges([])
+      return
+    }
 
     const allStateNodes: Node[] = []
     const allTransitionEdges: Edge[] = []
     let nodeIndex = 0
     let edgeIndex = 0
 
+    // Build layout entries with estimated metrics (like class diagram approach)
+    type FlatState = { state: UmpleState; id: string; gvNodeName: string; depth: number }
+    const allFlatStates: FlatState[] = []
+
     for (const sm of stateMachines) {
       const states = sm.states || []
+      const className = sm.className || sm.name.split('.')[0]
+      const smName = sm.name.includes('.') ? sm.name.split('.').slice(1).join('.') : sm.name
 
-      // Flatten nested states for node creation
       const flattenStates = (
         stateList: UmpleState[],
         parentPrefix: string,
-        depth: number
-      ): { state: UmpleState; id: string; depth: number }[] => {
-        const result: { state: UmpleState; id: string; depth: number }[] = []
+        depth: number,
+      ): FlatState[] => {
+        const result: FlatState[] = []
         for (const s of stateList) {
           const id = parentPrefix ? `${parentPrefix}.${s.name}` : `${sm.name}.${s.name}`
-          result.push({ state: s, id, depth })
+          const gvNodeName = `${className}_${smName}_${s.name}`
+          result.push({ state: s, id, gvNodeName, depth })
           if (s.nestedStates?.length) {
             result.push(...flattenStates(s.nestedStates, id, depth + 1))
           }
@@ -336,46 +350,91 @@ export function useDiagram() {
         return result
       }
 
-      const flatStates = flattenStates(states, '', 0)
+      allFlatStates.push(...flattenStates(states, '', 0))
+    }
 
-      // Create nodes
-      for (const { state, id, depth } of flatStates) {
-        const col = nodeIndex % STATE_GRID_COLS
-        const row = Math.floor(nodeIndex / STATE_GRID_COLS)
-        const isInitial = nodeIndex === 0 || (depth === 0 && flatStates.indexOf(flatStates.find((fs) => fs.id === id)!) === 0)
+    // Use estimated metrics + buildGvPositions for proper centering (matching class diagram approach)
+    const layoutEntries: LayoutEntry[] = allFlatStates.map((fs) => ({
+      name: fs.gvNodeName,
+      metrics: estimateStateMetrics(fs.state),
+    }))
 
-        allStateNodes.push({
-          id: `state-${id}`,
-          type: 'stateNode',
-          position: {
-            x: col * STATE_X_GAP + 50 + depth * 30,
-            y: row * STATE_Y_GAP + 50,
-          },
-          data: {
-            name: state.name,
-            isInitial: isInitial && depth === 0 && nodeIndex < states.length,
-            isFinal: state.name === 'Final' || state.name === 'final',
-            entryActions: state.entryActions || [],
-            exitActions: state.exitActions || [],
-            nestedStates: (state.nestedStates || []).map((ns) => ns.name),
-            isCollapsed: depth > 0,
-          } satisfies StateNodeData,
-        })
-        nodeIndex++
+    const positions = gvLayout
+      ? buildGvPositions(gvLayout, layoutEntries)
+      : null
+
+    // Build a position lookup by ReactFlow node ID for edge handle selection
+    const nodePositions = new Map<string, { x: number; y: number }>()
+
+    // Create nodes
+    for (const { state, id, gvNodeName, depth } of allFlatStates) {
+      const gvPos = positions?.get(gvNodeName)
+      const position = gvPos ?? {
+        x: (nodeIndex % STATE_GRID_COLS) * STATE_X_GAP + 50 + depth * 30,
+        y: Math.floor(nodeIndex / STATE_GRID_COLS) * STATE_Y_GAP + 50,
       }
 
-      // Create transition edges
-      for (const { state, id } of flatStates) {
+      const nodeId = `state-${id}`
+      nodePositions.set(nodeId, position)
+
+      allStateNodes.push({
+        id: nodeId,
+        type: 'stateNode',
+        position,
+        data: {
+          name: state.name,
+          isInitial: state.isInitial ?? false,
+          isFinal: state.name === 'Final' || state.name === 'final',
+          entryActions: state.entryActions || [],
+          exitActions: state.exitActions || [],
+          nestedStates: (state.nestedStates || []).map((ns) => ns.name),
+          isCollapsed: depth > 0,
+        } satisfies StateNodeData,
+      })
+      nodeIndex++
+    }
+
+    // Create transition edges with handle selection based on relative positions
+    for (const sm of stateMachines) {
+      const smFlatStates = allFlatStates.filter((fs) =>
+        fs.id.startsWith(sm.name + '.'),
+      )
+
+      for (const { state, id } of smFlatStates) {
         const transitions = state.transitions || []
         for (const t of transitions) {
-          // Find the target state id
-          const targetEntry = flatStates.find((fs) => fs.state.name === t.nextState)
+          const targetEntry = smFlatStates.find((fs) => fs.state.name === t.nextState)
           const targetId = targetEntry ? `state-${targetEntry.id}` : `state-${sm.name}.${t.nextState}`
+          const sourceId = `state-${id}`
+
+          const isSelfLoop = sourceId === targetId
+          const sourcePos = nodePositions.get(sourceId)
+          const targetPos = nodePositions.get(targetId)
+
+          // Select handles based on relative Y position (TB layout)
+          let sourceHandle: string | undefined
+          let targetHandle: string | undefined
+
+          if (isSelfLoop) {
+            sourceHandle = 'right-source'
+            targetHandle = 'right-target'
+          } else if (sourcePos && targetPos) {
+            if (sourcePos.y < targetPos.y) {
+              // Forward edge (source above target): default handles (source=Bottom, target=Top)
+              // Default handles have no id, so leave undefined
+            } else {
+              // Back-edge (source below target): use reverse handles
+              sourceHandle = 'top-source'
+              targetHandle = 'bottom-target'
+            }
+          }
 
           allTransitionEdges.push({
             id: `trans-${edgeIndex}`,
-            source: `state-${id}`,
+            source: sourceId,
             target: targetId,
+            ...(sourceHandle ? { sourceHandle } : {}),
+            ...(targetHandle ? { targetHandle } : {}),
             type: 'transition',
             data: {
               event: t.event || '',
@@ -392,5 +451,5 @@ export function useDiagram() {
     setStateEdges(allTransitionEdges)
   }, [setStateNodes, setStateEdges])
 
-  return { updateFromModel, updateStateDiagramFromModel }
+  return { updateFromModel, updateStateDiagramFromGv }
 }

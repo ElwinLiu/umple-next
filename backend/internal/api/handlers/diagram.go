@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/umple/umple-next/backend/internal/compiler"
+	"github.com/umple/umple-next/backend/internal/gvparse"
 	"github.com/umple/umple-next/backend/internal/model"
 )
 
@@ -45,10 +47,11 @@ type GvLayout struct {
 }
 
 type DiagramResponse struct {
-	SVG     string    `json:"svg"`
-	Layout  *GvLayout `json:"layout,omitempty"`
-	Errors  string    `json:"errors,omitempty"`
-	ModelID string    `json:"modelId"`
+	SVG           string                 `json:"svg"`
+	Layout        *GvLayout              `json:"layout,omitempty"`
+	StateMachines []gvparse.StateMachine `json:"stateMachines,omitempty"`
+	Errors        string                 `json:"errors,omitempty"`
+	ModelID       string                 `json:"modelId"`
 }
 
 // Graphviz JSON output structures (subset we care about).
@@ -205,6 +208,18 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Parse state machine structure from GV file (fast, before dot runs)
+	var stateMachines []gvparse.StateMachine
+	if req.DiagramType == "GvStateDiagram" {
+		if gvContent, err := os.ReadFile(gvFile); err == nil {
+			var parseErr error
+			stateMachines, parseErr = gvparse.ParseStateDiagram(string(gvContent))
+			if parseErr != nil {
+				log.Printf("gvparse: state machine parsing failed: %v", parseErr)
+			}
+		}
+	}
+
 	// Run dot -Tsvg and dot -Tjson concurrently (independent operations on the same .gv input)
 	var (
 		svgData    []byte
@@ -253,9 +268,10 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(DiagramResponse{
-		SVG:     string(svgData),
-		Layout:  layout,
-		Errors:  result.Errors,
-		ModelID: modelID,
+		SVG:           string(svgData),
+		Layout:        layout,
+		StateMachines: stateMachines,
+		Errors:        result.Errors,
+		ModelID:       modelID,
 	})
 }

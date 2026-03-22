@@ -41,7 +41,7 @@ export const TransitionEdge = memo(function TransitionEdge(props: EdgeProps) {
           <rect
             x={-4}
             y={-12}
-            width={label.length * 6.5 + 8}
+            width={label.length * 7 + 8}
             height={16}
             rx={3}
             fill="var(--color-surface-0)"
