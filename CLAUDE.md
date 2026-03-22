@@ -2,6 +2,8 @@
 
 ## Design Context
 
+The user uses shacdn/ui lib, consider using it when appropriate.
+
 ### Users
 Software developers, students, and educators working with UML-like modeling and code generation using the Umple language. They arrive with a task in mind (model a system, generate code, learn Umple) and need the tool to feel immediately legible and trustworthy — like a university-grade instrument, not a toy.
 

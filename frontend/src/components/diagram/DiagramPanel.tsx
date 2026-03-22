@@ -14,6 +14,7 @@ import { useUiStore } from '../../stores/uiStore'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
 import { ErrorBanner } from '@/components/ui/error-banner'
+import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { api } from '@/api/client'
 
@@ -84,13 +85,17 @@ export function DiagramPanel() {
             {hasReactFlowData && (
               <>
                 <div className="w-px h-3.5 bg-border mx-0.5" />
-                <ToolbarButton
-                  onClick={() => setRenderMode(renderMode === 'reactflow' ? 'graphviz' : 'reactflow')}
-                  label={renderMode === 'reactflow' ? 'Switch to Graphviz rendering' : 'Switch to React Flow rendering'}
-                  active={renderMode === 'graphviz'}
-                >
-                  {renderMode === 'reactflow' ? 'GV' : 'RF'}
-                </ToolbarButton>
+                <Tip content={`Renderer: ${renderMode === 'reactflow' ? 'React Flow' : 'Graphviz'}`} side="bottom">
+                  <label className="flex items-center gap-1.5 cursor-pointer">
+                    <span className={`text-xs ${renderMode === 'reactflow' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>RF</span>
+                    <Switch
+                      size="sm"
+                      checked={renderMode === 'graphviz'}
+                      onCheckedChange={(checked) => setRenderMode(checked ? 'graphviz' : 'reactflow')}
+                    />
+                    <span className={`text-xs ${renderMode === 'graphviz' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>GV</span>
+                  </label>
+                </Tip>
               </>
             )}
           </div>
@@ -136,29 +141,3 @@ export function DiagramPanel() {
 
 const toolbarBtnBase = 'px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1'
 
-function ToolbarButton({
-  onClick,
-  label,
-  active,
-  children,
-}: {
-  onClick: () => void
-  label: string
-  active?: boolean
-  children: React.ReactNode
-}) {
-  return (
-    <Tip content={label} side="bottom">
-      <button
-        onClick={onClick}
-        className={`${toolbarBtnBase} ${
-          active
-            ? 'text-brand font-semibold bg-brand-light'
-            : 'text-ink-muted hover:text-ink hover:bg-surface-2'
-        }`}
-      >
-        {children}
-      </button>
-    </Tip>
-  )
-}
