@@ -52,12 +52,12 @@ export function useCompile() {
       const { success } = await compileAndRefresh({ updateFromModel, updateStateDiagramFromGv }, isDark)
       if (success) {
         useUiStore.getState().setExecutionOutput('Compiled successfully.')
-        useUiStore.setState({ outputView: 'strip' })
+        useUiStore.getState().setOutputView('strip')
       } else {
         // Show strip for warnings-only (errors auto-open panel via setExecutionOutput)
         const { outputWarningCount, outputErrorCount } = useUiStore.getState()
         if (outputWarningCount > 0 && outputErrorCount === 0) {
-          useUiStore.setState({ outputView: 'strip' })
+          useUiStore.getState().setOutputView('strip')
         }
       }
     } catch {

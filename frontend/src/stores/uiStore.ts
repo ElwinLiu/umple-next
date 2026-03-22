@@ -110,7 +110,7 @@ export const useUiStore = create<UiState>((set) => ({
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.min(480, Math.max(200, sidebarWidth)) }),
   toggleTaskPanel: () => set((s) => ({ showTaskPanel: !s.showTaskPanel })),
   setOutputView: (outputView) => set({ outputView }),
-  toggleOutputPanel: () => set((s) => ({ outputView: s.outputView === 'panel' ? 'hidden' : 'panel' })),
+  toggleOutputPanel: () => set((s) => ({ outputView: s.outputView === 'hidden' ? 'panel' : 'hidden' })),
   openAgentPanel: () => set({ showAgentPanel: true }),
   closeAgentPanel: () => set({ showAgentPanel: false }),
   toggleAgentPanel: () => set((s) => ({ showAgentPanel: !s.showAgentPanel })),

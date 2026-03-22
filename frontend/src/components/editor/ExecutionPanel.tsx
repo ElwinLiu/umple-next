@@ -3,16 +3,11 @@ import { useUiStore } from '../../stores/uiStore'
 import { ChevronDown, ChevronUp, Check, AlertTriangle, X } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 
-// ── Badges (reused in TabBar + OutputPanel header) ──────────────────
+// ── Shared badge pills ──────────────────────────────────────────────
 
-function Badges() {
-  const errorCount = useUiStore((s) => s.outputErrorCount)
-  const warningCount = useUiStore((s) => s.outputWarningCount)
-
-  if (!errorCount && !warningCount) return null
-
+function BadgePills({ errorCount, warningCount }: { errorCount: number; warningCount: number }) {
   return (
-    <div className="flex items-center gap-1.5">
+    <>
       {errorCount > 0 && (
         <span className="flex items-center gap-1 rounded-full bg-status-error/15 px-1.5 py-0.5 text-xxs font-semibold leading-none text-status-error">
           {errorCount} {errorCount === 1 ? 'error' : 'errors'}
@@ -23,6 +18,19 @@ function Badges() {
           {warningCount} {warningCount === 1 ? 'warning' : 'warnings'}
         </span>
       )}
+    </>
+  )
+}
+
+function Badges() {
+  const errorCount = useUiStore((s) => s.outputErrorCount)
+  const warningCount = useUiStore((s) => s.outputWarningCount)
+
+  if (!errorCount && !warningCount) return null
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <BadgePills errorCount={errorCount} warningCount={warningCount} />
     </div>
   )
 }
@@ -42,16 +50,7 @@ export function OutputBadges() {
       className="flex items-center gap-1.5 px-2 h-full cursor-pointer hover:bg-surface-2/50 transition-colors"
       aria-label="Toggle output panel"
     >
-      {errorCount > 0 && (
-        <span className="flex items-center gap-1 rounded-full bg-status-error/15 px-1.5 py-0.5 text-xxs font-semibold leading-none text-status-error">
-          {errorCount} {errorCount === 1 ? 'error' : 'errors'}
-        </span>
-      )}
-      {warningCount > 0 && (
-        <span className="flex items-center gap-1 rounded-full bg-status-warning/15 px-1.5 py-0.5 text-xxs font-semibold leading-none text-status-warning">
-          {warningCount} {warningCount === 1 ? 'warning' : 'warnings'}
-        </span>
-      )}
+      <BadgePills errorCount={errorCount} warningCount={warningCount} />
     </button>
   )
 }

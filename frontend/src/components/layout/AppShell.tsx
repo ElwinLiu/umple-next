@@ -10,7 +10,10 @@ import { useCompiler } from '../../hooks/useCompiler'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 export function AppShell() {
-  const { showEditor, diagramOnly, outputView, showTaskPanel } = useUiStore()
+  const showEditor = useUiStore((s) => s.showEditor)
+  const diagramOnly = useUiStore((s) => s.diagramOnly)
+  const outputView = useUiStore((s) => s.outputView)
+  const showTaskPanel = useUiStore((s) => s.showTaskPanel)
   useCompiler()
 
   const editorVisible = showEditor && !diagramOnly

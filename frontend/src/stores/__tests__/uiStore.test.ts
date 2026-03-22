@@ -41,6 +41,13 @@ describe('uiStore', () => {
     expect(useUiStore.getState().outputView).toBe('hidden')
   })
 
+  it('toggleOutputPanel from strip goes to hidden', () => {
+    useUiStore.setState({ outputView: 'strip' })
+
+    useUiStore.getState().toggleOutputPanel()
+    expect(useUiStore.getState().outputView).toBe('hidden')
+  })
+
   it('does not change output view when clearing output', () => {
     useUiStore.setState({ outputView: 'panel' })
 
