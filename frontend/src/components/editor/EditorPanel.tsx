@@ -2,6 +2,7 @@ import { useCallback, lazy, Suspense } from 'react'
 import { TabBar } from './TabBar'
 import { UmpleEditor } from './UmpleEditor'
 import { UmpleDiffEditor } from './UmpleDiffEditor'
+import { SelectionToolbar } from './SelectionToolbar'
 import { useEditorStore } from '../../stores/editorStore'
 import { useAiConfigStore } from '@/stores/aiConfigStore'
 
@@ -45,9 +46,12 @@ export function EditorPanel() {
           <UmpleEditor key={activeTabId} code={code} onChange={handleChange} />
         )}
         {isAiConfigured && (
-          <Suspense>
-            <AgentPanel />
-          </Suspense>
+          <>
+            <SelectionToolbar />
+            <Suspense>
+              <AgentPanel />
+            </Suspense>
+          </>
         )}
       </div>
     </div>

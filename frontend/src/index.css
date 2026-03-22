@@ -311,18 +311,11 @@ body {
 
 /* ── Focus Rings ── */
 
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid var(--color-brand);
-  outline-offset: 1px;
-}
-
-/* cmdk input handles its own focus styling */
-[data-slot="command-input"]:focus-visible,
-[data-slot="agent-input"]:focus-visible {
-  outline: none;
+@layer base {
+  :where(button, input, select, textarea):focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 1px;
+  }
 }
 
 /* ── Scrollbar Styling ── */

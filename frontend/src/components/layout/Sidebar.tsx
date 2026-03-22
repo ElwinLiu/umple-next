@@ -13,7 +13,6 @@ import {
   ChevronsDownUp,
   ChevronsUpDown,
   Search,
-  Settings,
   Code,
   Columns2,
   Play,
@@ -28,13 +27,11 @@ import {
   ExternalLink,
 } from 'lucide-react'
 import { AiConfigSection } from '@/components/sidebar/AiConfigSection'
+import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuLabel,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuGroup,
@@ -141,7 +138,7 @@ function SidebarContent() {
         <LayoutToggle />
       </div>
 
-      {/* Row 2: fold/expand all left, search + settings right */}
+      {/* Row 2: fold/expand all left, search right */}
       <div className="flex items-center justify-between px-4 pb-2.5 shrink-0 border-b border-border/60">
         <Tip content={anyOpen ? 'Collapse all' : 'Expand all'} side="bottom">
           <button
@@ -152,18 +149,15 @@ function SidebarContent() {
             {anyOpen ? <ChevronsDownUp className="size-4" /> : <ChevronsUpDown className="size-4" />}
           </button>
         </Tip>
-        <div className="flex items-center gap-0.5">
-          <Tip content="Search (Ctrl K)" side="bottom">
-            <button
-              onClick={openCommandPalette}
-              className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
-              aria-label="Command palette"
-            >
-              <Search className="size-4" />
-            </button>
-          </Tip>
-          <SettingsDropdown />
-        </div>
+        <Tip content="Search (Ctrl K)" side="bottom">
+          <button
+            onClick={openCommandPalette}
+            className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
+            aria-label="Command palette"
+          >
+            <Search className="size-4" />
+          </button>
+        </Tip>
       </div>
 
       {/* Scrollable sections */}
@@ -561,18 +555,14 @@ const FOOTER_LINKS = [
 
 function SidebarFooter() {
   return (
-    <div className="shrink-0 border-t border-border/60 p-2" data-testid="sidebar-footer">
+    <div className="shrink-0 border-t border-border/60 px-3 py-2 flex items-center justify-between gap-2" data-testid="sidebar-footer">
       <DropdownMenu>
         <DropdownMenuTrigger
-          className="flex items-center gap-2.5 w-full rounded-lg px-2.5 py-2 text-left transition-colors cursor-pointer hover:bg-surface-2 data-[state=open]:bg-surface-2"
+          className="flex items-center gap-1.5 rounded-lg p-1.5 transition-colors cursor-pointer hover:bg-surface-2 data-[state=open]:bg-surface-2"
           aria-label="University of Ottawa resources"
           data-testid="sidebar-footer-menu"
         >
-          <img src="/uottawa-logo.svg" alt="" className="h-8 w-auto shrink-0 dark:invert" />
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-medium text-ink truncate">University of Ottawa</div>
-            <div className="text-xxs text-ink-muted">Resources & help</div>
-          </div>
+          <img src="/uottawa-logo.svg" alt="University of Ottawa" className="h-8 w-auto shrink-0 dark:invert" />
           <ChevronsUpDown className="size-3.5 text-ink-faint shrink-0" />
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" className="w-56">
@@ -593,36 +583,8 @@ function SidebarFooter() {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+      <ThemeToggle />
     </div>
-  )
-}
-
-// ── Settings dropdown ──
-
-function SettingsDropdown() {
-  const { theme, setTheme } = useUiStore()
-
-  return (
-    <DropdownMenu>
-      <Tip content="Settings" side="bottom">
-        <DropdownMenuTrigger
-          className="p-1.5 transition-colors cursor-pointer rounded-lg text-ink-muted hover:text-ink hover:bg-surface-2 outline-none data-[state=open]:text-ink data-[state=open]:bg-surface-2"
-          aria-label="Settings"
-        >
-          <Settings className="size-4" />
-        </DropdownMenuTrigger>
-      </Tip>
-      <DropdownMenuContent align="end" className="w-40">
-        <DropdownMenuLabel className="text-xxs uppercase tracking-wider text-ink-muted font-semibold">
-          Theme
-        </DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={theme} onValueChange={(v) => setTheme(v as 'light' | 'dark' | 'system')}>
-          <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="system">System</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
   )
 }
 

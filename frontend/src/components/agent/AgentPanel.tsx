@@ -33,6 +33,9 @@ function AgentPanel() {
     useAgent()
   const { showAgentPanel, openAgentPanel, closeAgentPanel } = useUiStore()
   const code = useEditorStore((s) => s.code)
+  const selection = useEditorStore((s) => s.selection)
+  const clearSelection = useEditorStore((s) => s.setSelection)
+  const activeTabName = useEditorStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.name ?? 'model.ump')
   const expanded = showAgentPanel
   const [focusExpandedInput, setFocusExpandedInput] = useState(false)
 
@@ -58,6 +61,12 @@ function AgentPanel() {
 
   const isStreaming = status === 'submitted' || status === 'streaming'
   const canSend = input.trim().length > 0 && !isStreaming
+
+  const selectionBadge = selection
+    ? selection.fromLine === selection.toLine
+      ? `${activeTabName} (${selection.fromLine})`
+      : `${activeTabName} (${selection.fromLine}:${selection.toLine})`
+    : null
   const userScrolledUp = useRef(false)
 
   /* Track whether the user has scrolled up */
@@ -71,6 +80,22 @@ function AgentPanel() {
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => el.removeEventListener('scroll', onScroll)
   }, [])
+
+  /* ── Consume pending messages from SelectionToolbar ── */
+  const pendingAgentMessage = useUiStore((s) => s.pendingAgentMessage)
+  const consumeAgentMessage = useUiStore((s) => s.consumeAgentMessage)
+
+  useEffect(() => {
+    if (!pendingAgentMessage) return
+    const msg = consumeAgentMessage()
+    if (msg) {
+      send(msg)
+      userScrolledUp.current = false
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      })
+    }
+  }, [pendingAgentMessage, consumeAgentMessage, send])
 
   /* Auto-scroll on new messages — skip if the user has scrolled up */
   useEffect(() => {
@@ -88,9 +113,15 @@ function AgentPanel() {
     const text = input.trim()
     if (!text || isStreaming) return
     if (!expanded) handleExpandPanel(true)
-    send(text)
+
+    let message = text
+    if (selection) {
+      message = `[${selectionBadge}]\n\`\`\`\n${selection.text}\n\`\`\`\n\n${text}`
+      clearSelection(null)
+    }
+
+    send(message)
     setInput('')
-    /* Always scroll to bottom on explicit user send */
     userScrolledUp.current = false
     requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -143,6 +174,8 @@ function AgentPanel() {
           isStreaming={isStreaming}
           canSend={canSend}
           textareaMaxHeight={60}
+          selectionBadge={selectionBadge}
+          onClearSelection={() => clearSelection(null)}
         >
           {messages.length > 0 && (
             <button
@@ -248,6 +281,8 @@ function AgentPanel() {
           textareaMaxHeight={100}
           autoFocus={focusExpandedInput}
           onAutoFocus={() => setFocusExpandedInput(false)}
+          selectionBadge={selectionBadge}
+          onClearSelection={() => clearSelection(null)}
         />
       </div>
     </div>

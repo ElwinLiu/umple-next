@@ -16,9 +16,11 @@ interface EditorState {
   tabs: Tab[]
   activeTabId: string
   diffPreview: DiffPreviewState | null
+  selection: { fromLine: number; toLine: number; text: string; coords?: { x: number; yTop: number; yBottom: number } } | null
 
   setCode: (code: string) => void
   setModelId: (id: string) => void
+  setSelection: (sel: { fromLine: number; toLine: number; text: string; coords?: { x: number; yTop: number; yBottom: number } } | null) => void
   showDiffPreview: (preview: DiffPreviewState) => void
   clearDiffPreview: (toolCallId?: string) => void
   markSaved: (id?: string) => void
@@ -62,6 +64,9 @@ export const useEditorStore = create<EditorState>((set) => ({
   tabs: [{ id: 'main', name: 'model.ump', code: DEFAULT_CODE, dirty: false, savedCode: DEFAULT_CODE }],
   activeTabId: 'main',
   diffPreview: null,
+  selection: null,
+
+  setSelection: (selection) => set({ selection }),
 
   setCode: (code) => set((s) => ({
     code,

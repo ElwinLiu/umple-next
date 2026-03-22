@@ -31,28 +31,26 @@ export function AppShell() {
             {editorVisible && (
               <>
                 <Panel defaultSize={50} minSize={20}>
-                  {outputView === 'panel' ? (
-                    <PanelGroup direction="vertical" className="h-full">
-                      <Panel defaultSize={65} minSize={20}>
-                        <div className="h-full rounded-lg overflow-hidden bg-surface-0">
+                  <PanelGroup direction="vertical" className="h-full">
+                    <Panel defaultSize={outputView === 'panel' ? 65 : 100} minSize={20}>
+                      <div className="h-full rounded-lg overflow-hidden bg-surface-0 flex flex-col">
+                        <div className="flex-1 min-h-0">
                           <EditorPanel />
                         </div>
-                      </Panel>
-                      <PanelResizeHandle className="h-2.5 cursor-row-resize" />
-                      <Panel defaultSize={35} minSize={10}>
-                        <div className="h-full rounded-lg overflow-hidden bg-surface-0">
-                          <OutputPanel />
-                        </div>
-                      </Panel>
-                    </PanelGroup>
-                  ) : (
-                    <div className="h-full rounded-lg overflow-hidden bg-surface-0 flex flex-col">
-                      <div className="flex-1 min-h-0">
-                        <EditorPanel />
+                        <CompileStatusStrip />
                       </div>
-                      <CompileStatusStrip />
-                    </div>
-                  )}
+                    </Panel>
+                    {outputView === 'panel' && (
+                      <>
+                        <PanelResizeHandle className="h-2.5 cursor-row-resize" />
+                        <Panel defaultSize={35} minSize={10}>
+                          <div className="h-full rounded-lg overflow-hidden bg-surface-0">
+                            <OutputPanel />
+                          </div>
+                        </Panel>
+                      </>
+                    )}
+                  </PanelGroup>
                 </Panel>
                 <PanelResizeHandle className="w-2.5 cursor-col-resize" />
               </>

@@ -1,5 +1,5 @@
 import { useRef, useEffect, type KeyboardEvent } from 'react'
-import { ArrowUp, Square } from 'lucide-react'
+import { ArrowUp, Square, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface InputBarProps {
@@ -14,6 +14,8 @@ interface InputBarProps {
   autoFocus?: boolean
   onAutoFocus?: () => void
   children?: React.ReactNode
+  selectionBadge?: string | null
+  onClearSelection?: () => void
 }
 
 export function InputBar({
@@ -28,6 +30,8 @@ export function InputBar({
   autoFocus = false,
   onAutoFocus,
   children,
+  selectionBadge,
+  onClearSelection,
 }: InputBarProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -49,6 +53,15 @@ export function InputBar({
       e.preventDefault()
       onSend()
     }
+    if (
+      e.key === 'Backspace' &&
+      selectionBadge &&
+      onClearSelection &&
+      textareaRef.current?.selectionStart === 0 &&
+      textareaRef.current?.selectionEnd === 0
+    ) {
+      onClearSelection()
+    }
   }
 
   return (
@@ -58,6 +71,21 @@ export function InputBar({
         className,
       )}
     >
+      {selectionBadge && (
+        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-2 py-0.5 pl-2 pr-1 text-xs text-ink-muted">
+          {selectionBadge}
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              onClearSelection?.()
+            }}
+            className="cursor-pointer rounded-full p-0.5 transition-colors hover:text-ink"
+            aria-label="Clear selection"
+          >
+            <X className="size-3" />
+          </button>
+        </span>
+      )}
       <textarea
         ref={textareaRef}
         data-slot="agent-input"

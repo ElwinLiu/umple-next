@@ -37,6 +37,11 @@ interface UiState {
   outputWarningCount: number
   theme: 'light' | 'dark' | 'system'
 
+  // Agent message queue (for sending from outside AgentPanel)
+  pendingAgentMessage: string | null
+  queueAgentMessage: (msg: string) => void
+  consumeAgentMessage: () => string | null
+
   // Progressive disclosure
   commandPaletteOpen: boolean
   rightPanelView: 'diagram' | 'generated'
@@ -79,7 +84,7 @@ function loadSidebarPref(): boolean {
   return true // default: expanded
 }
 
-export const useUiStore = create<UiState>((set) => ({
+export const useUiStore = create<UiState>((set, get) => ({
   showEditor: true,
   showSidebar: loadSidebarPref(),
   sidebarWidth: 280,
@@ -91,6 +96,14 @@ export const useUiStore = create<UiState>((set) => ({
   outputErrorCount: 0,
   outputWarningCount: 0,
   theme: 'system',
+
+  pendingAgentMessage: null,
+  queueAgentMessage: (msg) => set({ pendingAgentMessage: msg }),
+  consumeAgentMessage: (): string | null => {
+    const msg = get().pendingAgentMessage
+    if (msg) set({ pendingAgentMessage: null })
+    return msg
+  },
 
   commandPaletteOpen: false,
   rightPanelView: 'diagram',

@@ -1,7 +1,25 @@
 import { useRef, useEffect } from 'react'
 import { useUiStore } from '../../stores/uiStore'
-import { ChevronDown, ChevronUp, Check, AlertTriangle, X } from 'lucide-react'
+import { useAiConfigStore } from '@/stores/aiConfigStore'
+import { ChevronDown, ChevronUp, Check, AlertTriangle, X, Sparkles } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
+
+function useIsAiConfigured() {
+  return useAiConfigStore((s) => {
+    const cfg = s.configs[s.activeProvider]
+    return !!(cfg.apiKey.trim() && cfg.model.trim())
+  })
+}
+
+function triggerAIFix() {
+  const { executionOutput, executionErrors } = useUiStore.getState()
+  const errorInfo = [executionOutput, executionErrors].filter(Boolean).join('\n')
+  if (!errorInfo) return
+  useUiStore.getState().queueAgentMessage(
+    `Fix the following compilation issues:\n\n\`\`\`\n${errorInfo}\n\`\`\``,
+  )
+  useUiStore.getState().openAgentPanel()
+}
 
 // ── Shared badge pills ──────────────────────────────────────────────
 
@@ -63,6 +81,7 @@ export function CompileStatusStrip() {
   const warningCount = useUiStore((s) => s.outputWarningCount)
   const executionOutput = useUiStore((s) => s.executionOutput)
   const setOutputView = useUiStore((s) => s.setOutputView)
+  const isAiConfigured = useIsAiConfigured()
 
   const isSuccess = errorCount === 0 && warningCount === 0
 
@@ -93,6 +112,15 @@ export function CompileStatusStrip() {
         )}
       </div>
       <div className="flex items-center gap-1">
+        {!isSuccess && isAiConfigured && (
+          <button
+            onClick={triggerAIFix}
+            className="flex cursor-pointer items-center gap-1 rounded-full px-1.5 text-xxs text-brand transition-colors hover:text-brand-hover"
+          >
+            <Sparkles className="size-3" />
+            Fix
+          </button>
+        )}
         {!isSuccess && (
           <button
             onClick={() => setOutputView('panel')}
@@ -122,6 +150,10 @@ export function OutputPanel() {
   const outputRef = useRef<HTMLPreElement>(null)
   const executionOutput = useUiStore((s) => s.executionOutput)
   const executionErrors = useUiStore((s) => s.executionErrors)
+  const errorCount = useUiStore((s) => s.outputErrorCount)
+  const warningCount = useUiStore((s) => s.outputWarningCount)
+  const isAiConfigured = useIsAiConfigured()
+  const hasIssues = errorCount > 0 || warningCount > 0
 
   useEffect(() => {
     if (outputRef.current) {
@@ -136,6 +168,15 @@ export function OutputPanel() {
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-ink-muted">Output</span>
           <Badges />
+          {isAiConfigured && hasIssues && (
+            <button
+              onClick={triggerAIFix}
+              className="flex cursor-pointer items-center gap-1 rounded-full bg-brand/10 px-2 py-0.5 text-xxs font-medium text-brand transition-colors hover:bg-brand/20"
+            >
+              <Sparkles className="size-3" />
+              Fix
+            </button>
+          )}
         </div>
         <Tip content="Collapse" side="bottom">
           <button

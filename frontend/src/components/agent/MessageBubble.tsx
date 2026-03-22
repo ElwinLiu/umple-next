@@ -208,6 +208,16 @@ function ToolActionRow({
   )
 }
 
+/* ── Selection context parsing ── */
+
+const SELECTION_RE = /^\[(.+?)\]\n```\n([\s\S]*?)\n```\n\n([\s\S]*)$/
+
+function parseSelectionContext(text: string) {
+  const m = text.match(SELECTION_RE)
+  if (!m) return null
+  return { label: m[1], code: m[2], question: m[3] }
+}
+
 /* ── MessageBubble ── */
 
 export function MessageBubble({
@@ -238,14 +248,34 @@ export function MessageBubble({
       {message.parts.map((part, i) => {
         if (part.type === 'text') {
           if (!part.text) return null
-          return isUser ? (
-            <div
-              key={i}
-              className="max-w-[calc(100%-2rem)] rounded-2xl bg-surface-2 px-3 py-2 text-sm text-ink"
-            >
-              {part.text}
-            </div>
-          ) : (
+          if (isUser) {
+            const sel = parseSelectionContext(part.text)
+            if (sel) {
+              return (
+                <div
+                  key={i}
+                  className="max-w-[calc(100%-2rem)] space-y-1.5 rounded-2xl bg-surface-2 px-3 py-2 text-sm text-ink"
+                >
+                  <span className="inline-block rounded-full bg-surface-0 px-2 py-0.5 text-xs text-ink-muted">
+                    {sel.label}
+                  </span>
+                  <pre className="overflow-x-auto rounded-lg bg-surface-0 px-2.5 py-1.5 font-mono text-xs text-ink-muted">
+                    {sel.code}
+                  </pre>
+                  <p>{sel.question}</p>
+                </div>
+              )
+            }
+            return (
+              <div
+                key={i}
+                className="max-w-[calc(100%-2rem)] rounded-2xl bg-surface-2 px-3 py-2 text-sm text-ink"
+              >
+                {part.text}
+              </div>
+            )
+          }
+          return (
             <div
               key={i}
               className="prose prose-sm dark:prose-invert max-w-[calc(100%-2rem)] px-1 text-ink prose-p:my-1.5 prose-pre:bg-surface-1 prose-pre:text-ink prose-code:text-ink prose-headings:text-ink prose-strong:text-ink prose-a:text-brand prose-pre:border prose-pre:border-border"
