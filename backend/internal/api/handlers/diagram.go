@@ -27,9 +27,10 @@ func NewDiagramHandler(pool *compiler.Pool, store *model.Store) *DiagramHandler 
 }
 
 type DiagramRequest struct {
-	Code        string `json:"code"`
-	DiagramType string `json:"diagramType"`
-	ModelID     string `json:"modelId,omitempty"`
+	Code        string   `json:"code"`
+	DiagramType string   `json:"diagramType"`
+	ModelID     string   `json:"modelId,omitempty"`
+	Suboptions  []string `json:"suboptions,omitempty"`
 }
 
 type GvNodeLayout struct {
@@ -119,6 +120,25 @@ func parseGvLayout(jsonData []byte) *GvLayout {
 	return layout
 }
 
+// validSuboptions lists the allowed -s flags for umplesync.jar diagram generation.
+var validSuboptions = map[string]bool{
+	"hideattributes":       true,
+	"showmethods":          true,
+	"hideactions":          true,
+	"showtransitionlabels": true,
+	"hideguards":           true,
+	"showguardlabels":      true,
+	"hidenaturallanguage":  true,
+	"showFeatureDependency": true,
+	"gvdot":                true,
+	"gvsfdp":               true,
+	"gvcirco":              true,
+	"gvneato":              true,
+	"gvfdp":                true,
+	"gvtwopi":              true,
+	"gvdark":               true,
+}
+
 // validDiagramTypes lists the Graphviz diagram types supported by umple.
 var validDiagramTypes = map[string]bool{
 	"GvClassDiagram":              true,
@@ -182,8 +202,13 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Generate .gv file using umple
+	// Generate .gv file using umple, appending validated suboptions as -s flags
 	command := fmt.Sprintf("-generate %s %s/model.ump", req.DiagramType, dir)
+	for _, opt := range req.Suboptions {
+		if validSuboptions[opt] {
+			command += " -s " + opt
+		}
+	}
 	result, err := h.pool.Execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: dir,

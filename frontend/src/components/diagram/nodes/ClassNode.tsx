@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { cn } from '@/lib/utils'
+import { useDiagramStore } from '@/stores/diagramStore'
 
 export interface ClassNodeData {
   name: string
@@ -13,12 +14,19 @@ export interface ClassNodeData {
 
 export const ClassNode = memo(function ClassNode({ data }: NodeProps) {
   const d = data as ClassNodeData
+  const showAttributes = useDiagramStore((s) => s.showAttributes)
+  const showMethods = useDiagramStore((s) => s.showMethods)
+
   const headerClasses = d.isInterface
     ? 'bg-node-interface-bg text-node-interface-fg'
     : d.isAbstract
       ? 'bg-node-abstract-bg text-node-abstract-fg'
       : 'bg-node-class-bg text-node-class-fg'
   const label = d.name
+
+  const visibleAttrs = showAttributes ? d.attributes : []
+  const visibleMethods = showMethods ? d.methods : []
+  const hasBody = visibleAttrs.length > 0 || visibleMethods.length > 0
 
   return (
     <div className="bg-surface-0 border-2 border-border-strong rounded min-w-40 text-xs font-mono shadow-md" data-testid={`class-node-${d.name}`}>
@@ -27,17 +35,28 @@ export const ClassNode = memo(function ClassNode({ data }: NodeProps) {
 
       {/* Class name header */}
       <div
-        className={cn('px-2.5 py-1.5 font-bold text-center border-b border-border-strong', headerClasses, d.isAbstract && 'italic')}
+        className={cn('px-2.5 py-1.5 font-bold text-center', headerClasses, d.isAbstract && 'italic', hasBody && 'border-b border-border-strong')}
       >
         {label}
       </div>
 
-      {/* Attributes — matches GV output which only shows attributes, not methods */}
-      {d.attributes.length > 0 && (
-        <div className="px-2.5 py-1">
-          {d.attributes.map((attr, i) => (
+      {/* Attributes */}
+      {visibleAttrs.length > 0 && (
+        <div className={cn('px-2.5 py-1', visibleMethods.length > 0 && 'border-b border-border-strong')}>
+          {visibleAttrs.map((attr, i) => (
             <div key={i} className="py-px">
               {attr.type ? `${attr.name}: ${attr.type}` : attr.name}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Methods */}
+      {visibleMethods.length > 0 && (
+        <div className="px-2.5 py-1">
+          {visibleMethods.map((method, i) => (
+            <div key={i} className="py-px">
+              {method.returnType ? `${method.name}(${method.params}): ${method.returnType}` : `${method.name}(${method.params})`}
             </div>
           ))}
         </div>

@@ -113,7 +113,7 @@ export const api = {
     })
   },
 
-  diagram(req: { code: string; diagramType: string; modelId?: string }): Promise<{ svg: string; layout?: import('./types').GvLayout; stateMachines?: import('./types').UmpleStateMachine[]; errors?: string }> {
+  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[] }): Promise<{ svg: string; layout?: import('./types').GvLayout; stateMachines?: import('./types').UmpleStateMachine[]; errors?: string }> {
     return request('/diagram', {
       method: 'POST',
       body: JSON.stringify(req),

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useUiStore } from '../../stores/uiStore'
 import { useEditorStore } from '../../stores/editorStore'
-import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
+import { useDiagramStore, type DiagramView, type DisplayPrefKey, type GvLayoutAlgorithm } from '../../stores/diagramStore'
 import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
 import { UMPLE_TARGETS, type ExampleCategory } from '../../api/types'
@@ -39,12 +39,34 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 
-const DIAGRAM_TOGGLES = [
-  { key: 'showAttributes' as const, label: 'Attributes' },
-  { key: 'showMethods' as const, label: 'Methods' },
-  { key: 'showTraits' as const, label: 'Traits' },
-  { key: 'showActions' as const, label: 'Actions' },
+const DISPLAY_TOGGLES: Record<DiagramView, { key: DisplayPrefKey; label: string }[]> = {
+  class: [
+    { key: 'showAttributes', label: 'Attributes' },
+    { key: 'showMethods', label: 'Methods' },
+    { key: 'showTraits', label: 'Traits' },
+  ],
+  state: [
+    { key: 'showActions', label: 'Actions' },
+    { key: 'showTransitionLabels', label: 'Transition Labels' },
+    { key: 'showGuards', label: 'Guards' },
+    { key: 'showGuardLabels', label: 'Guard Labels' },
+    { key: 'showNaturalLanguage', label: 'Natural Language' },
+  ],
+  feature: [
+    { key: 'showFeatureDependency', label: 'Feature Dependency' },
+  ],
+  structure: [],
+}
+
+const LAYOUT_OPTIONS = [
+  { value: 'dot', label: 'Dot (default)' },
+  { value: 'sfdp', label: 'SFDP' },
+  { value: 'circo', label: 'Circo' },
+  { value: 'neato', label: 'Neato' },
+  { value: 'fdp', label: 'FDP' },
+  { value: 'twopi', label: 'Twopi' },
 ]
 
 // ── Collapsible section wrapper ──
@@ -361,25 +383,51 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
 
 // ── SECTION: Show & Hide ──
 
-function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const { showAttributes, showMethods, showActions, showTraits, togglePreference } = useUiStore()
+function DisplayToggle({ prefKey, label }: { prefKey: DisplayPrefKey; label: string }) {
+  const checked = useDiagramStore((s) => s[prefKey])
+  const toggleDisplayPref = useDiagramStore((s) => s.toggleDisplayPref)
 
-  const values = { showAttributes, showMethods, showActions, showTraits }
+  return (
+    <label
+      className="flex items-center justify-between py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors"
+      data-testid={`display-toggle-${prefKey}`}
+    >
+      {label}
+      <Switch
+        size="sm"
+        checked={checked}
+        onCheckedChange={() => toggleDisplayPref(prefKey)}
+      />
+    </label>
+  )
+}
+
+function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const viewMode = useDiagramStore((s) => s.viewMode)
+  const layoutAlgorithm = useDiagramStore((s) => s.layoutAlgorithm)
+  const setLayoutAlgorithm = useDiagramStore((s) => s.setLayoutAlgorithm)
+
+  const toggles = DISPLAY_TOGGLES[viewMode]
 
   return (
     <Section title="Diagram Display" open={open} onToggle={onToggle}>
-      <div className="space-y-1">
-        {DIAGRAM_TOGGLES.map(({ key, label }) => (
-          <label key={key} className="flex items-center gap-2 py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors">
-            <input
-              type="checkbox"
-              checked={values[key]}
-              onChange={() => togglePreference(key)}
-              className="accent-brand"
-            />
-            {label}
-          </label>
-        ))}
+      <div className="space-y-1.5">
+        {toggles.length > 0 ? (
+          toggles.map(({ key, label }) => (
+            <DisplayToggle key={key} prefKey={key} label={label} />
+          ))
+        ) : (
+          <p className="text-xxs text-ink-faint">No display options for this diagram type.</p>
+        )}
+        <div className="border-t border-border mt-2 pt-2">
+          <div className="text-xxs font-medium text-ink-muted mb-1.5">Layout Algorithm</div>
+          <Combobox
+            options={LAYOUT_OPTIONS}
+            value={layoutAlgorithm}
+            onSelect={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}
+            searchable={false}
+          />
+        </div>
       </div>
     </Section>
   )

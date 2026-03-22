@@ -115,8 +115,8 @@
 /* ── Dark Mode Token Overrides ── */
 
 .dark {
-  --color-brand: #d44a60;
-  --color-brand-hover: #e47d90;
+  --color-brand: #c9303e;
+  --color-brand-hover: #d44a58;
   --color-brand-light: #3a1520;
 
   --color-surface-0: #1a1a1a;

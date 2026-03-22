@@ -1,7 +1,14 @@
 import { useEffect, useRef } from 'react'
 import { useEditorStore } from '../stores/editorStore'
 import { useUiStore } from '../stores/uiStore'
-import { useDiagramStore, VIEW_TO_GV_TYPE, type DiagramView } from '../stores/diagramStore'
+import {
+  useDiagramStore,
+  getEffectiveDiagramType,
+  buildSuboptions,
+  selectSuboptionsKey,
+  type DiagramView,
+} from '../stores/diagramStore'
+import { useIsDark } from './useIsDark'
 import { useDiagram } from './useDiagram'
 import { api } from '../api/client'
 import type { UmpleModel, UmpleStateMachine, GvLayout } from '../api/types'
@@ -13,10 +20,22 @@ interface CompileCallbacks {
   updateStateDiagramFromGv: (stateMachines: UmpleStateMachine[], gvLayout?: GvLayout) => void
 }
 
+/** Build the diagram request params from current store state + isDark flag. */
+function getDiagramRequestParams(code: string, view: DiagramView, modelId: string, isDark: boolean) {
+  const s = useDiagramStore.getState()
+  return {
+    code,
+    diagramType: getEffectiveDiagramType(view, s.showTraits),
+    modelId,
+    suboptions: buildSuboptions(s, view, isDark),
+  }
+}
+
 /** Core compile + diagram refresh. Shared by auto-compile and manual compile.
  *  Returns { success, model } so callers can cache the parsed model. */
 export async function compileAndRefresh(
   callbacks: CompileCallbacks,
+  isDark: boolean,
   signal?: AbortSignal,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
   const { code, modelId, setModelId } = useEditorStore.getState()
@@ -53,10 +72,9 @@ export async function compileAndRefresh(
     // Fetch diagram SVG + layout
     let gvLayout: GvLayout | undefined
     const currentModelId = res.modelId || modelId
-    const gvType = VIEW_TO_GV_TYPE[viewMode]
-    if (currentModelId && gvType) {
+    if (currentModelId) {
       try {
-        const svgRes = await api.diagram({ code, diagramType: gvType, modelId: currentModelId })
+        const svgRes = await api.diagram(getDiagramRequestParams(code, viewMode, currentModelId, isDark))
         if (svgRes.svg) setSvgForView(viewMode, svgRes.svg)
         gvLayout = svgRes.layout
         // Update state diagram from GV-parsed data
@@ -95,6 +113,8 @@ export function useCompiler() {
   const viewMode = useDiagramStore((s) => s.viewMode)
   const setSvgForView = useDiagramStore((s) => s.setSvgForView)
   const setLastError = useDiagramStore((s) => s.setLastError)
+  const suboptionsKey = useDiagramStore(selectSuboptionsKey)
+  const isDark = useIsDark()
   const { updateFromModel, updateStateDiagramFromGv } = useDiagram()
 
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
@@ -108,6 +128,12 @@ export function useCompiler() {
   modelIdRef.current = modelId
   const viewModeRef = useRef(viewMode)
   viewModeRef.current = viewMode
+  const isDarkRef = useRef(isDark)
+  isDarkRef.current = isDark
+
+  // Track whether mount has completed to skip initial effect fires
+  const mountedRef = useRef(false)
+  useEffect(() => { mountedRef.current = true }, [])
 
   // Main compile effect — debounced on code/modelId changes
   useEffect(() => {
@@ -120,6 +146,7 @@ export function useCompiler() {
       try {
         const result = await compileAndRefresh(
           { updateFromModel, updateStateDiagramFromGv },
+          isDarkRef.current,
           abortRef.current.signal,
         )
         if (result.model) lastModelRef.current = result.model
@@ -133,29 +160,23 @@ export function useCompiler() {
     }
   }, [code, modelId])
 
-  // When viewMode changes, fetch the SVG for the new diagram type
+  // When viewMode, display preferences, or dark theme change, re-fetch diagram SVG
   useEffect(() => {
+    if (!mountedRef.current) return
     const currentCode = codeRef.current
     const currentModelId = modelIdRef.current
     if (!currentCode?.trim() || !currentModelId) return
 
-    fetchDiagramSvg(currentCode, viewMode, currentModelId)
-  }, [viewMode])
+    fetchDiagramSvg(currentCode, viewModeRef.current, currentModelId)
+  }, [viewMode, suboptionsKey, isDark])
 
   async function fetchDiagramSvg(umpleCode: string, view: DiagramView, mid: string) {
     // Abort previous diagram request
     if (diagramAbortRef.current) diagramAbortRef.current.abort()
     diagramAbortRef.current = new AbortController()
 
-    const gvType = VIEW_TO_GV_TYPE[view]
-    if (!gvType) return
-
     try {
-      const res = await api.diagram({
-        code: umpleCode,
-        diagramType: gvType,
-        modelId: mid,
-      })
+      const res = await api.diagram(getDiagramRequestParams(umpleCode, view, mid, isDarkRef.current))
       if (res.svg) {
         setSvgForView(view, res.svg)
       }

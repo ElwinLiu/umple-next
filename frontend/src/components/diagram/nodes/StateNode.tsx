@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { cn } from '@/lib/utils'
+import { useDiagramStore } from '@/stores/diagramStore'
 
 export interface StateNodeData {
   name: string
@@ -15,6 +16,7 @@ export interface StateNodeData {
 
 export const StateNode = memo(function StateNode({ data }: NodeProps) {
   const d = data as StateNodeData
+  const showActions = useDiagramStore((s) => s.showActions)
 
   const borderClasses = d.isFinal
     ? 'border-[3px] border-double'
@@ -28,7 +30,7 @@ export const StateNode = memo(function StateNode({ data }: NodeProps) {
       ? 'bg-node-final-bg text-node-final-fg'
       : 'bg-node-class-bg text-node-class-fg'
 
-  const hasActions = d.entryActions.length > 0 || d.exitActions.length > 0
+  const hasActions = showActions && (d.entryActions.length > 0 || d.exitActions.length > 0)
   const hasNested = d.nestedStates.length > 0
 
   return (

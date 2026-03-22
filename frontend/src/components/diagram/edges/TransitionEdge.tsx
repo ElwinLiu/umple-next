@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getBezierPath, type EdgeProps } from '@xyflow/react'
+import { useDiagramStore } from '@/stores/diagramStore'
 
 export interface TransitionEdgeData {
   event: string
@@ -11,6 +12,8 @@ export interface TransitionEdgeData {
 export const TransitionEdge = memo(function TransitionEdge(props: EdgeProps) {
   const { sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition, data } = props
   const d = data as TransitionEdgeData | undefined
+  const showActions = useDiagramStore((s) => s.showActions)
+  const showGuards = useDiagramStore((s) => s.showGuards)
 
   const [edgePath, labelX, labelY] = getBezierPath({
     sourceX,
@@ -22,10 +25,12 @@ export const TransitionEdge = memo(function TransitionEdge(props: EdgeProps) {
   })
 
   // Build label: "event [guard] / action"
+  // showActions gates the "/ action" part on transition edges (same toggle as entry/exit actions)
+  // showGuards gates the "[guard]" condition
   const parts: string[] = []
   if (d?.event) parts.push(d.event)
-  if (d?.guard) parts.push(`[${d.guard}]`)
-  if (d?.action) parts.push(`/ ${d.action}`)
+  if (d?.guard && showGuards) parts.push(`[${d.guard}]`)
+  if (d?.action && showActions) parts.push(`/ ${d.action}`)
   const label = parts.join(' ')
 
   return (

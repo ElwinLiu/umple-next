@@ -35,12 +35,6 @@ interface UiState {
   outputWarningCount: number
   theme: 'light' | 'dark' | 'system'
 
-  // Diagram display preferences
-  showAttributes: boolean
-  showMethods: boolean
-  showActions: boolean
-  showTraits: boolean
-
   // Progressive disclosure
   commandPaletteOpen: boolean
   rightPanelView: 'diagram' | 'generated'
@@ -59,7 +53,6 @@ interface UiState {
   toggleExecutionPanel: () => void
   setExecutionOutput: (output: string, errors?: string | null) => void
   setTheme: (theme: 'light' | 'dark' | 'system') => void
-  togglePreference: (key: 'showAttributes' | 'showMethods' | 'showActions' | 'showTraits') => void
 
   openCommandPalette: () => void
   closeCommandPalette: () => void
@@ -83,10 +76,6 @@ export const useUiStore = create<UiState>((set) => ({
   outputErrorCount: 0,
   outputWarningCount: 0,
   theme: 'system',
-  showAttributes: true,
-  showMethods: true,
-  showActions: false,
-  showTraits: true,
 
   commandPaletteOpen: false,
   rightPanelView: 'diagram',
@@ -115,7 +104,6 @@ export const useUiStore = create<UiState>((set) => ({
     }))
   },
   setTheme: (theme) => set({ theme }),
-  togglePreference: (key) => set((s) => ({ [key]: !s[key] })),
 
   openCommandPalette: () => set({ commandPaletteOpen: true }),
   closeCommandPalette: () => set({ commandPaletteOpen: false }),

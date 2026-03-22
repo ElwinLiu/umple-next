@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import { useEditorStore } from '../stores/editorStore'
 import { useUiStore } from '../stores/uiStore'
 import { useDiagram } from './useDiagram'
+import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
 import { compileAndRefresh } from './useCompiler'
 
@@ -40,6 +41,7 @@ export function useCompile() {
   const [compiling, setCompiling] = useState(false)
   const compilingRef = useRef(false)
   const { updateFromModel, updateStateDiagramFromGv } = useDiagram()
+  const isDark = useIsDark()
 
   const compile = useCallback(async () => {
     if (compilingRef.current) return
@@ -47,7 +49,7 @@ export function useCompile() {
     setCompiling(true)
 
     try {
-      const { success } = await compileAndRefresh({ updateFromModel, updateStateDiagramFromGv })
+      const { success } = await compileAndRefresh({ updateFromModel, updateStateDiagramFromGv }, isDark)
       if (success) useUiStore.getState().setExecutionOutput('Compiled successfully.')
     } catch {
       // compileAndRefresh handles error reporting
@@ -55,7 +57,7 @@ export function useCompile() {
       compilingRef.current = false
       setCompiling(false)
     }
-  }, [updateFromModel, updateStateDiagramFromGv])
+  }, [updateFromModel, updateStateDiagramFromGv, isDark])
 
   return { compile, compiling }
 }
