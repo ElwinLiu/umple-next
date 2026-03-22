@@ -3,7 +3,11 @@ import { useEditorStore } from '../../stores/editorStore'
 import { useUiStore } from '../../stores/uiStore'
 import { api } from '../../api/client'
 import { RequirementsInput } from './RequirementsInput'
-import { X } from 'lucide-react'
+import { SidePanel } from '@/components/ui/side-panel'
+import { ErrorBanner } from '@/components/ui/error-banner'
+import { Button } from '@/components/ui/button'
+import { lineTabClasses } from '@/components/ui/line-tab'
+import { cn } from '@/lib/utils'
 
 type AiMode = 'requirements' | 'explain'
 
@@ -71,41 +75,19 @@ export function AiPanel() {
     }
   }, [code])
 
-  if (!showAiPanel) return null
-
   return (
-    <div className="fixed top-14 right-0 w-full sm:w-[400px] bottom-0 bg-surface-0 border-l border-border flex flex-col z-[100] text-ink">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-1">
-        <span className="font-semibold text-sm">AI Assistant</span>
-        <button
-          onClick={toggleAiPanel}
-          className="p-1 rounded-md text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
-          aria-label="Close AI panel"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
+    <SidePanel title="AI Assistant" open={showAiPanel} onClose={toggleAiPanel}>
       {/* Mode tabs */}
       <div className="flex border-b border-border">
         <button
           onClick={() => setMode('requirements')}
-          className={`flex-1 px-3 py-2 text-xs border-none cursor-pointer transition-colors ${
-            mode === 'requirements'
-              ? 'font-semibold border-b-2 border-b-brand bg-surface-0 text-brand'
-              : 'font-normal border-b-2 border-b-transparent bg-transparent text-ink-muted hover:text-ink'
-          }`}
+          className={cn(lineTabClasses({ active: mode === 'requirements' }), 'flex-1 px-3 py-2')}
         >
           Generate from Requirements
         </button>
         <button
           onClick={() => setMode('explain')}
-          className={`flex-1 px-3 py-2 text-xs border-none cursor-pointer transition-colors ${
-            mode === 'explain'
-              ? 'font-semibold border-b-2 border-b-brand bg-surface-0 text-brand'
-              : 'font-normal border-b-2 border-b-transparent bg-transparent text-ink-muted hover:text-ink'
-          }`}
+          className={cn(lineTabClasses({ active: mode === 'explain' }), 'flex-1 px-3 py-2')}
         >
           Explain Model
         </button>
@@ -114,9 +96,7 @@ export function AiPanel() {
       {/* Content */}
       <div className="flex-1 p-4 overflow-auto">
         {error && (
-          <div className="px-3 py-2 mb-3 bg-brand-light border border-status-error rounded text-status-error text-xs">
-            {error}
-          </div>
+          <ErrorBanner className="mb-3">{error}</ErrorBanner>
         )}
 
         {mode === 'requirements' && (
@@ -128,13 +108,14 @@ export function AiPanel() {
             <p className="text-[13px] text-ink-muted m-0">
               Send the current editor code to AI for explanation.
             </p>
-            <button
+            <Button
               onClick={handleExplain}
               disabled={loading || !code.trim()}
-              className="px-4 py-2 text-[13px] font-semibold border-none rounded self-start transition-colors bg-brand text-ink-inverse cursor-pointer hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
+              size="sm"
+              className="self-start text-[13px]"
             >
               {loading ? 'Analyzing...' : 'Explain Current Model'}
-            </button>
+            </Button>
 
             {(loading && !explanation) && (
               <div className="text-[13px] text-ink-muted">
@@ -153,6 +134,6 @@ export function AiPanel() {
           </div>
         )}
       </div>
-    </div>
+    </SidePanel>
   )
 }

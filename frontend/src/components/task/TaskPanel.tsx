@@ -1,28 +1,16 @@
 import { useUiStore } from '../../stores/uiStore'
 import { useTask } from '../../hooks/useTask'
-import { X } from 'lucide-react'
+import { SidePanel } from '@/components/ui/side-panel'
+import { ErrorBanner } from '@/components/ui/error-banner'
+import { cn } from '@/lib/utils'
 
 export function TaskPanel() {
   const showTaskPanel = useUiStore((s) => s.showTaskPanel)
   const toggleTaskPanel = useUiStore((s) => s.toggleTaskPanel)
   const { task, loading, error, submitting, submitStatus, submitWork } = useTask()
 
-  if (!showTaskPanel) return null
-
   return (
-    <div className="fixed top-14 right-0 w-full sm:w-[380px] bottom-0 bg-surface-0 border-l border-border flex flex-col z-[100] text-ink">
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-border bg-surface-1">
-        <span className="font-semibold text-sm">Task</span>
-        <button
-          onClick={toggleTaskPanel}
-          className="p-1 rounded-md text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
-          aria-label="Close task panel"
-        >
-          <X className="size-4" />
-        </button>
-      </div>
-
+    <SidePanel title="Task" open={showTaskPanel} onClose={toggleTaskPanel} width="sm:w-[380px]">
       {/* Content */}
       <div className="flex-1 p-4 overflow-auto">
         {loading && (
@@ -30,9 +18,7 @@ export function TaskPanel() {
         )}
 
         {error && (
-          <div className="px-3 py-2 mb-3 bg-brand-light border border-status-error rounded text-status-error text-xs">
-            {error}
-          </div>
+          <ErrorBanner className="mb-3">{error}</ErrorBanner>
         )}
 
         {!loading && !task && !error && (
@@ -68,11 +54,12 @@ export function TaskPanel() {
               </button>
 
               {submitStatus && (
-                <div className={`mt-2 px-2.5 py-1.5 rounded text-xs border ${
+                <div className={cn(
+                  'mt-2 px-2.5 py-1.5 rounded text-xs border',
                   submitStatus === 'error'
                     ? 'bg-brand-light text-status-error border-status-error'
                     : 'bg-surface-1 text-status-success border-status-success'
-                }`}>
+                )}>
                   {submitStatus === 'error' ? 'Submission failed' : `Status: ${submitStatus}`}
                 </div>
               )}
@@ -80,6 +67,6 @@ export function TaskPanel() {
           </div>
         )}
       </div>
-    </div>
+    </SidePanel>
   )
 }

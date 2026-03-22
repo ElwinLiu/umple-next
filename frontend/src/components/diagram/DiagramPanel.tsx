@@ -9,6 +9,8 @@ import { CanvasBanner } from '../layout/CanvasBanner'
 import { useDiagramStore } from '../../stores/diagramStore'
 import { useUiStore } from '../../stores/uiStore'
 import { Tip } from '@/components/ui/tooltip'
+import { ErrorBanner } from '@/components/ui/error-banner'
+import { cn } from '@/lib/utils'
 
 export function DiagramPanel() {
   const { viewMode, renderMode, svgCache, stateNodes, setRenderMode } = useDiagramStore()
@@ -76,7 +78,7 @@ export function DiagramPanel() {
     <div className="h-full flex flex-col" data-testid="diagram-panel">
       <CanvasBanner />
       <div className="flex-1 relative" data-testid="diagram-canvas">
-        <div className={`absolute inset-0 ${rightPanelView !== 'diagram' ? 'invisible' : ''}`}>
+        <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
           <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
             <ToolbarButton onClick={handleExportSvg} label="Export SVG">SVG</ToolbarButton>
             <ToolbarButton onClick={handleExportPng} label="Export PNG">PNG</ToolbarButton>
@@ -106,11 +108,11 @@ export function DiagramPanel() {
         </div>
 
         {generationRequested && (
-          <div className={`absolute inset-0 bg-surface-0 flex flex-col ${rightPanelView !== 'generated' ? 'invisible' : ''}`}>
+          <div className={cn('absolute inset-0 bg-surface-0 flex flex-col', rightPanelView !== 'generated' && 'invisible')}>
             {generatedError && (
-              <div className="px-3 py-1.5 text-xs text-status-error bg-brand-light border-b border-border shrink-0">
+              <ErrorBanner className="py-1.5 rounded-none border-0 border-b border-border shrink-0">
                 {generatedError}
-              </div>
+              </ErrorBanner>
             )}
             {generatingCode ? (
               <div className="flex-1 flex items-center justify-center text-ink-faint text-sm">

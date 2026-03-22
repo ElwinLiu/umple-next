@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { cn } from '@/lib/utils'
 
 export interface ClassNodeData {
   name: string
@@ -26,8 +27,7 @@ export const ClassNode = memo(function ClassNode({ data }: NodeProps) {
 
       {/* Class name header */}
       <div
-        className={`px-2.5 py-1.5 font-bold text-center border-b border-border-strong ${headerClasses}`}
-        style={{ fontStyle: d.isAbstract ? 'italic' : 'normal' }}
+        className={cn('px-2.5 py-1.5 font-bold text-center border-b border-border-strong', headerClasses, d.isAbstract && 'italic')}
       >
         {label}
       </div>

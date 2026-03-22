@@ -14,6 +14,8 @@ import {
   DropdownMenuRadioItem,
 } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
+import { lineTabClasses } from '@/components/ui/line-tab'
+import { cn } from '@/lib/utils'
 
 const VIEW_MODES: { value: DiagramView; label: string }[] = [
   { value: 'class', label: 'Class' },
@@ -100,11 +102,7 @@ export function CanvasBanner() {
         <Tip content="Diagram (Ctrl+1)" side="bottom">
           <button
             onClick={() => setRightPanelView('diagram')}
-            className={`text-[11px] px-2.5 py-1 cursor-pointer transition-colors ${
-              rightPanelView === 'diagram'
-                ? 'text-brand font-semibold border-b-2 border-brand'
-                : 'text-ink-muted font-medium hover:text-ink'
-            }`}
+            className={cn(lineTabClasses({ active: rightPanelView === 'diagram' }), 'text-[11px] px-2.5 py-1')}
           >
             Diagram
           </button>
@@ -114,11 +112,7 @@ export function CanvasBanner() {
             <Tip content="Generated code (Ctrl+2)" side="bottom">
               <button
                 onClick={() => setRightPanelView('generated')}
-                className={`text-[11px] px-2.5 py-1 cursor-pointer transition-colors flex items-center gap-1.5 ${
-                  rightPanelView === 'generated'
-                    ? 'text-brand font-semibold border-b-2 border-brand'
-                    : 'text-ink-muted font-medium hover:text-ink'
-                }`}
+                className={cn(lineTabClasses({ active: rightPanelView === 'generated' }), 'text-[11px] px-2.5 py-1 flex items-center gap-1.5')}
               >
                 {generatingCode && <span className="w-1.5 h-1.5 rounded-full bg-status-warning animate-pulse" />}
                 {generatedLanguage}
@@ -153,9 +147,10 @@ export function CanvasBanner() {
         <Tip content={diagramOnly ? 'Show editor' : 'Diagram only'} side="bottom">
           <button
             onClick={() => setDiagramOnly(!diagramOnly)}
-            className={`p-1.5 transition-colors cursor-pointer rounded-md ${
+            className={cn(
+              'p-1.5 transition-colors cursor-pointer rounded-md',
               diagramOnly ? 'text-brand bg-brand-light' : 'text-ink-muted hover:text-ink hover:bg-surface-0/60'
-            }`}
+            )}
             aria-label={diagramOnly ? 'Show editor' : 'Diagram only'}
           >
             {diagramOnly ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}

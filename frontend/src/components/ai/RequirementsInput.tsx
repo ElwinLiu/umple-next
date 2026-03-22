@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 const EXAMPLE_PROMPTS = [
   'University system with students, courses, and professors',
@@ -38,13 +39,14 @@ export function RequirementsInput({ onGenerate, loading }: RequirementsInputProp
         ))}
       </div>
 
-      <button
+      <Button
         onClick={() => onGenerate(requirements)}
         disabled={loading || !requirements.trim()}
-        className="px-4 py-2 text-[13px] font-semibold border-none rounded self-start transition-colors bg-brand text-ink-inverse cursor-pointer hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
+        size="sm"
+        className="self-start text-[13px]"
       >
         {loading ? 'Generating...' : 'Generate Umple Code'}
-      </button>
+      </Button>
     </div>
   )
 }

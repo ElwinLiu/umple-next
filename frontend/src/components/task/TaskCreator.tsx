@@ -1,6 +1,8 @@
 import { useState, useCallback } from 'react'
 import { useEditorStore } from '../../stores/editorStore'
 import { api } from '../../api/client'
+import { Button } from '@/components/ui/button'
+import { ErrorBanner } from '@/components/ui/error-banner'
 
 export function TaskCreator() {
   const code = useEditorStore((s) => s.code)
@@ -65,18 +67,17 @@ export function TaskCreator() {
           The current editor code will be included as the initial code for this task.
         </div>
 
-        <button
+        <Button
           onClick={handleCreate}
           disabled={creating || !title.trim()}
-          className="px-4 py-2 text-[13px] font-semibold border-none rounded self-start transition-colors bg-brand text-ink-inverse cursor-pointer hover:bg-brand-hover disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
+          size="sm"
+          className="self-start text-[13px]"
         >
           {creating ? 'Creating...' : 'Create Task'}
-        </button>
+        </Button>
 
         {error && (
-          <div className="px-3 py-2 bg-brand-light border border-status-error rounded text-status-error text-xs">
-            {error}
-          </div>
+          <ErrorBanner>{error}</ErrorBanner>
         )}
 
         {result && (

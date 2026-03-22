@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { ExampleBrowser } from './ExampleBrowser'
 import { Preferences } from './Preferences'
+import { lineTabClasses } from '@/components/ui/line-tab'
+import { cn } from '@/lib/utils'
 
 type PaletteTab = 'examples' | 'preferences'
 
@@ -12,21 +14,13 @@ export function PalettePanel() {
       <div className="flex bg-surface-1 border-b border-border h-8 items-stretch shrink-0">
         <button
           onClick={() => setActiveTab('examples')}
-          className={`flex-1 px-3 text-xs border-none cursor-pointer transition-colors ${
-            activeTab === 'examples'
-              ? 'font-semibold border-b-2 border-b-brand bg-surface-0 text-ink'
-              : 'font-normal border-b-2 border-b-transparent bg-transparent text-ink-muted hover:text-ink hover:bg-surface-1'
-          }`}
+          className={cn(lineTabClasses({ active: activeTab === 'examples' }), 'flex-1 px-3', activeTab === 'examples' && 'text-ink bg-surface-0')}
         >
           Examples
         </button>
         <button
           onClick={() => setActiveTab('preferences')}
-          className={`flex-1 px-3 text-xs border-none cursor-pointer transition-colors ${
-            activeTab === 'preferences'
-              ? 'font-semibold border-b-2 border-b-brand bg-surface-0 text-ink'
-              : 'font-normal border-b-2 border-b-transparent bg-transparent text-ink-muted hover:text-ink hover:bg-surface-1'
-          }`}
+          className={cn(lineTabClasses({ active: activeTab === 'preferences' }), 'flex-1 px-3', activeTab === 'preferences' && 'text-ink bg-surface-0')}
         >
           Preferences
         </button>

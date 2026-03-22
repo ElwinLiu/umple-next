@@ -27,6 +27,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
+import { Button } from '@/components/ui/button'
 
 const DIAGRAM_TOGGLES = [
   { key: 'showAttributes' as const, label: 'Attributes' },
@@ -414,10 +415,11 @@ function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () =
           searchable={false}
         />
         <div className="flex gap-1.5">
-          <button
+          <Button
             onClick={handleGenerate}
             disabled={generatingCode}
-            className="flex-1 flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium rounded-md bg-brand text-ink-inverse hover:bg-brand-hover transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            size="xs"
+            className="flex-1 text-[12px]"
           >
             {generatingCode ? (
               <Loader2 className="size-3 animate-spin" />
@@ -425,11 +427,13 @@ function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () =
               <Code className="size-3" />
             )}
             Generate
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={execute}
             disabled={running}
-            className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 text-[12px] font-medium rounded-md bg-surface-2 text-ink hover:bg-border transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            variant="secondary"
+            size="xs"
+            className="text-[12px]"
           >
             {running ? (
               <Loader2 className="size-3 animate-spin" />
@@ -437,7 +441,7 @@ function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () =
               <Play className="size-3" />
             )}
             Execute
-          </button>
+          </Button>
         </div>
       </div>
     </Section>

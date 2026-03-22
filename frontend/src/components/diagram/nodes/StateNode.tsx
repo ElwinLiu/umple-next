@@ -1,5 +1,6 @@
 import { memo } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { cn } from '@/lib/utils'
 
 export interface StateNodeData {
   name: string
@@ -48,10 +49,7 @@ export const StateNode = memo(function StateNode({ data }: NodeProps) {
 
       {/* State name header */}
       <div
-        className={`px-3.5 py-1.5 font-bold text-center ${headerClasses}`}
-        style={{
-          borderBottom: (hasActions || hasNested) ? '1px solid var(--color-border)' : 'none',
-        }}
+        className={cn('px-3.5 py-1.5 font-bold text-center', headerClasses, (hasActions || hasNested) && 'border-b border-border')}
       >
         {d.isInitial && <span className="mr-1">&#9679;</span>}
         {d.name}
@@ -61,10 +59,7 @@ export const StateNode = memo(function StateNode({ data }: NodeProps) {
       {/* Entry/Exit actions */}
       {hasActions && (
         <div
-          className="px-2.5 py-1 text-ink-muted text-[10px]"
-          style={{
-            borderBottom: hasNested ? '1px solid var(--color-border)' : 'none',
-          }}
+          className={cn('px-2.5 py-1 text-ink-muted text-[10px]', hasNested && 'border-b border-border')}
         >
           {d.entryActions.map((action, i) => (
             <div key={`entry-${i}`} className="py-px">
