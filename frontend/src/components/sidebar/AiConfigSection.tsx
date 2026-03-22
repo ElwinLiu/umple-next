@@ -1,12 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAiConfigStore, type AiProvider } from '@/stores/aiConfigStore'
-import { useUiStore } from '@/stores/uiStore'
 import { fetchModels, type ModelInfo } from '@/ai/models'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { Combobox } from '@/components/ui/combobox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ChevronDown, ChevronRight, Eye, EyeOff, MessageSquare, Loader2, RefreshCw } from 'lucide-react'
+import { ChevronDown, ChevronRight, Eye, EyeOff, Loader2, RefreshCw } from 'lucide-react'
 
 const PROVIDER_OPTIONS: { value: AiProvider; label: string }[] = [
   { value: 'openai', label: 'OpenAI' },
@@ -21,7 +19,6 @@ export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: (
   const setActiveProvider = useAiConfigStore((state) => state.setActiveProvider)
   const setModel = useAiConfigStore((state) => state.setModel)
   const setApiKey = useAiConfigStore((state) => state.setApiKey)
-  const openAgentPanel = useUiStore((state) => state.openAgentPanel)
   const [showKey, setShowKey] = useState(false)
   const [models, setModels] = useState<ModelInfo[]>([])
   const [loadingModels, setLoadingModels] = useState(false)
@@ -96,7 +93,7 @@ export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: (
         ) : (
           <ChevronRight className="size-3.5 text-ink-faint shrink-0" />
         )}
-        AI Assistant
+        Umple AI
       </button>
       {open && (
         <div className="px-4 pb-3 pt-0.5 ml-5.5">
@@ -189,18 +186,6 @@ export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: (
                 <p className="mt-1 text-xxs text-status-error">{modelError}</p>
               )}
             </div>
-
-            {/* Open Agent button */}
-            <Button
-              onClick={openAgentPanel}
-              variant="secondary"
-              size="xs"
-              className="w-full text-xs"
-              disabled={!apiKey.trim() || !model.trim()}
-            >
-              <MessageSquare className="size-3" />
-              Open Agent
-            </Button>
           </div>
         </div>
       )}

@@ -3,7 +3,7 @@ import type { AiProvider } from '@/stores/aiConfigStore'
 import { getModel } from './provider'
 import { agentTools } from './tools'
 
-const SYSTEM_PROMPT = `You are an AI assistant for UmpleOnline, a web-based modeling tool for the Umple language.
+const SYSTEM_PROMPT = `You are Umple AI, an AI assistant for UmpleOnline, a web-based modeling tool for the Umple language.
 Umple is a model-oriented programming language that adds UML abstractions (associations, state machines, etc.) directly into code.
 
 You help users write, understand, and debug Umple code. You can:
