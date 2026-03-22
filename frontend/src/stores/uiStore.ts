@@ -75,6 +75,7 @@ interface UiState {
 }
 
 const SIDEBAR_KEY = 'umple:sidebar'
+const THEME_KEY = 'umple:theme'
 
 function loadSidebarPref(): boolean {
   try {
@@ -82,6 +83,14 @@ function loadSidebarPref(): boolean {
     if (v === 'true' || v === 'false') return v === 'true'
   } catch { /* SSR / private browsing */ }
   return true // default: expanded
+}
+
+function loadThemePref(): 'light' | 'dark' | 'system' {
+  try {
+    const v = localStorage.getItem(THEME_KEY)
+    if (v === 'light' || v === 'dark' || v === 'system') return v
+  } catch { /* private browsing */ }
+  return 'system'
 }
 
 export const useUiStore = create<UiState>((set, get) => ({
@@ -95,7 +104,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   executionErrors: null,
   outputErrorCount: 0,
   outputWarningCount: 0,
-  theme: 'system',
+  theme: loadThemePref(),
 
   pendingAgentMessage: null,
   queueAgentMessage: (msg) => set({ pendingAgentMessage: msg }),
@@ -138,7 +147,10 @@ export const useUiStore = create<UiState>((set, get) => ({
       ...(errors > 0 && !s.showAgentPanel ? { outputView: 'panel' as const } : {}),
     }))
   },
-  setTheme: (theme) => set({ theme }),
+  setTheme: (theme) => {
+    try { localStorage.setItem(THEME_KEY, theme) } catch { /* noop */ }
+    set({ theme })
+  },
 
   openCommandPalette: () => set({ commandPaletteOpen: true }),
   closeCommandPalette: () => set({ commandPaletteOpen: false }),

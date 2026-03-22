@@ -309,6 +309,30 @@ body {
   animation: spin 1s linear infinite;
 }
 
+/* ── Theme toggle transition management ── */
+
+.disable-transitions *,
+.disable-transitions *::before,
+.disable-transitions *::after {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+}
+.disable-transitions .theme-selector-indicator {
+  transition-duration: 0.3s !important;
+}
+
+.theme-selector-indicator {
+  transition: all 0.3s ease-out;
+}
+
+/* Button: width animates, color delays until indicator arrives */
+.theme-selector-button {
+  transition: width 200ms ease !important;
+}
+.theme-selector-button[aria-checked="true"] {
+  transition: width 200ms ease, color 0s ease 250ms !important;
+}
+
 /* ── Focus Rings ── */
 
 @layer base {
