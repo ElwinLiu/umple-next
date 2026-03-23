@@ -3,13 +3,13 @@ import { useAiConfigStore, type AiProvider } from '@/stores/aiConfigStore'
 import { fetchModels, type ModelInfo } from '@/ai/models'
 import { Input } from '@/components/ui/input'
 import { Combobox } from '@/components/ui/combobox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ChevronDown, ChevronRight, Eye, EyeOff, Loader2, RefreshCw } from 'lucide-react'
+import { Tip } from '@/components/ui/tooltip'
+import { ChevronDown, ChevronRight, Eye, EyeOff, Info, Loader2, RefreshCw } from 'lucide-react'
 
-const PROVIDER_OPTIONS: { value: AiProvider; label: string }[] = [
+const PROVIDERS: { value: AiProvider; label: string }[] = [
   { value: 'openai', label: 'OpenAI' },
   { value: 'anthropic', label: 'Anthropic' },
-  { value: 'google', label: 'Google Gemini' },
+  { value: 'google', label: 'Gemini' },
   { value: 'openrouter', label: 'OpenRouter' },
 ]
 
@@ -96,96 +96,100 @@ export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: (
         Umple AI
       </button>
       {open && (
-        <div className="px-4 pb-3 pt-0.5 ml-5.5">
-          <div className="space-y-3">
-            {/* Provider */}
-            <div>
-              <label className="block text-xxs font-medium text-ink-muted mb-1">Provider</label>
-              <Select value={provider} onValueChange={(v) => setActiveProvider(v as AiProvider)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {PROVIDER_OPTIONS.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <div className="px-4 pb-3 pt-1 ml-5.5 space-y-2.5">
+          {/* Provider pills */}
+          <div className="grid grid-cols-2 gap-1">
+            {PROVIDERS.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setActiveProvider(p.value)}
+                className={`px-2 py-1 rounded-md text-xxs font-medium transition-colors cursor-pointer text-center ${
+                  provider === p.value
+                    ? 'bg-brand-light text-brand'
+                    : 'bg-surface-1 text-ink-muted hover:bg-surface-2 hover:text-ink'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
-            {/* API Key */}
-            <div>
-              <label className="block text-xxs font-medium text-ink-muted mb-1" htmlFor="ai-api-key-input">
-                API Key
-              </label>
-              <div className="relative">
-                <Input
-                  id="ai-api-key-input"
-                  type={showKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="sk-..."
-                  className="pr-7 font-mono"
-                />
+          {/* API Key */}
+          <div className="relative">
+            <Input
+              id="ai-api-key-input"
+              type={showKey ? 'text' : 'password'}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="API key"
+              className="pr-12 font-mono"
+            />
+            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+              <Tip content="Your key is proxied through our server but is never stored or logged." side="top">
                 <button
                   type="button"
-                  onClick={() => setShowKey((v) => !v)}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-ink-faint hover:text-ink transition-colors cursor-pointer"
-                  aria-label={showKey ? 'Hide API key' : 'Show API key'}
+                  className="p-0.5 text-ink-faint hover:text-ink transition-colors cursor-pointer"
+                  aria-label="Key security info"
+                  tabIndex={-1}
                 >
-                  {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+                  <Info className="size-3" />
                 </button>
-              </div>
-              <p className="mt-1 text-xxs text-ink-faint">
-                Your key is proxied through our server but is never stored or logged.
-              </p>
+              </Tip>
+              <button
+                type="button"
+                onClick={() => setShowKey((v) => !v)}
+                className="p-0.5 text-ink-faint hover:text-ink transition-colors cursor-pointer"
+                aria-label={showKey ? 'Hide API key' : 'Show API key'}
+              >
+                {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+              </button>
             </div>
+          </div>
 
-            {/* Model */}
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-xxs font-medium text-ink-muted">Model</label>
-                {apiKey.trim() && (
-                  <button
-                    type="button"
-                    onClick={loadModels}
+          {/* Model */}
+          <div>
+            <div className="flex items-center gap-1">
+              <div className="flex-1 min-w-0">
+                {modelOptions.length > 0 ? (
+                  <Combobox
+                    options={modelOptions}
+                    value={model}
+                    onSelect={setModel}
+                    placeholder="Select model..."
+                    searchPlaceholder="Search models..."
+                  />
+                ) : (
+                  <Input
+                    value={model}
+                    onChange={(e) => setModel(e.target.value)}
+                    placeholder={loadingModels ? 'Loading models...' : 'Model ID'}
                     disabled={loadingModels}
-                    className="text-ink-faint hover:text-ink transition-colors cursor-pointer disabled:opacity-50"
-                    aria-label="Refresh models"
-                  >
-                    {loadingModels ? (
-                      <Loader2 className="size-3 animate-spin" />
-                    ) : (
-                      <RefreshCw className="size-3" />
-                    )}
-                  </button>
+                  />
                 )}
               </div>
-              {modelOptions.length > 0 ? (
-                <Combobox
-                  options={modelOptions}
-                  value={model}
-                  onSelect={setModel}
-                  placeholder="Select model..."
-                  searchPlaceholder="Search models..."
-                />
-              ) : (
-                <Input
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder={loadingModels ? 'Loading models...' : 'Enter model ID...'}
+              {apiKey.trim() && (
+                <button
+                  type="button"
+                  onClick={loadModels}
                   disabled={loadingModels}
-                />
-              )}
-              {modelDetail && (
-                <p className="mt-1 text-xxs text-ink-faint">{modelDetail}</p>
-              )}
-              {modelError && (
-                <p className="mt-1 text-xxs text-status-error">{modelError}</p>
+                  className="shrink-0 p-1.5 rounded-md text-ink-faint hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-50"
+                  aria-label="Refresh models"
+                >
+                  {loadingModels ? (
+                    <Loader2 className="size-3 animate-spin" />
+                  ) : (
+                    <RefreshCw className="size-3" />
+                  )}
+                </button>
               )}
             </div>
+            {modelDetail && (
+              <p className="mt-1 text-xxs text-ink-faint">{modelDetail}</p>
+            )}
+            {modelError && (
+              <p className="mt-1 text-xxs text-status-error">{modelError}</p>
+            )}
           </div>
         </div>
       )}
