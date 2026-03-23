@@ -90,7 +90,7 @@ export const api = {
     })
   },
 
-  sync(req: { action: string; modelId: string; params: Record<string, string> }): Promise<{ code: string; result: string; errors?: string }> {
+  sync(req: { action: string; modelId: string; params: Record<string, string> }): Promise<{ code: string; result: string; errors?: string; modelId?: string }> {
     return request('/sync', {
       method: 'POST',
       body: JSON.stringify(req),

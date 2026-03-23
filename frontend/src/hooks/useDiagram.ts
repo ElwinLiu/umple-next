@@ -261,6 +261,7 @@ export function useDiagram() {
               ? 'diamond-filled'
               : (!leftNav && rightNav ? 'arrow' : 'none'),
             type: edgeType,
+            assocId: assoc.id ?? '',
           } satisfies AssociationEdgeData,
         }
       })

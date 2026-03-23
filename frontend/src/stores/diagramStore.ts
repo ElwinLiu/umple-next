@@ -33,6 +33,9 @@ interface DiagramState {
   /** Cached SVG per diagram view so switching back is instant */
   svgCache: Partial<Record<DiagramView, string>>
   selectedNodeId: string | null
+  selectedEdgeId: string | null
+  editingNodeId: string | null
+  editingField: 'name' | 'newAttribute' | 'newMethod' | null
   compiling: boolean
   lastError: string | null
 
@@ -64,9 +67,19 @@ interface DiagramState {
   setSvgForView: (view: DiagramView, svg: string) => void
   clearSvgCache: () => void
   setSelectedNode: (id: string | null) => void
+  setSelectedEdge: (id: string | null) => void
+  setEditing: (nodeId: string | null, field: 'name' | 'newAttribute' | 'newMethod' | null) => void
   setCompiling: (compiling: boolean) => void
   setLastError: (error: string | null) => void
   updateNodePosition: (id: string, x: number, y: number) => void
+  /** Optimistic: add a node */
+  addNode: (node: Node) => void
+  /** Optimistic: remove a node by id */
+  removeNode: (id: string) => void
+  /** Optimistic: remove an edge by id */
+  removeEdge: (id: string) => void
+  /** Optimistic: rename a class node (updates id, data.name, and connected edges) */
+  renameNode: (oldId: string, newName: string) => void
   setDisplayPref: (key: DisplayPrefKey, value: boolean) => void
   toggleDisplayPref: (key: DisplayPrefKey) => void
   setLayoutAlgorithm: (algo: GvLayoutAlgorithm) => void
@@ -85,6 +98,9 @@ export const useDiagramStore = create<DiagramState>((set) => ({
   gvSvg: '',
   svgCache: {},
   selectedNodeId: null,
+  selectedEdgeId: null,
+  editingNodeId: null,
+  editingField: null,
   compiling: false,
   lastError: null,
 
@@ -114,6 +130,8 @@ export const useDiagramStore = create<DiagramState>((set) => ({
     set((s) => ({ svgCache: { ...s.svgCache, [view]: svg } })),
   clearSvgCache: () => set({ svgCache: {} }),
   setSelectedNode: (selectedNodeId) => set({ selectedNodeId }),
+  setSelectedEdge: (selectedEdgeId) => set({ selectedEdgeId }),
+  setEditing: (editingNodeId, editingField) => set({ editingNodeId, editingField }),
   setCompiling: (compiling) => set({ compiling }),
   setLastError: (lastError) => set({ lastError }),
   updateNodePosition: (id, x, y) =>
@@ -122,6 +140,32 @@ export const useDiagramStore = create<DiagramState>((set) => ({
         n.id === id ? { ...n, position: { x, y } } : n
       ),
     })),
+  addNode: (node) => set((s) => ({ nodes: [...s.nodes, node] })),
+  removeNode: (id) => set((s) => ({
+    nodes: s.nodes.filter((n) => n.id !== id),
+    edges: s.edges.filter((e) => e.source !== id && e.target !== id),
+    selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
+  })),
+  removeEdge: (id) => set((s) => ({
+    edges: s.edges.filter((e) => e.id !== id),
+    selectedEdgeId: s.selectedEdgeId === id ? null : s.selectedEdgeId,
+  })),
+  renameNode: (oldId, newName) => set((s) => {
+    const newId = `class-${newName}`
+    return {
+      nodes: s.nodes.map((n) =>
+        n.id === oldId
+          ? { ...n, id: newId, data: { ...n.data, name: newName } }
+          : n
+      ),
+      edges: s.edges.map((e) => ({
+        ...e,
+        source: e.source === oldId ? newId : e.source,
+        target: e.target === oldId ? newId : e.target,
+      })),
+      selectedNodeId: s.selectedNodeId === oldId ? newId : s.selectedNodeId,
+    }
+  }),
   setDisplayPref: (key, value) => set({ [key]: value }),
   toggleDisplayPref: (key) => set((s) => ({ [key]: !s[key] })),
   setLayoutAlgorithm: (layoutAlgorithm) => set({ layoutAlgorithm }),

@@ -10,6 +10,8 @@ export interface Tab {
   savedCode: string
 }
 
+const MAX_UNDO = 50
+
 interface EditorState {
   code: string
   modelId: string | null
@@ -17,8 +19,14 @@ interface EditorState {
   activeTabId: string
   diffPreview: DiffPreviewState | null
   selection: { fromLine: number; toLine: number; text: string; coords?: { x: number; yTop: number; yBottom: number } } | null
+  undoStack: string[]
+  redoStack: string[]
 
   setCode: (code: string) => void
+  /** Called by diagram sync — pushes current code onto undo stack before updating */
+  setCodeFromSync: (code: string) => void
+  undo: () => void
+  redo: () => void
   setModelId: (id: string) => void
   setSelection: (sel: { fromLine: number; toLine: number; text: string; coords?: { x: number; yTop: number; yBottom: number } } | null) => void
   showDiffPreview: (preview: DiffPreviewState) => void
@@ -65,6 +73,8 @@ export const useEditorStore = create<EditorState>((set) => ({
   activeTabId: 'main',
   diffPreview: null,
   selection: null,
+  undoStack: [],
+  redoStack: [],
 
   setSelection: (selection) => set({ selection }),
 
@@ -76,6 +86,50 @@ export const useEditorStore = create<EditorState>((set) => ({
         : t
     ),
   })),
+
+  setCodeFromSync: (code) => set((s) => {
+    if (code === s.code) return s
+    return {
+      code,
+      undoStack: [...s.undoStack.slice(-(MAX_UNDO - 1)), s.code],
+      redoStack: [],
+      tabs: s.tabs.map((t) =>
+        t.id === s.activeTabId
+          ? { ...t, code, dirty: code !== t.savedCode }
+          : t
+      ),
+    }
+  }),
+
+  undo: () => set((s) => {
+    if (s.undoStack.length === 0) return s
+    const prev = s.undoStack[s.undoStack.length - 1]
+    return {
+      code: prev,
+      undoStack: s.undoStack.slice(0, -1),
+      redoStack: [...s.redoStack, s.code],
+      tabs: s.tabs.map((t) =>
+        t.id === s.activeTabId
+          ? { ...t, code: prev, dirty: prev !== t.savedCode }
+          : t
+      ),
+    }
+  }),
+
+  redo: () => set((s) => {
+    if (s.redoStack.length === 0) return s
+    const next = s.redoStack[s.redoStack.length - 1]
+    return {
+      code: next,
+      undoStack: [...s.undoStack, s.code],
+      redoStack: s.redoStack.slice(0, -1),
+      tabs: s.tabs.map((t) =>
+        t.id === s.activeTabId
+          ? { ...t, code: next, dirty: next !== t.savedCode }
+          : t
+      ),
+    }
+  }),
 
   setModelId: (modelId) => set({ modelId }),
 
