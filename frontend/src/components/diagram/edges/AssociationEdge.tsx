@@ -1,5 +1,8 @@
 import { memo } from 'react'
 import { BaseEdge, EdgeLabelRenderer, getStraightPath, type EdgeProps } from '@xyflow/react'
+import type { GvPoint } from '@/api/types'
+import { clamp } from '@/hooks/diagrams/positions'
+import { buildPathFromPoints } from './pathUtils'
 
 export type AssociationDecoration = 'none' | 'arrow' | 'triangle' | 'diamond-filled' | 'diamond'
 
@@ -11,11 +14,11 @@ export interface AssociationEdgeData {
   sourceDecoration?: AssociationDecoration
   targetDecoration?: AssociationDecoration
   type: 'association' | 'generalization' | 'composition' | 'aggregation' | 'unidirectional' | 'unidirectional-reverse'
+  exactPoints?: GvPoint[]
+  labelPos?: GvPoint
+  headLabelPos?: GvPoint
+  tailLabelPos?: GvPoint
   [key: string]: unknown
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max)
 }
 
 function markerForDecoration(decoration: AssociationDecoration | undefined) {
@@ -110,6 +113,27 @@ export const AssociationEdge = memo(function AssociationEdge(props: EdgeProps) {
 
   // Self-loop: source and target are the same node
   if (source === target) {
+    if (d?.exactPoints?.length) {
+      const exactPath = buildPathFromPoints(d.exactPoints)
+      return (
+        <>
+          <BaseEdge
+            path={exactPath}
+            markerEnd={markerForDecoration(targetDecoration)}
+            markerStart={markerForDecoration(sourceDecoration)}
+            style={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
+          />
+          <EdgeLabelRenderer>
+            {d?.sourceMultiplicity && d.tailLabelPos && (
+              <EdgeLabel testId={`edge-label-${id}-source-multiplicity`} x={d.tailLabelPos.x} y={d.tailLabelPos.y} fontSize={12} color="var(--color-ink-muted)" translateX="-50%">{d.sourceMultiplicity}</EdgeLabel>
+            )}
+            {d?.targetMultiplicity && d.headLabelPos && (
+              <EdgeLabel testId={`edge-label-${id}-target-multiplicity`} x={d.headLabelPos.x} y={d.headLabelPos.y} fontSize={12} color="var(--color-ink-muted)" translateX="-50%">{d.targetMultiplicity}</EdgeLabel>
+            )}
+          </EdgeLabelRenderer>
+        </>
+      )
+    }
     // Right-side handles: source at 20% (upper), target at 80% (lower)
     const midY = (sourceY + targetY) / 2
     const offset = 50
@@ -175,11 +199,12 @@ export const AssociationEdge = memo(function AssociationEdge(props: EdgeProps) {
   const targetAnchor = Math.abs(dx) > Math.abs(dy)
     ? (unitX >= 0 ? 'end' : 'start')
     : 'middle'
+  const exactPath = d?.exactPoints?.length ? buildPathFromPoints(d.exactPoints) : ''
 
   return (
     <>
       <BaseEdge
-        path={edgePath}
+        path={exactPath || edgePath}
         markerEnd={markerForDecoration(targetDecoration)}
         markerStart={markerForDecoration(sourceDecoration)}
         style={{ stroke: 'var(--color-border-strong)', strokeWidth: 1.5 }}
@@ -187,16 +212,52 @@ export const AssociationEdge = memo(function AssociationEdge(props: EdgeProps) {
 
       <EdgeLabelRenderer>
         {d?.sourceMultiplicity && (
-          <EdgeLabel testId={`edge-label-${id}-source-multiplicity`} x={sourceBaseX + normalX * 12} y={sourceBaseY + normalY * 12} fontSize={12} color="var(--color-ink-muted)" translateX={anchorToTranslateX(sourceAnchor)}>{d.sourceMultiplicity}</EdgeLabel>
+          <EdgeLabel
+            testId={`edge-label-${id}-source-multiplicity`}
+            x={d.tailLabelPos?.x ?? (sourceBaseX + normalX * 12)}
+            y={d.tailLabelPos?.y ?? (sourceBaseY + normalY * 12)}
+            fontSize={12}
+            color="var(--color-ink-muted)"
+            translateX={d.tailLabelPos ? '-50%' : anchorToTranslateX(sourceAnchor)}
+          >
+            {d.sourceMultiplicity}
+          </EdgeLabel>
         )}
         {d?.targetMultiplicity && (
-          <EdgeLabel testId={`edge-label-${id}-target-multiplicity`} x={targetBaseX + normalX * 12} y={targetBaseY + normalY * 12} fontSize={12} color="var(--color-ink-muted)" translateX={anchorToTranslateX(targetAnchor)}>{d.targetMultiplicity}</EdgeLabel>
+          <EdgeLabel
+            testId={`edge-label-${id}-target-multiplicity`}
+            x={d.headLabelPos?.x ?? (targetBaseX + normalX * 12)}
+            y={d.headLabelPos?.y ?? (targetBaseY + normalY * 12)}
+            fontSize={12}
+            color="var(--color-ink-muted)"
+            translateX={d.headLabelPos ? '-50%' : anchorToTranslateX(targetAnchor)}
+          >
+            {d.targetMultiplicity}
+          </EdgeLabel>
         )}
         {d?.sourceRole && (
-          <EdgeLabel testId={`edge-label-${id}-source-role`} x={sourceBaseX + normalX * 28} y={sourceBaseY + normalY * 28} fontSize={10} color="var(--color-ink-faint)" translateX={anchorToTranslateX(sourceAnchor)}>{d.sourceRole}</EdgeLabel>
+          <EdgeLabel
+            testId={`edge-label-${id}-source-role`}
+            x={d.tailLabelPos?.x ?? (sourceBaseX + normalX * 28)}
+            y={(d.tailLabelPos?.y ?? (sourceBaseY + normalY * 28)) + 14}
+            fontSize={10}
+            color="var(--color-ink-faint)"
+            translateX={d.tailLabelPos ? '-50%' : anchorToTranslateX(sourceAnchor)}
+          >
+            {d.sourceRole}
+          </EdgeLabel>
         )}
         {d?.targetRole && (
-          <EdgeLabel testId={`edge-label-${id}-target-role`} x={targetBaseX + normalX * 28} y={targetBaseY + normalY * 28} fontSize={10} color="var(--color-ink-faint)" translateX={anchorToTranslateX(targetAnchor)}>{d.targetRole}</EdgeLabel>
+          <EdgeLabel
+            testId={`edge-label-${id}-target-role`}
+            x={d.headLabelPos?.x ?? (targetBaseX + normalX * 28)}
+            y={(d.headLabelPos?.y ?? (targetBaseY + normalY * 28)) + 14}
+            fontSize={10}
+            color="var(--color-ink-faint)"
+            translateX={d.headLabelPos ? '-50%' : anchorToTranslateX(targetAnchor)}
+          >
+            {d.targetRole}
+          </EdgeLabel>
         )}
       </EdgeLabelRenderer>
     </>

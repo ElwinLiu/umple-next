@@ -83,27 +83,14 @@ export interface Position {
   height: number
 }
 
-// State machine types (parsed from GV files by the backend)
-export interface UmpleStateMachine {
-  name: string
-  className: string
-  states: UmpleState[]
+export interface GvTextLine {
+  text: string
+  bold?: boolean
 }
 
-export interface UmpleState {
-  name: string
-  entryActions?: string[]
-  exitActions?: string[]
-  nestedStates?: UmpleState[]
-  transitions?: UmpleTransition[]
-  isInitial?: boolean
-}
-
-export interface UmpleTransition {
-  event: string
-  guard?: string
-  action?: string
-  nextState: string
+export interface GvPoint {
+  x: number
+  y: number
 }
 
 export interface GvNodeLayout {
@@ -112,12 +99,35 @@ export interface GvNodeLayout {
   y: number
   width: number
   height: number
+  shape?: string
+  textLines?: GvTextLine[]
+}
+
+export interface GvEdgeLayout {
+  source: string
+  target: string
+  label?: string
+  headLabel?: string
+  tailLabel?: string
+  points?: GvPoint[]
+  labelPos?: GvPoint
+  headLabelPos?: GvPoint
+  tailLabelPos?: GvPoint
 }
 
 export interface GvLayout {
   bboxWidth: number
   bboxHeight: number
   nodes: GvNodeLayout[]
+  edges?: GvEdgeLayout[]
+}
+
+export interface DiagramResponse {
+  svg: string
+  html?: string
+  layout?: GvLayout
+  errors?: string
+  modelId: string
 }
 
 export interface ExampleEntry {
@@ -130,21 +140,27 @@ export interface ExampleCategory {
   examples: ExampleEntry[]
 }
 
-export interface ModelResponse {
-  id: string
-  code: string
-}
-
 export interface GenerateRequest {
   code: string
   language: string
   modelId?: string
 }
 
+export interface GeneratedArtifact {
+  label: string
+  url: string
+  filename?: string
+}
+
 export interface GenerateResponse {
   output: string
   language: string
   errors?: string
+  modelId?: string
+  kind?: 'text' | 'html' | 'iframe'
+  html?: string
+  iframeUrl?: string
+  downloads?: GeneratedArtifact[]
 }
 
 // Task types
@@ -169,8 +185,3 @@ export interface TaskResponse {
 export interface TaskSubmitResponse {
   status: string
 }
-
-export const UMPLE_TARGETS = [
-  'Java', 'Php', 'Python', 'Ruby', 'Cpp', 'RTCpp', 'SimpleCpp',
-  'Json', 'Sql', 'Alloy', 'NuSMV', 'USE', 'Ecore', 'TextUml', 'Umlet', 'SimulateJava',
-] as const

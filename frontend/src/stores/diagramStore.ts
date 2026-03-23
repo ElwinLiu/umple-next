@@ -1,16 +1,30 @@
 import { create } from 'zustand'
 import type { Node, Edge } from '@xyflow/react'
 
-export type DiagramView = 'class' | 'state' | 'feature' | 'structure'
-export type RenderMode = 'reactflow' | 'graphviz'
+export type DiagramView = 'class' | 'state' | 'feature' | 'structure' | 'erd' | 'instance' | 'eventSequence' | 'stateTables'
+type RenderMode = 'reactflow' | 'graphviz'
 export type GvLayoutAlgorithm = 'dot' | 'sfdp' | 'circo' | 'neato' | 'fdp' | 'twopi'
 
-/** Maps frontend view modes to Umple Graphviz generation types */
-export const VIEW_TO_GV_TYPE: Record<DiagramView, string> = {
+/** Maps frontend view modes to Umple generation types.
+ *  NOTE: 'structure' maps to StructureDiagram (composite structure with ports
+ *  and bindings). Unlike the Graphviz diagram types, this generator returns
+ *  HTML/JS that renders into an SVG canvas. */
+const VIEW_TO_GV_TYPE: Record<DiagramView, string> = {
   class: 'GvClassDiagram',
   state: 'GvStateDiagram',
   feature: 'GvFeatureDiagram',
-  structure: 'GvClassTraitDiagram',
+  structure: 'StructureDiagram',
+  erd: 'GvEntityRelationshipDiagram',
+  instance: 'InstanceDiagram',
+  eventSequence: 'EventSequence',
+  stateTables: 'StateTables',
+}
+
+/** Classifies each view by its backend output kind */
+export const VIEW_OUTPUT_KIND: Record<DiagramView, 'gv' | 'html'> = {
+  class: 'gv', state: 'gv', feature: 'gv', structure: 'html',
+  erd: 'gv', instance: 'gv',
+  eventSequence: 'html', stateTables: 'html',
 }
 
 /** All display preference keys */
@@ -19,19 +33,21 @@ export type DisplayPrefKey =
   | 'showActions' | 'showTransitionLabels' | 'showGuards' | 'showGuardLabels' | 'showNaturalLanguage'
   | 'showFeatureDependency'
 
+export interface DiagramElements {
+  nodes: Node[]
+  edges: Edge[]
+}
+
+export const EMPTY_DIAGRAM_ELEMENTS: DiagramElements = { nodes: [], edges: [] }
+
 interface DiagramState {
   viewMode: DiagramView
   renderMode: RenderMode
-  nodes: Node[]
-  edges: Edge[]
-  stateNodes: Node[]
-  stateEdges: Edge[]
-  featureNodes: Node[]
-  featureEdges: Edge[]
-  structureText: string
-  gvSvg: string
+  diagramData: Partial<Record<DiagramView, DiagramElements>>
   /** Cached SVG per diagram view so switching back is instant */
   svgCache: Partial<Record<DiagramView, string>>
+  /** Cached HTML per diagram view (for EventSequence, StateTables) */
+  htmlCache: Partial<Record<DiagramView, string>>
   selectedNodeId: string | null
   selectedEdgeId: string | null
   editingNodeId: string | null
@@ -56,16 +72,13 @@ interface DiagramState {
 
   setViewMode: (mode: DiagramView) => void
   setRenderMode: (mode: RenderMode) => void
-  setNodes: (nodes: Node[]) => void
-  setEdges: (edges: Edge[]) => void
-  setStateNodes: (nodes: Node[]) => void
-  setStateEdges: (edges: Edge[]) => void
-  setFeatureNodes: (nodes: Node[]) => void
-  setFeatureEdges: (edges: Edge[]) => void
-  setStructureText: (text: string) => void
-  setGvSvg: (svg: string) => void
+  setDiagramData: (view: DiagramView, nodes: Node[], edges: Edge[]) => void
+  getDiagramData: (view: DiagramView) => DiagramElements
+  clearDiagramData: (view?: DiagramView) => void
   setSvgForView: (view: DiagramView, svg: string) => void
   clearSvgCache: () => void
+  setHtmlForView: (view: DiagramView, html: string) => void
+  clearHtmlCache: () => void
   setSelectedNode: (id: string | null) => void
   setSelectedEdge: (id: string | null) => void
   setEditing: (nodeId: string | null, field: 'name' | 'newAttribute' | 'newMethod' | null) => void
@@ -80,23 +93,16 @@ interface DiagramState {
   removeEdge: (id: string) => void
   /** Optimistic: rename a class node (updates id, data.name, and connected edges) */
   renameNode: (oldId: string, newName: string) => void
-  setDisplayPref: (key: DisplayPrefKey, value: boolean) => void
   toggleDisplayPref: (key: DisplayPrefKey) => void
   setLayoutAlgorithm: (algo: GvLayoutAlgorithm) => void
 }
 
-export const useDiagramStore = create<DiagramState>((set) => ({
+export const useDiagramStore = create<DiagramState>((set, get) => ({
   viewMode: 'class',
   renderMode: 'reactflow',
-  nodes: [],
-  edges: [],
-  stateNodes: [],
-  stateEdges: [],
-  featureNodes: [],
-  featureEdges: [],
-  structureText: '',
-  gvSvg: '',
+  diagramData: {},
   svgCache: {},
+  htmlCache: {},
   selectedNodeId: null,
   selectedEdgeId: null,
   editingNodeId: null,
@@ -118,55 +124,96 @@ export const useDiagramStore = create<DiagramState>((set) => ({
 
   setViewMode: (viewMode) => set({ viewMode }),
   setRenderMode: (renderMode) => set({ renderMode }),
-  setNodes: (nodes) => set({ nodes }),
-  setEdges: (edges) => set({ edges }),
-  setStateNodes: (stateNodes) => set({ stateNodes }),
-  setStateEdges: (stateEdges) => set({ stateEdges }),
-  setFeatureNodes: (featureNodes) => set({ featureNodes }),
-  setFeatureEdges: (featureEdges) => set({ featureEdges }),
-  setStructureText: (structureText) => set({ structureText }),
-  setGvSvg: (gvSvg) => set({ gvSvg }),
+  setDiagramData: (view, nodes, edges) =>
+    set((s) => ({ diagramData: { ...s.diagramData, [view]: { nodes, edges } } })),
+  getDiagramData: (view): DiagramElements => get().diagramData[view] ?? EMPTY_DIAGRAM_ELEMENTS,
+  clearDiagramData: (view) =>
+    set((s) => {
+      if (!view) return { diagramData: {} }
+      const next = { ...s.diagramData }
+      delete next[view]
+      return { diagramData: next }
+    }),
   setSvgForView: (view, svg) =>
     set((s) => ({ svgCache: { ...s.svgCache, [view]: svg } })),
   clearSvgCache: () => set({ svgCache: {} }),
+  setHtmlForView: (view, html) =>
+    set((s) => ({ htmlCache: { ...s.htmlCache, [view]: html } })),
+  clearHtmlCache: () => set({ htmlCache: {} }),
   setSelectedNode: (selectedNodeId) => set({ selectedNodeId }),
   setSelectedEdge: (selectedEdgeId) => set({ selectedEdgeId }),
   setEditing: (editingNodeId, editingField) => set({ editingNodeId, editingField }),
   setCompiling: (compiling) => set({ compiling }),
   setLastError: (lastError) => set({ lastError }),
   updateNodePosition: (id, x, y) =>
-    set((s) => ({
-      nodes: s.nodes.map((n) =>
-        n.id === id ? { ...n, position: { x, y } } : n
-      ),
-    })),
-  addNode: (node) => set((s) => ({ nodes: [...s.nodes, node] })),
-  removeNode: (id) => set((s) => ({
-    nodes: s.nodes.filter((n) => n.id !== id),
-    edges: s.edges.filter((e) => e.source !== id && e.target !== id),
-    selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
-  })),
-  removeEdge: (id) => set((s) => ({
-    edges: s.edges.filter((e) => e.id !== id),
-    selectedEdgeId: s.selectedEdgeId === id ? null : s.selectedEdgeId,
-  })),
+    set((s) => {
+      const current = s.diagramData.class
+      if (!current) return s
+      return {
+        diagramData: {
+          ...s.diagramData,
+          class: {
+            ...current,
+            nodes: current.nodes.map((n) =>
+              n.id === id ? { ...n, position: { x, y } } : n
+            ),
+          },
+        },
+      }
+    }),
+  addNode: (node) => set((s) => {
+    const current = s.diagramData.class ?? EMPTY_DIAGRAM_ELEMENTS
+    return {
+      diagramData: {
+        ...s.diagramData,
+        class: { ...current, nodes: [...current.nodes, node] },
+      },
+    }
+  }),
+  removeNode: (id) => set((s) => {
+    const current = s.diagramData.class ?? EMPTY_DIAGRAM_ELEMENTS
+    return {
+      diagramData: {
+        ...s.diagramData,
+        class: {
+          nodes: current.nodes.filter((n) => n.id !== id),
+          edges: current.edges.filter((e) => e.source !== id && e.target !== id),
+        },
+      },
+      selectedNodeId: s.selectedNodeId === id ? null : s.selectedNodeId,
+    }
+  }),
+  removeEdge: (id) => set((s) => {
+    const current = s.diagramData.class ?? EMPTY_DIAGRAM_ELEMENTS
+    return {
+      diagramData: {
+        ...s.diagramData,
+        class: { ...current, edges: current.edges.filter((e) => e.id !== id) },
+      },
+      selectedEdgeId: s.selectedEdgeId === id ? null : s.selectedEdgeId,
+    }
+  }),
   renameNode: (oldId, newName) => set((s) => {
     const newId = `class-${newName}`
     return {
-      nodes: s.nodes.map((n) =>
-        n.id === oldId
-          ? { ...n, id: newId, data: { ...n.data, name: newName } }
-          : n
-      ),
-      edges: s.edges.map((e) => ({
-        ...e,
-        source: e.source === oldId ? newId : e.source,
-        target: e.target === oldId ? newId : e.target,
-      })),
+      diagramData: {
+        ...s.diagramData,
+        class: {
+          nodes: (s.diagramData.class?.nodes ?? []).map((n) =>
+            n.id === oldId
+              ? { ...n, id: newId, data: { ...n.data, name: newName } }
+              : n
+          ),
+          edges: (s.diagramData.class?.edges ?? []).map((e) => ({
+            ...e,
+            source: e.source === oldId ? newId : e.source,
+            target: e.target === oldId ? newId : e.target,
+          })),
+        },
+      },
       selectedNodeId: s.selectedNodeId === oldId ? newId : s.selectedNodeId,
     }
   }),
-  setDisplayPref: (key, value) => set({ [key]: value }),
   toggleDisplayPref: (key) => set((s) => ({ [key]: !s[key] })),
   setLayoutAlgorithm: (layoutAlgorithm) => set({ layoutAlgorithm }),
 }))

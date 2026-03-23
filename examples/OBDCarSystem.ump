@@ -92,7 +92,7 @@ class ConditionCheckAdapter{
    
   
    if (sparkPlugclientData < wheelsclientData) {
-    carInformation->setParticleFilterclientData( sparkPlugclientData );
+    carInformation->setSparkPlugclientData( sparkPlugclientData );
    }
   
   carInformation->setWheelsclientData(wheelsclientData);  
@@ -146,7 +146,7 @@ class CarSystem {
  SensorReader clientWheels;
  SensorReader clientMotorOil;
  SensorReader clientParticleFilter;
- SensorReader clientSparkPlugAdaptive;
+ SensorReader clientSparkPlug;
  ConditionCheckAdapter conditionCheckAdapter;
  MotorRotationSpeed motorRotationSpeed;
  MotorOilQuantity motorOilQuantity;
@@ -187,20 +187,20 @@ class CarSystem {
 
  this.ignition -> clientMotorOil.ignition;
  this.motorOilData -> clientMotorOil.sensorData {
-  return new SensorData(this.wheelsData.relativeWear,this.wheelsData.initialAvailability);
+  return new SensorData(this.motorOilData.relativeWear,this.motorOilData.initialAvailability);
  }
  this.boardData -> clientMotorOil.boardData;
 
 
  this.ignition -> clientParticleFilter.ignition;
- this.particleFilter -> clientParticleFilter.sensorData {
-  return new SensorData(this.wheelsData.relativeWear,this.wheelsData.initialAvailability);
+ this.particleFilterData -> clientParticleFilter.sensorData {
+  return new SensorData(this.particleFilterData.relativeWear,this.particleFilterData.initialAvailability);
  }
  this.boardData -> clientParticleFilter.boardData;
 
  this.ignition -> clientSparkPlug.ignition;
- this.sparkPlug -> clientSparkPlug.sensorData {
-  return new SensorData(this.wheelsData.relativeWear,this.wheelsData.initialAvailability);
+ this.sparkPlugData -> clientSparkPlug.sensorData {
+  return new SensorData(this.sparkPlugData.relativeWear,this.sparkPlugData.initialAvailability);
  }
  this.boardData -> clientSparkPlug.boardData;
 
@@ -214,8 +214,8 @@ class CarSystem {
 
  throttleControl.throttleValue -> this.throttleStatus;
  motorOilCheck.motorOilRenewal -> this.motorOilLed;
- motorRotationSpeed.motorRotationSpeed -> throttleControl.motorRotationSpeed;
- motorOilQuantity.motorOilQuantity -> motorOilCheck.motorOilQuantity;
+ motorRotationSpeed.speed -> throttleControl.motorRotationSpeed;
+ motorRotationSpeed.speed -> motorOilCheck.motorRotationSpeed;
  motorOilViscosity.motorOilViscosity -> motorOilCheck.motorOilViscosity;
 }
 // @@@skipjavacompile @@@skipphpcompile @@@skippythoncompile generated code does not compile - likely incomplete

@@ -8,6 +8,7 @@ import (
 type Config struct {
 	Port           int
 	UmpleJar       string
+	UmpleSyncJar   string
 	UmplePort      int
 	ModelStorePath string
 	ExamplePath    string
@@ -19,6 +20,7 @@ func Load() *Config {
 	return &Config{
 		Port:           getEnvInt("PORT", 3001),
 		UmpleJar:       getEnv("UMPLE_JAR", "/jars/umple.jar"),
+		UmpleSyncJar:   getEnv("UMPLE_SYNC_JAR", "/jars/umplesync.jar"),
 		UmplePort:      getEnvInt("UMPLE_PORT", 5555),
 		ModelStorePath: getEnv("MODEL_STORE_PATH", "/data/models"),
 		ExamplePath:    getEnv("EXAMPLE_PATH", "/examples"),

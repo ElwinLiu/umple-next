@@ -5,9 +5,14 @@ collab/node_modules/
 code-exec/node_modules/
 
 # Build
+backend/server
 frontend/dist/
 frontend/playwright-report/
 frontend/test-results/
+*.tsbuildinfo
+
+# Runtime state
+backend/versionRunning.txt
 
 # Data
 data/models/tmp*

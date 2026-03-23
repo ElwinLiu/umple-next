@@ -121,6 +121,18 @@ func (p *Pool) ensureRunning() error {
 	return p.startServer()
 }
 
+// LockModel acquires the per-model mutex for the given work directory.
+// Callers that operate on model files outside of Pool.Execute must use
+// LockModel / UnlockModel to prevent concurrent access.
+func (p *Pool) LockModel(workDir string) {
+	p.getModelMutex(workDir).Lock()
+}
+
+// UnlockModel releases the per-model mutex for the given work directory.
+func (p *Pool) UnlockModel(workDir string) {
+	p.getModelMutex(workDir).Unlock()
+}
+
 func (p *Pool) getModelMutex(workDir string) *sync.Mutex {
 	val, _ := p.modelMu.LoadOrStore(workDir, &sync.Mutex{})
 	return val.(*sync.Mutex)

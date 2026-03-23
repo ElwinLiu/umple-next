@@ -11,7 +11,7 @@ export function useExecute() {
   const [running, setRunning] = useState(false)
   const runningRef = useRef(false)
 
-  const execute = useCallback(async () => {
+  const execute = useCallback(async (languageOverride?: string) => {
     if (runningRef.current) return
     runningRef.current = true
     setRunning(true)
@@ -21,7 +21,7 @@ export function useExecute() {
     setExecutionOutput('')
 
     const code = useEditorStore.getState().code
-    const language = useUiStore.getState().generatedLanguage
+    const language = languageOverride || useUiStore.getState().generatedLanguage
     try {
       const result = await api.execute({ code, language })
       setExecutionOutput(result.output || '', result.errors || null)
@@ -40,7 +40,7 @@ export function useExecute() {
 export function useCompile() {
   const [compiling, setCompiling] = useState(false)
   const compilingRef = useRef(false)
-  const { updateFromModel, updateStateDiagramFromGv } = useDiagram()
+  const { updateClassDiagram } = useDiagram()
   const isDark = useIsDark()
 
   const compile = useCallback(async () => {
@@ -49,7 +49,7 @@ export function useCompile() {
     setCompiling(true)
 
     try {
-      const { success } = await compileAndRefresh({ updateFromModel, updateStateDiagramFromGv }, isDark)
+      const { success } = await compileAndRefresh({ updateClassDiagram }, isDark)
       if (success) {
         useUiStore.getState().setExecutionOutput('Compiled successfully.')
         useUiStore.getState().setOutputView('strip')
@@ -66,7 +66,7 @@ export function useCompile() {
       compilingRef.current = false
       setCompiling(false)
     }
-  }, [updateFromModel, updateStateDiagramFromGv, isDark])
+  }, [updateClassDiagram, isDark])
 
   return { compile, compiling }
 }

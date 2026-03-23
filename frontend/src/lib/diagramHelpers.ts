@@ -6,11 +6,6 @@ export function extractClassName(nodeId: string): string {
   return nodeId.replace(/^class-/, '')
 }
 
-/** Build a ReactFlow node ID from a class name. */
-export function classNodeId(className: string): string {
-  return `class-${className}`
-}
-
 /** Generate a unique class name that doesn't conflict with existing nodes. */
 export function generateClassName(nodes: { id: string }[]): string {
   const existing = new Set(nodes.map((n) => extractClassName(n.id)))

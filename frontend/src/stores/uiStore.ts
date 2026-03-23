@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { GenerateResponse, GeneratedArtifact } from '../api/types'
 
 /** Parse Umple JSON error string to count errors vs warnings.
  *  Umple severity: 1 = error, 2 = warning, 3 = warning */
@@ -47,6 +48,11 @@ interface UiState {
   rightPanelView: 'diagram' | 'generated'
   diagramOnly: boolean
   generatedCode: string
+  generatedHtml: string
+  generatedKind: 'text' | 'html' | 'iframe'
+  generatedIframeUrl: string | null
+  generatedDownloads: GeneratedArtifact[]
+  generatedTargetId: string
   generatedLanguage: string
   generatingCode: boolean
   generatedError: string | null
@@ -68,7 +74,7 @@ interface UiState {
   closeCommandPalette: () => void
   setRightPanelView: (view: 'diagram' | 'generated') => void
   setDiagramOnly: (v: boolean) => void
-  setGeneratedOutput: (code: string, language: string) => void
+  setGeneratedOutput: (result: GenerateResponse, targetId: string) => void
   setGeneratingCode: (generating: boolean) => void
   setGeneratedError: (error: string | null) => void
   clearGenerated: () => void
@@ -118,6 +124,11 @@ export const useUiStore = create<UiState>((set, get) => ({
   rightPanelView: 'diagram',
   diagramOnly: false,
   generatedCode: '',
+  generatedHtml: '',
+  generatedKind: 'text',
+  generatedIframeUrl: null,
+  generatedDownloads: [],
+  generatedTargetId: 'Java',
   generatedLanguage: 'Java',
   generatingCode: false,
   generatedError: null,
@@ -156,12 +167,31 @@ export const useUiStore = create<UiState>((set, get) => ({
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
   setRightPanelView: (rightPanelView) => set({ rightPanelView }),
   setDiagramOnly: (diagramOnly) => set({ diagramOnly, showEditor: !diagramOnly }),
-  setGeneratedOutput: (generatedCode, generatedLanguage) =>
-    set({ generatedCode, generatedLanguage, rightPanelView: 'generated', generatedError: null }),
+  setGeneratedOutput: (result, generatedTargetId) =>
+    set({
+      generatedCode: result.output ?? '',
+      generatedHtml: result.html ?? '',
+      generatedKind: result.kind ?? (result.iframeUrl ? 'iframe' : result.html ? 'html' : 'text'),
+      generatedIframeUrl: result.iframeUrl ?? null,
+      generatedDownloads: result.downloads ?? [],
+      generatedTargetId,
+      generatedLanguage: result.language,
+      rightPanelView: 'generated',
+      generatedError: result.errors ?? null,
+    }),
   setGeneratingCode: (generatingCode) => set(generatingCode
     ? { generatingCode, generationRequested: true, rightPanelView: 'generated' }
     : { generatingCode }
   ),
   setGeneratedError: (generatedError) => set({ generatedError }),
-  clearGenerated: () => set({ generatedCode: '', generatedError: null, rightPanelView: 'diagram', generationRequested: false }),
+  clearGenerated: () => set({
+    generatedCode: '',
+    generatedHtml: '',
+    generatedKind: 'text',
+    generatedIframeUrl: null,
+    generatedDownloads: [],
+    generatedError: null,
+    rightPanelView: 'diagram',
+    generationRequested: false,
+  }),
 }))

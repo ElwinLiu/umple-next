@@ -11,13 +11,13 @@ import {
 import { useIsDark } from './useIsDark'
 import { useDiagram } from './useDiagram'
 import { api } from '../api/client'
-import type { UmpleModel, UmpleStateMachine, GvLayout } from '../api/types'
+import type { UmpleModel, GvLayout } from '../api/types'
+
 
 const DEBOUNCE_MS = 1500
 
 interface CompileCallbacks {
-  updateFromModel: (model: UmpleModel, gvLayout?: GvLayout) => void
-  updateStateDiagramFromGv: (stateMachines: UmpleStateMachine[], gvLayout?: GvLayout) => void
+  updateClassDiagram: (model: UmpleModel, gvLayout?: GvLayout) => void
 }
 
 /** Build the diagram request params from current store state + isDark flag. */
@@ -39,7 +39,7 @@ export async function compileAndRefresh(
   signal?: AbortSignal,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
   const { code, modelId, setModelId } = useEditorStore.getState()
-  const { viewMode, setCompiling, setLastError, clearSvgCache, setSvgForView } = useDiagramStore.getState()
+  const { viewMode, setCompiling, setLastError, clearSvgCache, clearHtmlCache, clearDiagramData, setSvgForView, setHtmlForView } = useDiagramStore.getState()
   const { setExecutionOutput } = useUiStore.getState()
 
   if (!code.trim()) return { success: false, model: null }
@@ -48,6 +48,8 @@ export async function compileAndRefresh(
   setLastError(null)
   setExecutionOutput('')
   clearSvgCache()
+  clearHtmlCache()
+  clearDiagramData()
 
   let success = false
   let model: UmpleModel | null = null
@@ -76,11 +78,8 @@ export async function compileAndRefresh(
       try {
         const svgRes = await api.diagram(getDiagramRequestParams(code, viewMode, currentModelId, isDark))
         if (svgRes.svg) setSvgForView(viewMode, svgRes.svg)
+        if (svgRes.html) setHtmlForView(viewMode, svgRes.html)
         gvLayout = svgRes.layout
-        // Update state diagram from GV-parsed data
-        if (viewMode === 'state' && svgRes.stateMachines) {
-          callbacks.updateStateDiagramFromGv(svgRes.stateMachines, svgRes.layout)
-        }
         if (svgRes.errors) {
           setLastError(svgRes.errors)
           setExecutionOutput('', svgRes.errors)
@@ -93,8 +92,9 @@ export async function compileAndRefresh(
       }
     }
 
-    // Update class diagram with GV positions (or grid fallback if no layout)
-    if (model) callbacks.updateFromModel(model, gvLayout)
+    if (model && viewMode === 'class') {
+      callbacks.updateClassDiagram(model, gvLayout)
+    }
   } catch (err: any) {
     if (err.name === 'AbortError') throw err
     const msg = err.message || 'Compilation failed'
@@ -112,10 +112,11 @@ export function useCompiler() {
   const modelId = useEditorStore((s) => s.modelId)
   const viewMode = useDiagramStore((s) => s.viewMode)
   const setSvgForView = useDiagramStore((s) => s.setSvgForView)
+  const setHtmlForView = useDiagramStore((s) => s.setHtmlForView)
   const setLastError = useDiagramStore((s) => s.setLastError)
   const suboptionsKey = useDiagramStore(selectSuboptionsKey)
   const isDark = useIsDark()
-  const { updateFromModel, updateStateDiagramFromGv } = useDiagram()
+  const { updateClassDiagram } = useDiagram()
 
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const abortRef = useRef<AbortController>(undefined)
@@ -145,7 +146,7 @@ export function useCompiler() {
 
       try {
         const result = await compileAndRefresh(
-          { updateFromModel, updateStateDiagramFromGv },
+          { updateClassDiagram },
           isDarkRef.current,
           abortRef.current.signal,
         )
@@ -180,11 +181,11 @@ export function useCompiler() {
       if (res.svg) {
         setSvgForView(view, res.svg)
       }
-      // Update ReactFlow nodes from diagram response
-      if (view === 'class' && res.layout && lastModelRef.current) {
-        updateFromModel(lastModelRef.current, res.layout)
-      } else if (view === 'state' && res.stateMachines?.length) {
-        updateStateDiagramFromGv(res.stateMachines, res.layout)
+      if (res.html) {
+        setHtmlForView(view, res.html)
+      }
+      if (view === 'class' && lastModelRef.current) {
+        updateClassDiagram(lastModelRef.current, res.layout)
       }
       if (res.errors) {
         setLastError(res.errors)

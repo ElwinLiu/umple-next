@@ -1,0 +1,245 @@
+import type { Edge, Node } from '@xyflow/react'
+import type { GvEdgeLayout, GvLayout, Position, UmpleAttribute, UmpleModel } from '../../api/types'
+import type { ClassNodeData } from '../../components/diagram/nodes/ClassNode'
+import type { AssociationEdgeData } from '../../components/diagram/edges/AssociationEdge'
+import { buildGridPositions, buildGvPositions, clamp, createLayoutEdgeMatcher, estimateTextWidth, type DiagramNodeMetrics, type LayoutEntry } from './positions'
+import type { DiagramResult } from './types'
+
+const DEFAULT_WIDTH = 180
+
+function resolveNodeMetrics(
+  position: Position | undefined,
+  fallback: DiagramNodeMetrics,
+): DiagramNodeMetrics {
+  return {
+    width: Math.max(position?.width ?? 0, fallback.width),
+    height: Math.max(position?.height ?? 0, fallback.height),
+  }
+}
+
+function exactLayoutMetrics(layout: GvLayout | undefined, name: string, fallback: DiagramNodeMetrics) {
+  const layoutNode = layout?.nodes.find((node) => node.name === name)
+  if (!layoutNode) return fallback
+  return {
+    width: layoutNode.width,
+    height: layoutNode.height,
+  }
+}
+
+function withExactEdgeLayout(edge: Edge, layoutEdge: GvEdgeLayout | undefined): Edge {
+  if (!layoutEdge) return edge
+  const data = (edge.data ?? {}) as Record<string, unknown>
+  return {
+    ...edge,
+    data: {
+      ...data,
+      exactPoints: layoutEdge.points,
+      labelPos: layoutEdge.labelPos,
+      headLabelPos: layoutEdge.headLabelPos,
+      tailLabelPos: layoutEdge.tailLabelPos,
+    },
+  }
+}
+
+function estimateClassMetrics(
+  name: string,
+  attributes: UmpleAttribute[] = [],
+): DiagramNodeMetrics {
+  const lines = [
+    name,
+    ...attributes.map((attr) => (attr.type ? `${attr.name}: ${attr.type}` : attr.name)),
+  ]
+
+  const widestLine = lines.reduce((max, line) => Math.max(max, estimateTextWidth(line)), 0)
+
+  return {
+    width: clamp(Math.round(widestLine + 40), DEFAULT_WIDTH, 420),
+    height: clamp(38 + (attributes.length > 0 ? attributes.length * 18 : 0), 50, 420),
+  }
+}
+
+function asBoolean(value: string | boolean | undefined, defaultValue: boolean) {
+  if (value === undefined) return defaultValue
+  return value === true || value === 'true'
+}
+
+export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): DiagramResult {
+  const classes = model.umpleClasses || []
+  const associations = model.umpleAssociations || []
+  const interfaces = model.umpleInterfaces || []
+
+  const layoutEntries: LayoutEntry[] = [
+    ...classes.map((cls) => ({
+      name: cls.name,
+      metrics: exactLayoutMetrics(
+        gvLayout,
+        cls.name,
+        resolveNodeMetrics(cls.position, estimateClassMetrics(cls.name, cls.attributes)),
+      ),
+    })),
+    ...interfaces.map((iface) => ({
+      name: iface.name,
+      metrics: exactLayoutMetrics(
+        gvLayout,
+        iface.name,
+        resolveNodeMetrics(iface.position, estimateClassMetrics(iface.name)),
+      ),
+    })),
+  ]
+
+  const positions = gvLayout
+    ? buildGvPositions(gvLayout, layoutEntries)
+    : buildGridPositions(layoutEntries)
+  const matchLayoutEdge = createLayoutEdgeMatcher(gvLayout)
+
+  const classNodes: Node[] = classes.map((cls): Node => {
+    const metrics = layoutEntries.find((entry) => entry.name === cls.name)?.metrics ?? estimateClassMetrics(cls.name, cls.attributes)
+    return {
+      id: `class-${cls.name}`,
+      type: 'classNode',
+      position: positions.get(cls.name) ?? { x: 50, y: 50 },
+      style: { width: metrics.width, height: metrics.height },
+      data: {
+        name: cls.name,
+        attributes: (cls.attributes || []).map((a) => ({
+          name: a.name,
+          type: a.type || '',
+        })),
+        methods: (cls.methods || []).map((m) => ({
+          name: m.name,
+          returnType: m.type || 'void',
+          params: m.parameters || '',
+        })),
+        isAbstract: cls.isAbstract || false,
+        isInterface: false,
+        displayColor: cls.displayColor || '',
+      } satisfies ClassNodeData,
+    }
+  })
+
+  const ifaceNodes: Node[] = interfaces.map((iface): Node => {
+    const metrics = layoutEntries.find((entry) => entry.name === iface.name)?.metrics ?? estimateClassMetrics(iface.name)
+    return {
+      id: `class-${iface.name}`,
+      type: 'classNode',
+      position: positions.get(iface.name) ?? { x: 50, y: 50 },
+      style: { width: metrics.width, height: metrics.height },
+      data: {
+        name: iface.name,
+        attributes: [],
+        methods: (iface.methods || []).map((m) => ({
+          name: m.name,
+          returnType: m.type || 'void',
+          params: m.parameters || '',
+        })),
+        isAbstract: false,
+        isInterface: true,
+      } satisfies ClassNodeData,
+    }
+  })
+
+  const assocEdges: Edge[] = associations
+    .filter((a) => (a.classOneId && a.classTwoId) || (a.end1 && a.end2))
+    .map((assoc, i): Edge => {
+      const source = assoc.classOneId
+        ? `class-${assoc.classOneId}`
+        : `class-${assoc.end1!.className}`
+      const target = assoc.classTwoId
+        ? `class-${assoc.classTwoId}`
+        : `class-${assoc.end2!.className}`
+
+      const srcMult = assoc.multiplicityOne ?? assoc.end1?.multiplicity ?? ''
+      const tgtMult = assoc.multiplicityTwo ?? assoc.end2?.multiplicity ?? ''
+      const srcRole = assoc.roleOne ?? assoc.end1?.roleName ?? ''
+      const tgtRole = assoc.roleTwo ?? assoc.end2?.roleName ?? ''
+
+      const leftComp = asBoolean(assoc.isLeftComposition, false)
+      const rightComp = asBoolean(assoc.isRightComposition, false)
+      const leftNav = asBoolean(assoc.isLeftNavigable, true)
+      const rightNav = asBoolean(assoc.isRightNavigable, true)
+
+      let edgeType: AssociationEdgeData['type'] = 'association'
+      if (leftComp || rightComp) {
+        edgeType = 'composition'
+      } else if (!leftNav && rightNav) {
+        edgeType = 'unidirectional'
+      } else if (leftNav && !rightNav) {
+        edgeType = 'unidirectional-reverse'
+      }
+
+      const isSelfLoop = source === target
+
+      const layoutEdge = matchLayoutEdge((edge) =>
+        edge.source === assoc.classOneId && edge.target === assoc.classTwoId &&
+        (edge.headLabel ?? '') === tgtMult && (edge.tailLabel ?? '') === srcMult,
+      ) ?? matchLayoutEdge((edge) =>
+        edge.source === source.replace(/^class-/, '') && edge.target === target.replace(/^class-/, '') &&
+        (edge.headLabel ?? '') === tgtMult && (edge.tailLabel ?? '') === srcMult,
+      )
+
+      return withExactEdgeLayout({
+        id: `assoc-${i}`,
+        source,
+        target,
+        ...(isSelfLoop ? { sourceHandle: 'right-source', targetHandle: 'right-target' } : {}),
+        type: 'association',
+        data: {
+          sourceMultiplicity: srcMult,
+          targetMultiplicity: tgtMult,
+          sourceRole: srcRole,
+          targetRole: tgtRole,
+          sourceDecoration: leftComp
+            ? 'diamond-filled'
+            : (!rightNav && leftNav ? 'arrow' : 'none'),
+          targetDecoration: rightComp
+            ? 'diamond-filled'
+            : (!leftNav && rightNav ? 'arrow' : 'none'),
+          type: edgeType,
+          assocId: assoc.id ?? '',
+        } satisfies AssociationEdgeData,
+      }, layoutEdge)
+    })
+
+  const genEdges: Edge[] = classes
+    .filter((cls) => cls.extendsClass)
+    .map((cls): Edge => withExactEdgeLayout({
+      id: `gen-${cls.name}`,
+      source: `class-${cls.name}`,
+      target: `class-${cls.extendsClass}`,
+      type: 'association',
+      data: {
+        sourceMultiplicity: '',
+        targetMultiplicity: '',
+        sourceRole: '',
+        targetRole: '',
+        sourceDecoration: 'none',
+        targetDecoration: 'triangle',
+        type: 'generalization',
+      } satisfies AssociationEdgeData,
+    }, matchLayoutEdge((edge) => edge.source === cls.name && edge.target === cls.extendsClass && !edge.headLabel && !edge.tailLabel)))
+
+  const implEdges: Edge[] = classes
+    .filter((cls) => cls.implementedInterfaces?.length)
+    .flatMap((cls) =>
+      cls.implementedInterfaces!.map((iface): Edge => withExactEdgeLayout({
+        id: `impl-${cls.name}-${iface}`,
+        source: `class-${cls.name}`,
+        target: `class-${iface}`,
+        type: 'association',
+        data: {
+          sourceMultiplicity: '',
+          targetMultiplicity: '',
+          sourceRole: '',
+          targetRole: '',
+          sourceDecoration: 'none',
+          targetDecoration: 'triangle',
+          type: 'generalization',
+        } satisfies AssociationEdgeData,
+      }, matchLayoutEdge((edge) => edge.source === cls.name && edge.target === iface && !edge.headLabel && !edge.tailLabel))),
+    )
+
+  return {
+    nodes: [...classNodes, ...ifaceNodes],
+    edges: [...assocEdges, ...genEdges, ...implEdges],
+  }
+}

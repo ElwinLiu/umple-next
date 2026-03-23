@@ -19,7 +19,8 @@ export function EdgeContextMenu({ position, edgeId, onClose }: EdgeContextMenuPr
 
   const handleDelete = useCallback(async () => {
     if (!edgeId) return
-    const { edges, removeEdge } = useDiagramStore.getState()
+    const { getDiagramData, removeEdge } = useDiagramStore.getState()
+    const edges = getDiagramData('class').edges
     const edge = edges.find((e) => e.id === edgeId)
     if (!edge) { onClose(); return }
 

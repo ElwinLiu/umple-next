@@ -9,7 +9,7 @@ import type { ClassNodeData } from './nodes/ClassNode'
 
 type DiagramMode = 'select' | 'addClass'
 
-export function DiagramControls() {
+export function DiagramControls({ allowClassEditing = false }: { allowClassEditing?: boolean }) {
   const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow()
   const [mode, setMode] = useState<DiagramMode>('select')
   const { sync } = useDiagramSync()
@@ -18,7 +18,8 @@ export function DiagramControls() {
     (e: React.MouseEvent) => {
       if (mode !== 'addClass') return
       const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-      const { nodes, addNode } = useDiagramStore.getState()
+      const { getDiagramData, addNode } = useDiagramStore.getState()
+      const nodes = getDiagramData('class').nodes
 
       const className = generateClassName(nodes)
 
@@ -46,27 +47,28 @@ export function DiagramControls() {
     [mode, screenToFlowPosition, sync]
   )
 
-  // Expose click handler on the parent ReactFlow via data attribute
-  // (ClassDiagram reads this)
-
   return (
     <>
       <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-0.5 bg-surface-0 border border-border rounded-lg shadow-sm p-0.5">
-        <ControlButton
-          onClick={() => setMode('select')}
-          label="Select mode"
-          active={mode === 'select'}
-        >
-          <MousePointer2 className="size-3.5" />
-        </ControlButton>
-        <ControlButton
-          onClick={() => setMode(mode === 'addClass' ? 'select' : 'addClass')}
-          label="Add class (click canvas)"
-          active={mode === 'addClass'}
-        >
-          <Plus className="size-3.5" />
-        </ControlButton>
-        <div className="h-px bg-border mx-0.5" />
+        {allowClassEditing && (
+          <>
+            <ControlButton
+              onClick={() => setMode('select')}
+              label="Select mode"
+              active={mode === 'select'}
+            >
+              <MousePointer2 className="size-3.5" />
+            </ControlButton>
+            <ControlButton
+              onClick={() => setMode(mode === 'addClass' ? 'select' : 'addClass')}
+              label="Add class (click canvas)"
+              active={mode === 'addClass'}
+            >
+              <Plus className="size-3.5" />
+            </ControlButton>
+            <div className="h-px bg-border mx-0.5" />
+          </>
+        )}
         <ControlButton onClick={() => zoomIn()} label="Zoom in">
           <ZoomIn className="size-3.5" />
         </ControlButton>
@@ -80,7 +82,7 @@ export function DiagramControls() {
       </div>
 
       {/* Invisible overlay to capture clicks in addClass mode */}
-      {mode === 'addClass' && (
+      {allowClassEditing && mode === 'addClass' && (
         <div
           className="absolute inset-0 z-[5] cursor-crosshair"
           onClick={handlePaneClick}
@@ -92,7 +94,7 @@ export function DiagramControls() {
   )
 }
 
-function ControlButton({
+export function ControlButton({
   onClick,
   label,
   children,

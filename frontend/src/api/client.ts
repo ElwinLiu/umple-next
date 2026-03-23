@@ -1,6 +1,6 @@
 import type {
-  CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse, ModelResponse,
-  TaskCreateRequest, TaskCreateResponse, TaskResponse, TaskSubmitResponse,
+  CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse,
+  TaskCreateRequest, TaskCreateResponse, TaskResponse, TaskSubmitResponse, DiagramResponse,
 } from './types'
 
 const API_BASE = '/api'
@@ -46,24 +46,6 @@ export const api = {
     return request(`/examples/${encodeURIComponent(name)}`)
   },
 
-  createModel(code: string): Promise<ModelResponse> {
-    return request('/models', {
-      method: 'POST',
-      body: JSON.stringify({ code }),
-    })
-  },
-
-  getModel(id: string): Promise<ModelResponse> {
-    return request(`/models/${encodeURIComponent(id)}`)
-  },
-
-  updateModel(id: string, code: string): Promise<void> {
-    return request(`/models/${encodeURIComponent(id)}`, {
-      method: 'PUT',
-      body: JSON.stringify({ code }),
-    })
-  },
-
   generate(req: GenerateRequest): Promise<GenerateResponse> {
     return request('/generate', {
       method: 'POST',
@@ -97,7 +79,7 @@ export const api = {
     })
   },
 
-  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[] }): Promise<{ svg: string; layout?: import('./types').GvLayout; stateMachines?: import('./types').UmpleStateMachine[]; errors?: string }> {
+  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[] }): Promise<DiagramResponse> {
     return request('/diagram', {
       method: 'POST',
       body: JSON.stringify(req),

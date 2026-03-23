@@ -39,36 +39,9 @@ func (s *Store) Create(code string) (*Model, error) {
 	return &Model{ID: id, Code: code}, nil
 }
 
-// Get loads a model by ID.
-func (s *Store) Get(id string) (*Model, error) {
-	id = sanitizeID(id)
-	dir := filepath.Join(s.root, id)
-	data, err := os.ReadFile(filepath.Join(dir, "model.ump"))
-	if err != nil {
-		return nil, fmt.Errorf("model not found: %s", id)
-	}
-	return &Model{ID: id, Code: string(data)}, nil
-}
-
-// Update writes new code to an existing model.
-func (s *Store) Update(id, code string) error {
-	id = sanitizeID(id)
-	dir := filepath.Join(s.root, id)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return fmt.Errorf("model not found: %s", id)
-	}
-	return os.WriteFile(filepath.Join(dir, "model.ump"), []byte(code), 0644)
-}
-
 // ModelDir returns the filesystem path for a model ID.
 func (s *Store) ModelDir(id string) string {
 	return filepath.Join(s.root, sanitizeID(id))
-}
-
-// Exists checks if a model directory exists.
-func (s *Store) Exists(id string) bool {
-	_, err := os.Stat(filepath.Join(s.root, sanitizeID(id)))
-	return err == nil
 }
 
 // CleanupLoop periodically removes tmp model directories older than maxAge.
@@ -80,33 +53,6 @@ func (s *Store) CleanupLoop(interval time.Duration) {
 	for range ticker.C {
 		s.cleanup(maxAge)
 	}
-}
-
-// Bookmark copies a temporary model to a named bookmark directory.
-func (s *Store) Bookmark(id, name string) error {
-	id = sanitizeID(id)
-	name = sanitizeID(name)
-
-	srcDir := filepath.Join(s.root, id)
-	if _, err := os.Stat(srcDir); os.IsNotExist(err) {
-		return fmt.Errorf("model not found: %s", id)
-	}
-
-	dstDir := filepath.Join(s.root, "bookmarks", name)
-	if err := os.MkdirAll(dstDir, 0755); err != nil {
-		return fmt.Errorf("create bookmark dir: %w", err)
-	}
-
-	// Copy model.ump
-	data, err := os.ReadFile(filepath.Join(srcDir, "model.ump"))
-	if err != nil {
-		return fmt.Errorf("read source model: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(dstDir, "model.ump"), data, 0644); err != nil {
-		return fmt.Errorf("write bookmark model: %w", err)
-	}
-
-	return nil
 }
 
 // CreateTask creates a new model in the tasks/ subdirectory.

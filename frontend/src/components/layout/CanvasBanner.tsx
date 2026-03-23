@@ -3,7 +3,7 @@ import { useUiStore } from '../../stores/uiStore'
 import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
 import { useCompile } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
-import { UMPLE_TARGETS } from '../../api/types'
+import { GENERATE_TARGETS } from '../../generation/targets'
 import { Hammer, Loader2, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -12,23 +12,21 @@ import {
   DropdownMenuTrigger,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
 import { lineTabClasses } from '@/components/ui/line-tab'
 import { cn } from '@/lib/utils'
-
-const VIEW_MODES: { value: DiagramView; label: string }[] = [
-  { value: 'class', label: 'Class' },
-  { value: 'state', label: 'State' },
-  { value: 'feature', label: 'Feature' },
-  { value: 'structure', label: 'Structure' },
-]
+import { VIEW_MODE_GROUPS, ALL_VIEW_MODES } from '../../constants/diagram'
+import { getGenerateTarget } from '../../generation/targets'
 
 export function CanvasBanner() {
   const {
     diagramOnly, setDiagramOnly,
     rightPanelView, setRightPanelView,
-    generatedLanguage, generatingCode,
+    generatedTargetId, generatingCode,
     generationRequested,
   } = useUiStore()
   const { viewMode, setViewMode } = useDiagramStore()
@@ -88,16 +86,22 @@ export function CanvasBanner() {
         <DropdownMenu>
           <Tip content="Diagram view" side="bottom">
             <DropdownMenuTrigger className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer outline-none" aria-label="Diagram view">
-              {VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}
+              {ALL_VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}
               <ChevronDown className="size-3" />
             </DropdownMenuTrigger>
           </Tip>
-          <DropdownMenuContent align="start" className="w-32">
+          <DropdownMenuContent align="start" className="w-48">
             <DropdownMenuRadioGroup value={viewMode} onValueChange={(v) => setViewMode(v as DiagramView)}>
-              {VIEW_MODES.map((m) => (
-                <DropdownMenuRadioItem key={m.value} value={m.value} data-testid={`diagram-view-${m.value}`}>
-                  {m.label}
-                </DropdownMenuRadioItem>
+              {VIEW_MODE_GROUPS.map((group, gi) => (
+                <DropdownMenuGroup key={group.label}>
+                  {gi > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
+                  {group.modes.map((m) => (
+                    <DropdownMenuRadioItem key={m.value} value={m.value} data-testid={`diagram-view-${m.value}`}>
+                      {m.label}
+                    </DropdownMenuRadioItem>
+                  ))}
+                </DropdownMenuGroup>
               ))}
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
@@ -121,7 +125,7 @@ export function CanvasBanner() {
                 className={cn(lineTabClasses({ active: rightPanelView === 'generated' }), 'text-xs px-2.5 py-1 flex items-center gap-1.5')}
               >
                 {generatingCode && <span className="w-1.5 h-1.5 rounded-full bg-status-warning animate-pulse" />}
-                {generatedLanguage}
+                {getGenerateTarget(generatedTargetId)?.label ?? generatedTargetId}
               </button>
             </Tip>
             <DropdownMenu>
@@ -134,13 +138,13 @@ export function CanvasBanner() {
                 </DropdownMenuTrigger>
               </Tip>
               <DropdownMenuContent align="start" className="w-40 max-h-52">
-                {UMPLE_TARGETS.map((target) => (
+                {GENERATE_TARGETS.map((target) => (
                   <DropdownMenuItem
-                    key={target}
-                    onSelect={() => handleGenerate(target)}
-                    className={`text-xs ${target === generatedLanguage ? 'bg-brand-light text-brand font-semibold' : ''}`}
+                    key={target.id}
+                    onSelect={() => handleGenerate(target.id)}
+                    className={`text-xs ${target.id === generatedTargetId ? 'bg-brand-light text-brand font-semibold' : ''}`}
                   >
-                    {target}
+                    {target.label}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>

@@ -4,7 +4,9 @@ import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
 import { useEditorStore } from '../../stores/editorStore'
 import { useGenerate } from '../../hooks/useGenerate'
 import { api } from '../../api/client'
-import { UMPLE_TARGETS, type ExampleCategory } from '../../api/types'
+import type { ExampleCategory } from '../../api/types'
+import { GENERATE_TARGETS } from '../../generation/targets'
+import { getViewForExampleCategory } from '../../constants/diagram'
 import {
   LayoutGrid, Workflow, GitBranch, Network,
   Code, Layers, Maximize2, Minimize2,
@@ -109,13 +111,18 @@ export function CommandPalette() {
     generate(language)
   }, [closeCommandPalette, generate])
 
-  const handleLoadExample = useCallback(async (name: string) => {
+  const handleLoadExample = useCallback(async (name: string, category: string) => {
     closeCommandPalette()
     try {
       const res = await api.getExample(name)
       loadExample(res.name, res.code)
+      const view = getViewForExampleCategory(category)
+      if (view) {
+        setViewMode(view)
+      }
+      useUiStore.getState().setRightPanelView('diagram')
     } catch { /* ignore */ }
-  }, [closeCommandPalette, loadExample])
+  }, [closeCommandPalette, loadExample, setViewMode])
 
   const currentCategory = useMemo(
     () => page && page !== 'examples' ? categories.find((c) => c.name === page) : undefined,
@@ -182,14 +189,14 @@ export function CommandPalette() {
 
             <CommandSeparator />
             <CommandGroup heading="Generate">
-              {UMPLE_TARGETS.map((target) => (
+              {GENERATE_TARGETS.map((target) => (
                 <CommandItem
-                  key={target}
-                  onSelect={() => handleGenerate(target)}
-                  data-testid={`command-item-gen-${target}`}
+                  key={target.id}
+                  onSelect={() => handleGenerate(target.id)}
+                  data-testid={`command-item-gen-${target.id}`}
                 >
                   <Code />
-                  {target}
+                  {target.label}
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -278,7 +285,7 @@ export function CommandPalette() {
             {currentCategory.examples.map((ex) => (
                 <CommandItem
                   key={ex.name}
-                  onSelect={() => handleLoadExample(ex.name)}
+                  onSelect={() => handleLoadExample(ex.name, currentCategory.name)}
                   data-testid={`command-item-example-${ex.name}`}
                 >
                   <FileCode />

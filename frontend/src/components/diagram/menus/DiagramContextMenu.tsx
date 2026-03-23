@@ -22,7 +22,8 @@ export function DiagramContextMenu({ position, flowPosition, onClose }: DiagramC
   useMenuClose(menuRef, position, onClose)
 
   const handleAddClass = useCallback(async () => {
-    const { nodes, addNode } = useDiagramStore.getState()
+    const { getDiagramData, addNode } = useDiagramStore.getState()
+    const nodes = getDiagramData('class').nodes
     const className = generateClassName(nodes)
     const pos = flowPosition ?? { x: 100, y: 100 }
 

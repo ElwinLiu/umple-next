@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { api } from '../../api/client'
 import { useEditorStore } from '../../stores/editorStore'
+import { useDiagramStore } from '../../stores/diagramStore'
+import { useUiStore } from '../../stores/uiStore'
 import type { ExampleCategory } from '../../api/types'
+import { getViewForExampleCategory } from '../../constants/diagram'
 
 function toTestId(value: string) {
   return value
@@ -45,11 +48,16 @@ export function ExampleBrowser() {
     )
   }, [allExamples, search])
 
-  const handleSelect = useCallback((name: string) => {
+  const handleSelect = useCallback((name: string, category: string) => {
     setLoadingExample(name)
     api.getExample(name)
       .then((res) => {
         loadExample(res.name, res.code)
+        const view = getViewForExampleCategory(category)
+        if (view) {
+          useDiagramStore.getState().setViewMode(view)
+        }
+        useUiStore.getState().setRightPanelView('diagram')
       })
       .catch((err) => setError(err.message || 'Failed to load example'))
       .finally(() => setLoadingExample(null))
@@ -81,7 +89,7 @@ export function ExampleBrowser() {
         {filtered.map((ex) => (
           <button
             key={`${ex.category}-${ex.name}`}
-            onClick={() => handleSelect(ex.name)}
+            onClick={() => handleSelect(ex.name, ex.category)}
             data-testid={`example-item-${toTestId(ex.name)}`}
             className={`w-full text-left px-3 py-1.5 text-xs border-x-0 border-t-0 border-b border-border bg-transparent transition-colors focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px] ${
               loadingExample === ex.name

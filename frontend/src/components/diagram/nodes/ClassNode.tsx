@@ -23,6 +23,7 @@ function validateClassName(value: string): string | null {
 
 export const ClassNode = memo(function ClassNode({ id, data, selected }: NodeProps) {
   const d = data as ClassNodeData
+  const isEditableView = useDiagramStore((s) => s.viewMode === 'class')
   const showAttributes = useDiagramStore((s) => s.showAttributes)
   const showMethods = useDiagramStore((s) => s.showMethods)
   const editingNodeId = useDiagramStore((s) => s.editingNodeId)
@@ -39,8 +40,9 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
   }, [])
 
   const handleNameDoubleClick = useCallback(() => {
+    if (!isEditableView) return
     useDiagramStore.getState().setEditing(id, 'name')
-  }, [id])
+  }, [id, isEditableView])
 
   const handleRenameCommit = useCallback(async (newName: string) => {
     clearEditing()
@@ -106,7 +108,7 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
   return (
     <div
       className={cn(
-        'bg-surface-0 border-2 rounded min-w-40 text-xs font-mono shadow-md transition-shadow',
+        'h-full w-full bg-surface-0 border-2 rounded text-xs font-mono shadow-md transition-shadow overflow-hidden',
         selected ? 'border-brand ring-2 ring-brand/30' : 'border-border-strong',
       )}
       data-testid={`class-node-${d.name}`}
@@ -142,6 +144,7 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
               </span>
               <button
                 onClick={() => handleRemoveAttribute(attr.name)}
+                disabled={!isEditableView}
                 className="opacity-0 group-hover/attr:opacity-100 ml-1 p-0.5 rounded hover:bg-destructive/10 text-ink-faint hover:text-destructive transition-opacity"
                 aria-label={`Remove attribute ${attr.name}`}
               >
@@ -171,6 +174,7 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
               </span>
               <button
                 onClick={() => handleRemoveMethod(method.name)}
+                disabled={!isEditableView}
                 className="opacity-0 group-hover/method:opacity-100 ml-1 p-0.5 rounded hover:bg-destructive/10 text-ink-faint hover:text-destructive transition-opacity"
                 aria-label={`Remove method ${method.name}`}
               >

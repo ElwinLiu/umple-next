@@ -1,10 +1,13 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useUiStore } from '../../stores/uiStore'
 import { useEditorStore } from '../../stores/editorStore'
-import { useDiagramStore, type DiagramView, type DisplayPrefKey, type GvLayoutAlgorithm } from '../../stores/diagramStore'
+import { useDiagramStore, VIEW_OUTPUT_KIND, type DiagramView, type DisplayPrefKey, type GvLayoutAlgorithm } from '../../stores/diagramStore'
 import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
-import { UMPLE_TARGETS, type ExampleCategory } from '../../api/types'
+import { useGenerate } from '../../hooks/useGenerate'
+import type { ExampleCategory } from '../../api/types'
+import { GENERATE_TARGETS, getGenerateTarget } from '../../generation/targets'
+import { DISPLAY_TOGGLES, LAYOUT_OPTIONS, VIEW_MODE_GROUPS, getViewForExampleCategory } from '../../constants/diagram'
 import { Combobox } from '@/components/ui/combobox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
@@ -39,34 +42,6 @@ import {
 import { Tip } from '@/components/ui/tooltip'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
-
-const DISPLAY_TOGGLES: Record<DiagramView, { key: DisplayPrefKey; label: string }[]> = {
-  class: [
-    { key: 'showAttributes', label: 'Attributes' },
-    { key: 'showMethods', label: 'Methods' },
-    { key: 'showTraits', label: 'Traits' },
-  ],
-  state: [
-    { key: 'showActions', label: 'Actions' },
-    { key: 'showTransitionLabels', label: 'Transition Labels' },
-    { key: 'showGuards', label: 'Guards' },
-    { key: 'showGuardLabels', label: 'Guard Labels' },
-    { key: 'showNaturalLanguage', label: 'Natural Language' },
-  ],
-  feature: [
-    { key: 'showFeatureDependency', label: 'Feature Dependency' },
-  ],
-  structure: [],
-}
-
-const LAYOUT_OPTIONS = [
-  { value: 'dot', label: 'Dot (default)' },
-  { value: 'sfdp', label: 'SFDP' },
-  { value: 'circo', label: 'Circo' },
-  { value: 'neato', label: 'Neato' },
-  { value: 'fdp', label: 'FDP' },
-  { value: 'twopi', label: 'Twopi' },
-]
 
 // ── Collapsible section wrapper ──
 
@@ -302,17 +277,12 @@ function ResizeHandle() {
 // ── SECTION: Diagram Type ──
 
 function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const { viewMode, setViewMode, renderMode, setRenderMode } = useDiagramStore()
+  const { viewMode, setViewMode } = useDiagramStore()
   const [allCategories, setAllCategories] = useState<ExampleCategory[]>([])
   const [loaded, setLoaded] = useState(false)
   const loadExample = useEditorStore((s) => s.loadExample)
 
-  const views: { value: DiagramView; label: string }[] = [
-    { value: 'class', label: 'Editable Class Diagram' },
-    { value: 'state', label: 'State Diagram' },
-    { value: 'feature', label: 'Feature Diagram' },
-    { value: 'structure', label: 'Structure Diagram' },
-  ]
+  const viewGroups = VIEW_MODE_GROUPS
 
   useEffect(() => {
     if (!loaded) {
@@ -323,7 +293,7 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
 
   const exampleOptions = useMemo(
     () => allCategories
-      .filter((cat) => (CATEGORY_TO_VIEW[cat.name] ?? 'class') === viewMode)
+      .filter((cat) => (getViewForExampleCategory(cat.name) ?? 'class') === viewMode)
       .flatMap((cat) => cat.examples)
       .map((ex) => ({ value: ex.name, label: ex.name })),
     [allCategories, viewMode]
@@ -333,35 +303,30 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
     try {
       const res = await api.getExample(name)
       loadExample(res.name, res.code)
+      useUiStore.getState().setRightPanelView('diagram')
     } catch { /* ignore */ }
   }, [loadExample])
 
   return (
     <Section title="Diagram Type" open={open} onToggle={onToggle}>
       <div className="space-y-1">
-        {views.map((v) => (
-          <label key={v.value} className="flex items-center gap-2 py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors">
-            <input
-              type="radio"
-              name="diagramType"
-              checked={viewMode === v.value}
-              onChange={() => setViewMode(v.value)}
-              className="accent-brand"
-            />
-            {v.label}
-          </label>
+        {viewGroups.map((group, gi) => (
+          <div key={group.label} className={gi > 0 ? 'mt-2.5' : ''}>
+            <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1">{group.label}</div>
+            {group.modes.map((v) => (
+              <label key={v.value} className="flex items-center gap-2 py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors">
+                <input
+                  type="radio"
+                  name="diagramType"
+                  checked={viewMode === v.value}
+                  onChange={() => setViewMode(v.value)}
+                  className="accent-brand"
+                />
+                {v.longLabel ?? v.label}
+              </label>
+            ))}
+          </div>
         ))}
-        <div className="mt-3">
-          <label className="flex items-center gap-2 py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors">
-            <input
-              type="checkbox"
-              checked={renderMode === 'graphviz'}
-              onChange={() => setRenderMode(renderMode === 'graphviz' ? 'reactflow' : 'graphviz')}
-              className="accent-brand"
-            />
-            Use GraphViz Rendering
-          </label>
-        </div>
         {exampleOptions.length > 0 && (
           <div className="mt-2.5">
             <Combobox
@@ -380,7 +345,7 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
 
 // ── SECTION: Show & Hide ──
 
-function DisplayToggle({ prefKey, label }: { prefKey: DisplayPrefKey; label: string }) {
+export function DisplayToggle({ prefKey, label }: { prefKey: DisplayPrefKey; label: string }) {
   const checked = useDiagramStore((s) => s[prefKey])
   const toggleDisplayPref = useDiagramStore((s) => s.toggleDisplayPref)
 
@@ -416,21 +381,23 @@ function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => vo
         ) : (
           <p className="text-xxs text-ink-faint">No display options for this diagram type.</p>
         )}
-        <div className="mt-3">
-          <div className="text-xxs font-medium text-ink-muted mb-1.5">Layout Algorithm</div>
-          <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {LAYOUT_OPTIONS.map((opt) => (
-                <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {VIEW_OUTPUT_KIND[viewMode] !== 'html' && (
+          <div className="mt-3">
+            <div className="text-xxs font-medium text-ink-muted mb-1.5">Layout Algorithm</div>
+            <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {LAYOUT_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
     </Section>
   )
@@ -440,39 +407,30 @@ function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => vo
 
 function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const code = useEditorStore((s) => s.code)
-  const modelId = useEditorStore((s) => s.modelId)
-  const {
-    setGeneratedOutput, setGeneratingCode, setGeneratedError,
-    generatingCode,
-  } = useUiStore()
+  const generatingCode = useUiStore((s) => s.generatingCode)
   const { execute, running } = useExecute()
+  const generate = useGenerate()
 
-  const [language, setLanguage] = useState('Java')
+  const [targetId, setTargetId] = useState('Java')
+  const selectedTarget = useMemo(
+    () => getGenerateTarget(targetId) ?? GENERATE_TARGETS[0],
+    [targetId],
+  )
 
   const languageOptions = useMemo(
-    () => UMPLE_TARGETS.map((t) => ({ value: t, label: t })),
+    () => GENERATE_TARGETS.map((target) => ({ value: target.id, label: target.label })),
     []
   )
 
   const handleGenerate = useCallback(async () => {
     if (!code.trim() || generatingCode) return
-    setGeneratingCode(true)
-    setGeneratedError(null)
-    try {
-      const res = await api.generate({ code, language, modelId: modelId ?? undefined })
-      setGeneratedOutput(res.output, language)
-      if (res.errors) setGeneratedError(res.errors)
-    } catch (err: any) {
-      setGeneratedError(err.message || 'Generation failed')
-    } finally {
-      setGeneratingCode(false)
-    }
-  }, [code, language, modelId, generatingCode, setGeneratedOutput, setGeneratingCode, setGeneratedError])
+    generate(targetId)
+  }, [code, generatingCode, generate, targetId])
 
   return (
     <Section title="Generate Code" open={open} onToggle={onToggle}>
       <div className="space-y-2">
-        <Select value={language} onValueChange={setLanguage}>
+        <Select value={targetId} onValueChange={setTargetId}>
           <SelectTrigger>
             <SelectValue />
           </SelectTrigger>
@@ -499,11 +457,12 @@ function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () =
             Generate
           </Button>
           <Button
-            onClick={execute}
-            disabled={running}
+            onClick={() => execute(selectedTarget.id)}
+            disabled={running || !selectedTarget.executable}
             variant="secondary"
             size="xs"
             className="text-xs"
+            title={selectedTarget.executable ? 'Execute generated code' : 'Execution is only supported for Java and Python'}
           >
             {running ? (
               <Loader2 className="size-3 animate-spin" />
@@ -516,15 +475,6 @@ function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () =
       </div>
     </Section>
   )
-}
-
-// ── Map API category names to diagram view modes ──
-
-const CATEGORY_TO_VIEW: Record<string, DiagramView> = {
-  'Class Diagrams': 'class',
-  'State Machines': 'state',
-  'Composite Structure': 'structure',
-  'Feature Diagrams': 'feature',
 }
 
 // ── Footer links data ──

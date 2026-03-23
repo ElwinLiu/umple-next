@@ -17,7 +17,4 @@ type CompileResult struct {
 
 	// Errors is the content extracted from ERROR!!...!!ERROR framing.
 	Errors string
-
-	// Success indicates whether the compilation completed without socket errors.
-	Success bool
 }

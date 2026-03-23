@@ -92,8 +92,7 @@ func sendCommand(conn net.Conn, command string) (*CompileResult, error) {
 	}
 
 	return &CompileResult{
-		Output:  output.String(),
-		Errors:  errs.String(),
-		Success: true,
+		Output: output.String(),
+		Errors: errs.String(),
 	}, nil
 }

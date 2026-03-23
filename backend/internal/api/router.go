@@ -29,7 +29,6 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 
 	// Existing handlers
 	compileH := handlers.NewCompileHandler(pool, store)
-	modelH := handlers.NewModelHandler(store)
 	exampleH := handlers.NewExampleHandler(cfg.ExamplePath)
 	healthH := handlers.NewHealthHandler()
 
@@ -38,6 +37,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 	syncH := handlers.NewSyncHandler(pool, store)
 	diagramH := handlers.NewDiagramHandler(pool, store)
 	exportH := handlers.NewExportHandler(pool, store)
+	generatedAssetH := handlers.NewGeneratedAssetHandler(store)
 	execProxy := execution.NewProxy(cfg.ExecutionURL)
 	executeH := handlers.NewExecuteHandler(pool, store, execProxy)
 	taskH := handlers.NewTaskHandler(store)
@@ -53,15 +53,11 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 		r.Post("/diagram", diagramH.Generate)
 		r.Post("/export", exportH.Export)
 		r.Post("/execute", executeH.Execute)
+		r.Get("/generated/{modelId}/*", generatedAssetH.Serve)
 
 		// Examples
 		r.Get("/examples", exampleH.List)
 		r.Get("/examples/{name}", exampleH.Get)
-
-		// Models
-		r.Post("/models", modelH.Create)
-		r.Get("/models/{id}", modelH.Get)
-		r.Put("/models/{id}", modelH.Update)
 
 		// Tasks
 		r.Post("/tasks", taskH.Create)
