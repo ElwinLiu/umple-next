@@ -92,7 +92,7 @@ export function useAgent() {
     setMessages,
     addToolOutput,
     addToolApprovalResponse,
-  } = useChat<AgentUIMessage>({ chat })
+  } = useChat<AgentUIMessage>({ chat, experimental_throttle: 16 })
 
   // Restore chat history from session store whenever the chat instance is recreated
   const restoredChatRef = useRef<typeof chat | null>(null)

@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { getToolName, isToolUIPart, type UIMessage } from 'ai'
 import {
   Eye,
@@ -14,6 +15,19 @@ import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import type { ToolPreviewInfo } from '@/ai/editPreview'
 import { ActionRow } from './ActionRow'
+
+/* ── Memoized Markdown ── */
+
+const REMARK_PLUGINS = [remarkGfm]
+
+/**
+ * Wraps ReactMarkdown in memo so it only re-parses when the text string
+ * actually changes — avoids redundant AST parsing during streaming when
+ * the throttled render fires but the text part hasn't grown.
+ */
+const MemoizedMarkdown = memo(function MemoizedMarkdown({ text }: { text: string }) {
+  return <ReactMarkdown remarkPlugins={REMARK_PLUGINS}>{text}</ReactMarkdown>
+})
 
 /* ── Tool Config ── */
 
@@ -280,7 +294,7 @@ export function MessageBubble({
               key={i}
               className="prose prose-sm dark:prose-invert max-w-[calc(100%-2rem)] px-1 text-ink prose-p:my-1.5 prose-pre:bg-surface-1 prose-pre:text-ink prose-code:text-ink prose-headings:text-ink prose-strong:text-ink prose-a:text-brand prose-pre:border prose-pre:border-border"
             >
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{part.text}</ReactMarkdown>
+              <MemoizedMarkdown text={part.text} />
             </div>
           )
         }
