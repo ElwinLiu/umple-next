@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@xyflow/react'
-import type { GvEdgeLayout, GvLayout, Position, UmpleAttribute, UmpleModel } from '../../api/types'
+import type { GvEdgeLayout, GvLayout, GvNodeLayout, Position, UmpleAttribute, UmpleMethod, UmpleModel } from '../../api/types'
 import type { ClassNodeData } from '../../components/diagram/nodes/ClassNode'
 import type { AssociationEdgeData } from '../../components/diagram/edges/AssociationEdge'
 import { buildGridPositions, buildGvPositions, clamp, createLayoutEdgeMatcher, estimateTextWidth, type DiagramNodeMetrics, type LayoutEntry } from './positions'
@@ -63,10 +63,79 @@ function asBoolean(value: string | boolean | undefined, defaultValue: boolean) {
   return value === true || value === 'true'
 }
 
+function normalizeDisplayText(line: string): string {
+  return line
+    .replace(/\s+/g, ' ')
+    .replace(/\s*:\s*/g, ': ')
+    .replace(/\(\s*/g, '(')
+    .replace(/\s*\)/g, ')')
+    .replace(/\s*,\s*/g, ', ')
+    .trim()
+}
+
+function formatMethod(method: UmpleMethod): string {
+  const params = method.parameters || ''
+  return method.type ? `${method.name}(${params}): ${method.type}` : `${method.name}(${params})`
+}
+
+function parseMethodSignature(line: string) {
+  const match = line.match(/^([^(:]+)\(([^)]*)\)(?::\s*(.+))?$/)
+  if (!match) return null
+
+  return {
+    name: match[1].trim(),
+    params: match[2].trim(),
+    returnType: match[3]?.trim() || '',
+  }
+}
+
+function getVisibleBodyLines(layoutNode: GvNodeLayout | undefined): string[] {
+  if (!layoutNode?.textLines?.length) return []
+
+  return layoutNode.textLines
+    .map((line) => line.text.trim())
+    .filter((line) => line && line !== layoutNode.name)
+}
+
+function buildDisplayMethods(methods: UmpleMethod[], layoutNode: GvNodeLayout | undefined): ClassNodeData['methods'] {
+  const explicit = methods.map((method) => ({
+    name: method.name,
+    returnType: method.type || 'void',
+    params: method.parameters || '',
+    displayText: formatMethod(method),
+    removable: true,
+  }))
+
+  const bodyLines = getVisibleBodyLines(layoutNode)
+  if (bodyLines.length === 0) return explicit
+
+  const explicitByText = new Map(explicit.map((method) => [normalizeDisplayText(method.displayText ?? ''), method]))
+
+  return bodyLines
+    .filter((line) => line.includes('('))
+    .map((line) => {
+      const normalized = normalizeDisplayText(line)
+      const explicitMethod = explicitByText.get(normalized)
+      if (explicitMethod) {
+        return { ...explicitMethod, displayText: line }
+      }
+
+      const parsed = parseMethodSignature(line)
+      return {
+        name: parsed?.name || line,
+        returnType: parsed?.returnType || '',
+        params: parsed?.params || '',
+        displayText: line,
+        removable: false,
+      }
+    })
+}
+
 export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): DiagramResult {
   const classes = model.umpleClasses || []
   const associations = model.umpleAssociations || []
   const interfaces = model.umpleInterfaces || []
+  const layoutNodeMap = new Map((gvLayout?.nodes ?? []).map((node) => [node.name, node]))
 
   const layoutEntries: LayoutEntry[] = [
     ...classes.map((cls) => ({
@@ -94,6 +163,7 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
 
   const classNodes: Node[] = classes.map((cls): Node => {
     const metrics = layoutEntries.find((entry) => entry.name === cls.name)?.metrics ?? estimateClassMetrics(cls.name, cls.attributes)
+    const layoutNode = layoutNodeMap.get(cls.name)
     return {
       id: `class-${cls.name}`,
       type: 'classNode',
@@ -105,11 +175,7 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
           name: a.name,
           type: a.type || '',
         })),
-        methods: (cls.methods || []).map((m) => ({
-          name: m.name,
-          returnType: m.type || 'void',
-          params: m.parameters || '',
-        })),
+        methods: buildDisplayMethods(cls.methods || [], layoutNode),
         isAbstract: cls.isAbstract || false,
         isInterface: false,
         displayColor: cls.displayColor || '',
@@ -119,6 +185,7 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
 
   const ifaceNodes: Node[] = interfaces.map((iface): Node => {
     const metrics = layoutEntries.find((entry) => entry.name === iface.name)?.metrics ?? estimateClassMetrics(iface.name)
+    const layoutNode = layoutNodeMap.get(iface.name)
     return {
       id: `class-${iface.name}`,
       type: 'classNode',
@@ -127,11 +194,7 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
       data: {
         name: iface.name,
         attributes: [],
-        methods: (iface.methods || []).map((m) => ({
-          name: m.name,
-          returnType: m.type || 'void',
-          params: m.parameters || '',
-        })),
+        methods: buildDisplayMethods(iface.methods || [], layoutNode),
         isAbstract: false,
         isInterface: true,
       } satisfies ClassNodeData,

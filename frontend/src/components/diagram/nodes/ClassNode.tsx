@@ -11,7 +11,7 @@ import { EditableField } from './EditableField'
 export interface ClassNodeData {
   name: string
   attributes: { name: string; type: string }[]
-  methods: { name: string; returnType: string; params: string }[]
+  methods: { name: string; returnType: string; params: string; displayText?: string; removable?: boolean }[]
   isAbstract: boolean
   isInterface: boolean
   [key: string]: unknown
@@ -172,16 +172,18 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
           {visibleMethods.map((method, i) => (
             <div key={i} className="group/method flex items-center py-px">
               <span className="flex-1">
-                {method.returnType ? `${method.name}(${method.params}): ${method.returnType}` : `${method.name}(${method.params})`}
+                {method.displayText ?? (method.returnType ? `${method.name}(${method.params}): ${method.returnType}` : `${method.name}(${method.params})`)}
               </span>
-              <button
-                onClick={() => handleRemoveMethod(method.name)}
-                disabled={!isEditableView}
-                className="opacity-0 group-hover/method:opacity-100 ml-1 p-0.5 rounded hover:bg-destructive/10 text-ink-faint hover:text-destructive transition-opacity"
-                aria-label={`Remove method ${method.name}`}
-              >
-                <X className="size-2.5" />
-              </button>
+              {method.removable !== false && (
+                <button
+                  onClick={() => handleRemoveMethod(method.name)}
+                  disabled={!isEditableView}
+                  className="opacity-0 group-hover/method:opacity-100 ml-1 p-0.5 rounded hover:bg-destructive/10 text-ink-faint hover:text-destructive transition-opacity"
+                  aria-label={`Remove method ${method.name}`}
+                >
+                  <X className="size-2.5" />
+                </button>
+              )}
             </div>
           ))}
           {isAddingMethod && (
