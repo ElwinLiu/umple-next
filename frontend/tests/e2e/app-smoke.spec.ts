@@ -12,6 +12,14 @@ const bankingModel = {
 }
 
 test.beforeEach(async ({ page }) => {
+  // Dismiss the welcome dialog for tests
+  await page.addInitScript(() => {
+    localStorage.setItem('umple-preferences-v1', JSON.stringify({
+      state: { hasSeenWelcome: true },
+      version: 0,
+    }))
+  })
+
   await page.route('**/api/examples', async (route) => {
     await route.fulfill({
       json: [

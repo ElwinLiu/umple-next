@@ -8,6 +8,8 @@ import { CommandPalette } from '../command/CommandPalette'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useCompiler } from '../../hooks/useCompiler'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog'
+import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
 
 export function AppShell() {
   const showEditor = useEphemeralStore((s) => s.showEditor)
@@ -66,6 +68,8 @@ export function AppShell() {
 
         {showTaskPanel && <TaskPanel />}
         <CommandPalette />
+        <WelcomeDialog />
+        <OnboardingTour />
       </div>
     </div>
     </TooltipProvider>

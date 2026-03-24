@@ -102,7 +102,7 @@ export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: (
     : null
 
   return (
-    <div>
+    <div data-tour="ai-config">
       <button
         onClick={onToggle}
         className="flex items-center gap-2 w-full px-4 pt-2.5 pb-1.5 text-[13px] font-medium text-ink hover:bg-surface-2/60 transition-colors cursor-pointer text-left"

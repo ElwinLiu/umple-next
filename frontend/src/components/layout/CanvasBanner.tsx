@@ -102,7 +102,7 @@ export function CanvasBanner() {
 
         <DropdownMenu>
           <Tip content="Diagram view" side="bottom">
-            <DropdownMenuTrigger className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer outline-none" aria-label="Diagram view">
+            <DropdownMenuTrigger data-tour="diagram-view" className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer outline-none" aria-label="Diagram view">
               {ALL_VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}
               <ChevronDown className="size-3" />
             </DropdownMenuTrigger>

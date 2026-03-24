@@ -47,6 +47,10 @@ interface PreferencesState {
   theme: 'light' | 'dark' | 'system'
   setTheme: (theme: 'light' | 'dark' | 'system') => void
 
+  // Onboarding
+  hasSeenWelcome: boolean
+  dismissWelcome: () => void
+
   // Sidebar
   showSidebar: boolean
   sidebarWidth: number
@@ -81,6 +85,10 @@ export const usePreferencesStore = create<PreferencesState>()(
       // Theme
       theme: 'system',
       setTheme: (theme) => set({ theme }),
+
+      // Onboarding
+      hasSeenWelcome: false,
+      dismissWelcome: () => set({ hasSeenWelcome: true }),
 
       // Sidebar
       showSidebar: true,
@@ -137,6 +145,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       },
       partialize: (state) => ({
         theme: state.theme,
+        hasSeenWelcome: state.hasSeenWelcome,
         showSidebar: state.showSidebar,
         sidebarWidth: state.sidebarWidth,
         showAttributes: state.showAttributes,

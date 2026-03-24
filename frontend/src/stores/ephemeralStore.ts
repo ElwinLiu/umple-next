@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { DiffPreviewState } from '@/ai/editPreview'
 import type { GenerateResponse, GeneratedArtifact } from '../api/types'
 import { useSessionStore } from './sessionStore'
+import { usePreferencesStore } from './preferencesStore'
 
 /** Parse Umple JSON error string to count errors vs warnings.
  *  Umple severity: 1 = error, 2 = warning, 3 = warning */
@@ -68,6 +69,12 @@ interface EphemeralState {
 
   // Agent message queue
   pendingAgentMessage: string | null
+
+  // Onboarding tour
+  tourStep: number | null
+  startTour: () => void
+  setTourStep: (step: number | null) => void
+  finishTour: () => void
 
   // Layout actions
   toggleEditor: () => void
@@ -150,6 +157,15 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
 
   // Agent message queue
   pendingAgentMessage: null,
+
+  // Onboarding tour
+  tourStep: null,
+  startTour: () => {
+    usePreferencesStore.getState().dismissWelcome()
+    set({ tourStep: 0 })
+  },
+  setTourStep: (tourStep) => set({ tourStep }),
+  finishTour: () => set({ tourStep: null }),
 
   // Layout actions
   toggleEditor: () => set((s) => ({ showEditor: !s.showEditor })),

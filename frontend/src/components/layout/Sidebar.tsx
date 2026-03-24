@@ -305,7 +305,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
     <Section title="Tools" open={open} onToggle={onToggle}>
       <div className="space-y-4">
         {/* Examples */}
-        <div>
+        <div data-tour="examples">
           <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Examples</div>
           <div className="space-y-1.5">
             <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
@@ -342,7 +342,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
         </div>
 
         {/* Generate Code */}
-        <div>
+        <div data-tour="generate">
           <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Generate Code</div>
           <div className="space-y-2">
             <Select value={targetId} onValueChange={setTargetId}>
@@ -392,7 +392,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
 
         {/* Layout Algorithm */}
         {showLayout && (
-          <div>
+          <div data-tour="layout-algorithm">
             <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Layout Algorithm</div>
             <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
               <SelectTrigger>
@@ -483,6 +483,7 @@ function LayoutToggle({ side = 'bottom' }: { side?: 'bottom' | 'right' }) {
     <Tip content="Toggle sidebar" side={side}>
       <button
         onClick={toggleSidebar}
+        data-tour="sidebar-toggle"
         className="p-1.5 transition-colors cursor-pointer rounded-lg text-ink-muted hover:text-ink hover:bg-surface-2"
         aria-label="Toggle sidebar"
       >
