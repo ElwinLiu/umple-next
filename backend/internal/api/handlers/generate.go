@@ -414,6 +414,8 @@ func languageExtensions(lang string) []string {
 		return []string{".uml", ".notation", ".di", ".project"}
 	case "Scxml":
 		return []string{".scxml"}
+	case "Mermaid":
+		return []string{".mermaid"}
 	default:
 		return nil
 	}

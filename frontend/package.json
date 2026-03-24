@@ -13,7 +13,7 @@
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
     "test:e2e:ui": "playwright test --ui",
-    "test:e2e:live": "PLAYWRIGHT_LIVE_BACKEND=1 playwright test tests/e2e/live-backend.spec.ts",
+    "test:e2e:live": "PLAYWRIGHT_LIVE_BACKEND=1 playwright test tests/e2e/live-backend.spec.ts tests/e2e/live-generate.spec.ts",
     "test:e2e:install": "playwright install chromium",
     "test:e2e:typecheck": "tsc -p tsconfig.playwright.json --noEmit"
   },
