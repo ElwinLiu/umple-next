@@ -1,6 +1,17 @@
 FROM golang:1.23-alpine
 
 RUN apk add --no-cache graphviz openjdk17-jdk python3
+
+# TXL (required for Python code generation) is a glibc binary.
+# Install glibc compatibility layer for Alpine and create the /lib64 symlink
+# that the dynamic linker path (hardcoded in the ELF binary) expects.
+RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/sgerrand.rsa.pub \
+ && wget -q https://github.com/sgerrand/alpine-pkg-glibc/releases/download/2.35-r1/glibc-2.35-r1.apk \
+ && apk add --no-cache --force-overwrite glibc-2.35-r1.apk \
+ && rm glibc-2.35-r1.apk \
+ && mkdir -p /lib64 \
+ && ln -sf /usr/glibc-compat/lib/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
+
 RUN go install github.com/air-verse/air@v1.61.7
 
 WORKDIR /app
