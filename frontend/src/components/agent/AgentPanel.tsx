@@ -8,6 +8,8 @@ import {
 import {
   ChevronDown,
   ChevronUp,
+  Maximize2,
+  Minimize2,
   RotateCcw,
   Loader2,
 } from 'lucide-react'
@@ -42,6 +44,7 @@ function AgentPanel() {
   /* ── Resize ── */
   const {
     height,
+    setHeight,
     panelRef,
     resizeHandlers,
     resetSuppressClick,
@@ -52,7 +55,25 @@ function AgentPanel() {
     maxHeightVh: MAX_HEIGHT_VH,
     foldThreshold: FOLD_THRESHOLD,
     onFold: closeAgentPanel,
+    onResize: () => setMaximized(false),
   })
+
+  /* ── Maximize ── */
+  const [maximized, setMaximized] = useState(false)
+  const prevHeight = useRef(DEFAULT_HEIGHT)
+
+  const toggleMaximize = useCallback(() => {
+    if (maximized) {
+      setHeight(prevHeight.current)
+      setMaximized(false)
+    } else {
+      prevHeight.current = panelRef.current?.offsetHeight ?? height
+      // Match the editor container height (parent of the absolutely-positioned panel)
+      const containerH = panelRef.current?.parentElement?.offsetHeight
+      setHeight(containerH ? containerH - 16 : window.innerHeight * MAX_HEIGHT_VH)
+      setMaximized(true)
+    }
+  }, [maximized, height, setHeight, panelRef])
 
   /* ── Input state ── */
   const [input, setInput] = useState('')
@@ -223,6 +244,13 @@ function AgentPanel() {
         </button>
 
         <div className="flex items-center gap-1">
+          <button
+            onClick={toggleMaximize}
+            className="cursor-pointer rounded-full p-2 text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+            aria-label={maximized ? 'Restore panel size' : 'Maximize panel'}
+          >
+            {maximized ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+          </button>
           <button
             onClick={handleReset}
             className="cursor-pointer rounded-full p-2 text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"

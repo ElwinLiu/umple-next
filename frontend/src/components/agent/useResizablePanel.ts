@@ -6,6 +6,7 @@ interface UseResizablePanelOptions {
   maxHeightVh: number
   foldThreshold: number
   onFold: () => void
+  onResize?: () => void
 }
 
 export function useResizablePanel({
@@ -14,6 +15,7 @@ export function useResizablePanel({
   maxHeightVh,
   foldThreshold,
   onFold,
+  onResize,
 }: UseResizablePanelOptions) {
   const [height, setHeight] = useState(defaultHeight)
   const panelRef = useRef<HTMLDivElement>(null)
@@ -63,8 +65,9 @@ export function useResizablePanel({
     dragging.current = false
     if (panelRef.current) {
       setHeight(panelRef.current.offsetHeight)
+      onResize?.()
     }
-  }, [])
+  }, [onResize])
 
   /** Call on pointerdown-capture in collapsed state to reset the suppress flag. */
   const resetSuppressClick = useCallback(() => {
@@ -82,6 +85,7 @@ export function useResizablePanel({
 
   return {
     height,
+    setHeight,
     panelRef,
     resizeHandlers: { onPointerDown, onPointerMove, onPointerUp },
     resetSuppressClick,
