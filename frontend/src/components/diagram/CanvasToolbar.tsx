@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useSessionStore } from '../../stores/sessionStore'
 import { usePreferencesStore, type DisplayPrefKey } from '../../stores/preferencesStore'
 import { DISPLAY_TOGGLES } from '../../constants/diagram'
@@ -9,11 +9,24 @@ export function CanvasToolbar() {
   const viewMode = useSessionStore((s) => s.viewMode)
   const [expanded, setExpanded] = useState(false)
 
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!expanded) return
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setExpanded(false)
+      }
+    }
+    document.addEventListener('pointerdown', handler, true)
+    return () => document.removeEventListener('pointerdown', handler, true)
+  }, [expanded])
+
   const toggles = DISPLAY_TOGGLES[viewMode]
   if (toggles.length === 0) return null
 
   return (
-    <div className="absolute top-2 left-2 z-10">
+    <div className="absolute top-2 left-2 z-10" ref={containerRef}>
       <div className="bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg shadow-sm overflow-hidden">
         <button
           onClick={() => setExpanded(!expanded)}
