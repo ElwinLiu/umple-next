@@ -1,25 +1,25 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useUiStore } from '../../stores/uiStore'
 import { useEditorStore } from '../../stores/editorStore'
-import { useDiagramStore, VIEW_OUTPUT_KIND, type DiagramView, type DisplayPrefKey, type GvLayoutAlgorithm } from '../../stores/diagramStore'
+import { useDiagramStore, VIEW_OUTPUT_KIND, type GvLayoutAlgorithm } from '../../stores/diagramStore'
 import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
 import type { ExampleCategory } from '../../api/types'
 import { GENERATE_TARGETS, getGenerateTarget } from '../../generation/targets'
-import { DISPLAY_TOGGLES, LAYOUT_OPTIONS, VIEW_MODE_GROUPS, getViewForExampleCategory } from '../../constants/diagram'
+import { LAYOUT_OPTIONS, ALL_VIEW_MODES, PINNED_VIEW_MODES, getViewForExampleCategory } from '../../constants/diagram'
 import { Combobox } from '@/components/ui/combobox'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Button } from '@/components/ui/button'
 import {
   ChevronDown,
   ChevronRight,
-  ChevronsDownUp,
   ChevronsUpDown,
   Search,
   Code,
-  Columns2,
   Play,
   Loader2,
+  Columns2,
   BookOpen,
   MessageCircleQuestion,
   Github,
@@ -40,8 +40,6 @@ import {
   DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
-import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 
 // ── Collapsible section wrapper ──
 
@@ -80,67 +78,37 @@ function Section({
 
 // ── Sidebar content (shared between pinned and floating) ──
 
-const SECTION_KEYS = ['diagramType', 'diagramDisplay', 'generateCode', 'ai'] as const
-type SectionKey = (typeof SECTION_KEYS)[number]
-
 function SidebarContent() {
   const openCommandPalette = useUiStore((s) => s.openCommandPalette)
-  const [allExpanded, setAllExpanded] = useState(false)
-  const [overrides, setOverrides] = useState<Partial<Record<SectionKey, boolean>>>({ diagramType: true })
-
-  const isOpen = (key: SectionKey) => overrides[key] ?? allExpanded
-
-  const toggleSection = useCallback((key: SectionKey) => {
-    setOverrides((prev) => ({ ...prev, [key]: !(prev[key] ?? allExpanded) }))
-  }, [allExpanded])
-
-  const toggleAll = useCallback(() => {
-    setAllExpanded((prev) => !prev)
-    setOverrides({})
-  }, [])
-
-  const anyOpen = SECTION_KEYS.some((k) => isOpen(k))
+  const [toolsOpen, setToolsOpen] = useState(true)
+  const [aiOpen, setAiOpen] = useState(false)
 
   return (
     <>
-      {/* Row 1: logo + title left, layout right */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0">
+      {/* Header: logo + title left, search + layout right */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 border-b border-border/60">
         <a href="/" className="flex items-center gap-2.5 no-underline text-ink" aria-label="UmpleOnline home">
           <img src="/umple-logo.svg" alt="" className="h-6 w-auto" />
           <span className="text-lg font-semibold tracking-tight">UmpleOnline</span>
         </a>
-
-        <LayoutToggle />
-      </div>
-
-      {/* Row 2: fold/expand all left, search right */}
-      <div className="flex items-center justify-between px-4 pb-2.5 shrink-0 border-b border-border/60">
-        <Tip content={anyOpen ? 'Collapse all' : 'Expand all'} side="bottom">
-          <button
-            onClick={toggleAll}
-            className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
-            aria-label={anyOpen ? 'Collapse all sections' : 'Expand all sections'}
-          >
-            {anyOpen ? <ChevronsDownUp className="size-4" /> : <ChevronsUpDown className="size-4" />}
-          </button>
-        </Tip>
-        <Tip content="Search (Ctrl K)" side="bottom">
-          <button
-            onClick={openCommandPalette}
-            className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
-            aria-label="Command palette"
-          >
-            <Search className="size-4" />
-          </button>
-        </Tip>
+        <div className="flex items-center gap-0.5">
+          <Tip content="Search (Ctrl K)" side="bottom">
+            <button
+              onClick={openCommandPalette}
+              className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
+              aria-label="Command palette"
+            >
+              <Search className="size-4" />
+            </button>
+          </Tip>
+          <LayoutToggle />
+        </div>
       </div>
 
       {/* Scrollable sections */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin py-1 space-y-1">
-        <DiagramTypeSection open={isOpen('diagramType')} onToggle={() => toggleSection('diagramType')} />
-        <ShowHideSection open={isOpen('diagramDisplay')} onToggle={() => toggleSection('diagramDisplay')} />
-        <GenerateCodeSection open={isOpen('generateCode')} onToggle={() => toggleSection('generateCode')} />
-        <AiConfigSection open={isOpen('ai')} onToggle={() => toggleSection('ai')} />
+        <ToolsSection open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
+        <AiConfigSection open={aiOpen} onToggle={() => setAiOpen((v) => !v)} />
       </div>
 
       {/* Footer */}
@@ -274,15 +242,34 @@ function ResizeHandle() {
   )
 }
 
-// ── SECTION: Diagram Type ──
+// ── SECTION: Tools (Examples + Generate Code + Layout) ──
 
-function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const { viewMode, setViewMode } = useDiagramStore()
-  const [allCategories, setAllCategories] = useState<ExampleCategory[]>([])
-  const [loaded, setLoaded] = useState(false)
+function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const { viewMode, setViewMode, layoutAlgorithm, setLayoutAlgorithm } = useDiagramStore()
+  const code = useEditorStore((s) => s.code)
+  const generatingCode = useUiStore((s) => s.generatingCode)
+  const { execute } = useExecute()
+  const running = useUiStore((s) => s.executing)
+  const generate = useGenerate()
   const loadExample = useEditorStore((s) => s.loadExample)
 
-  const viewGroups = VIEW_MODE_GROUPS
+  const [allCategories, setAllCategories] = useState<ExampleCategory[]>([])
+  const [loaded, setLoaded] = useState(false)
+  const [targetId, setTargetId] = useState('Java')
+  const [selectedExample, setSelectedExample] = useState<string | undefined>(undefined)
+
+  const viewLabel = ALL_VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'
+  const showLayout = VIEW_OUTPUT_KIND[viewMode] !== 'html'
+
+  const selectedTarget = useMemo(
+    () => getGenerateTarget(targetId) ?? GENERATE_TARGETS[0],
+    [targetId],
+  )
+
+  const languageOptions = useMemo(
+    () => GENERATE_TARGETS.map((target) => ({ value: target.id, label: target.label })),
+    []
+  )
 
   useEffect(() => {
     if (!loaded) {
@@ -303,87 +290,109 @@ function DiagramTypeSection({ open, onToggle }: { open: boolean; onToggle: () =>
     try {
       const res = await api.getExample(name)
       loadExample(res.name, res.code)
+      setSelectedExample(name)
       useUiStore.getState().setRightPanelView('diagram')
     } catch { /* ignore */ }
   }, [loadExample])
 
+  const handleGenerate = useCallback(async () => {
+    if (!code.trim() || generatingCode) return
+    generate(targetId)
+  }, [code, generatingCode, generate, targetId])
+
   return (
-    <Section title="Diagram Type" open={open} onToggle={onToggle}>
-      <div className="space-y-1">
-        {viewGroups.map((group, gi) => (
-          <div key={group.label} className={gi > 0 ? 'mt-2.5' : ''}>
-            <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1">{group.label}</div>
-            {group.modes.map((v) => (
-              <label key={v.value} className="flex items-center gap-2 py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors">
-                <input
-                  type="radio"
-                  name="diagramType"
-                  checked={viewMode === v.value}
-                  onChange={() => setViewMode(v.value)}
-                  className="accent-brand"
-                />
-                {v.longLabel ?? v.label}
-              </label>
-            ))}
-          </div>
-        ))}
-        {exampleOptions.length > 0 && (
-          <div className="mt-2.5">
+    <Section title="Tools" open={open} onToggle={onToggle}>
+      <div className="space-y-4">
+        {/* Examples */}
+        <div>
+          <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Examples</div>
+          <div className="space-y-1.5">
+            <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {PINNED_VIEW_MODES.map((pv) => {
+                  const m = ALL_VIEW_MODES.find((v) => v.value === pv)
+                  if (!m) return null
+                  return (
+                    <SelectItem key={m.value} value={m.value}>
+                      {m.longLabel ?? m.label}
+                    </SelectItem>
+                  )
+                })}
+                <SelectSeparator />
+                {ALL_VIEW_MODES.filter((m) => !PINNED_VIEW_MODES.includes(m.value)).map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.longLabel ?? m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Combobox
               key={viewMode}
               options={exampleOptions}
+              value={selectedExample}
               onSelect={handleLoadExample}
-              placeholder="Load an example..."
+              placeholder={exampleOptions.length > 0 ? 'Load an example...' : 'No examples'}
               searchPlaceholder="Search examples..."
             />
           </div>
-        )}
-      </div>
-    </Section>
-  )
-}
+        </div>
 
-// ── SECTION: Show & Hide ──
+        {/* Generate Code */}
+        <div>
+          <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Generate Code</div>
+          <div className="space-y-2">
+            <Select value={targetId} onValueChange={setTargetId}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {languageOptions.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex gap-1.5">
+              <Button
+                onClick={handleGenerate}
+                disabled={generatingCode}
+                size="xs"
+                className="flex-1 text-xs"
+              >
+                {generatingCode ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Code className="size-3" />
+                )}
+                Generate
+              </Button>
+              <Button
+                onClick={() => execute(selectedTarget.id)}
+                disabled={running || !selectedTarget.executable}
+                variant="secondary"
+                size="xs"
+                className="text-xs"
+                title={selectedTarget.executable ? 'Execute generated code' : 'Execution is only supported for Java and Python'}
+              >
+                {running ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <Play className="size-3" />
+                )}
+                Execute
+              </Button>
+            </div>
+          </div>
+        </div>
 
-export function DisplayToggle({ prefKey, label }: { prefKey: DisplayPrefKey; label: string }) {
-  const checked = useDiagramStore((s) => s[prefKey])
-  const toggleDisplayPref = useDiagramStore((s) => s.toggleDisplayPref)
-
-  return (
-    <label
-      className="flex items-center justify-between py-0.5 text-xs text-ink cursor-pointer hover:text-ink-muted transition-colors"
-      data-testid={`display-toggle-${prefKey}`}
-    >
-      {label}
-      <Switch
-        size="sm"
-        checked={checked}
-        onCheckedChange={() => toggleDisplayPref(prefKey)}
-      />
-    </label>
-  )
-}
-
-function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const viewMode = useDiagramStore((s) => s.viewMode)
-  const layoutAlgorithm = useDiagramStore((s) => s.layoutAlgorithm)
-  const setLayoutAlgorithm = useDiagramStore((s) => s.setLayoutAlgorithm)
-
-  const toggles = DISPLAY_TOGGLES[viewMode]
-
-  return (
-    <Section title="Diagram Display" open={open} onToggle={onToggle}>
-      <div className="space-y-1.5">
-        {toggles.length > 0 ? (
-          toggles.map(({ key, label }) => (
-            <DisplayToggle key={key} prefKey={key} label={label} />
-          ))
-        ) : (
-          <p className="text-xxs text-ink-faint">No display options for this diagram type.</p>
-        )}
-        {VIEW_OUTPUT_KIND[viewMode] !== 'html' && (
-          <div className="mt-3">
-            <div className="text-xxs font-medium text-ink-muted mb-1.5">Layout Algorithm</div>
+        {/* Layout Algorithm */}
+        {showLayout && (
+          <div>
+            <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Layout Algorithm</div>
             <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
               <SelectTrigger>
                 <SelectValue />
@@ -398,81 +407,6 @@ function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => vo
             </Select>
           </div>
         )}
-      </div>
-    </Section>
-  )
-}
-
-// ── SECTION: Generate Code ──
-
-function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const code = useEditorStore((s) => s.code)
-  const generatingCode = useUiStore((s) => s.generatingCode)
-  const { execute } = useExecute()
-  const running = useUiStore((s) => s.executing)
-  const generate = useGenerate()
-
-  const [targetId, setTargetId] = useState('Java')
-  const selectedTarget = useMemo(
-    () => getGenerateTarget(targetId) ?? GENERATE_TARGETS[0],
-    [targetId],
-  )
-
-  const languageOptions = useMemo(
-    () => GENERATE_TARGETS.map((target) => ({ value: target.id, label: target.label })),
-    []
-  )
-
-  const handleGenerate = useCallback(async () => {
-    if (!code.trim() || generatingCode) return
-    generate(targetId)
-  }, [code, generatingCode, generate, targetId])
-
-  return (
-    <Section title="Generate Code" open={open} onToggle={onToggle}>
-      <div className="space-y-2">
-        <Select value={targetId} onValueChange={setTargetId}>
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {languageOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <div className="flex gap-1.5">
-          <Button
-            onClick={handleGenerate}
-            disabled={generatingCode}
-            size="xs"
-            className="flex-1 text-xs"
-          >
-            {generatingCode ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <Code className="size-3" />
-            )}
-            Generate
-          </Button>
-          <Button
-            onClick={() => execute(selectedTarget.id)}
-            disabled={running || !selectedTarget.executable}
-            variant="secondary"
-            size="xs"
-            className="text-xs"
-            title={selectedTarget.executable ? 'Execute generated code' : 'Execution is only supported for Java and Python'}
-          >
-            {running ? (
-              <Loader2 className="size-3 animate-spin" />
-            ) : (
-              <Play className="size-3" />
-            )}
-            Execute
-          </Button>
-        </div>
       </div>
     </Section>
   )

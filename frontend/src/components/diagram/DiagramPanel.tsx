@@ -4,6 +4,7 @@ import { toSvg, toPng } from 'html-to-image'
 import { ClassDiagram } from './ClassDiagram'
 import { SmartSvgView } from './SmartSvgView'
 import { HtmlDiagramView } from './HtmlDiagramView'
+import { CanvasToolbar } from './CanvasToolbar'
 import { GeneratedOutputView } from '../generation/GeneratedOutputView'
 import { CanvasBanner } from '../layout/CanvasBanner'
 import { EMPTY_DIAGRAM_ELEMENTS, type DiagramView, useDiagramStore, VIEW_OUTPUT_KIND } from '../../stores/diagramStore'
@@ -75,6 +76,7 @@ export function DiagramPanel() {
       <CanvasBanner />
       <div className="flex-1 relative" data-testid="diagram-canvas">
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
+          {!showHtml && <CanvasToolbar />}
           {!showHtml && (
             <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
               <DropdownMenu>

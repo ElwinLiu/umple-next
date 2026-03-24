@@ -10,6 +10,19 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
     <title>UmpleOnline</title>
+    <script>
+      // Apply dark mode + background before first paint to prevent white flash
+      ;(function() {
+        var t = 'light'
+        try { t = localStorage.getItem('umple:theme') || 'light' } catch(e) {}
+        var dark = t === 'dark' || (t === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) {
+          document.documentElement.classList.add('dark')
+          document.documentElement.style.backgroundColor = '#1a1a1a'
+          document.documentElement.style.color = '#e5e5e5'
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

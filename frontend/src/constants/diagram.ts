@@ -21,7 +21,7 @@ export const VIEW_MODE_GROUPS: {
     label: 'Structure',
     modes: [
       { value: 'class', label: 'Class', longLabel: 'Class Diagram' },
-      { value: 'erd', label: 'Entity Relationship' },
+      { value: 'erd', label: 'Entity Relationship', longLabel: 'Entity Relationship Diagram' },
       { value: 'feature', label: 'Feature', longLabel: 'Feature Diagram' },
       { value: 'structure', label: 'Structure', longLabel: 'Composite Structure Diagram' },
     ],
@@ -29,9 +29,9 @@ export const VIEW_MODE_GROUPS: {
   {
     label: 'Behavior',
     modes: [
-      { value: 'state', label: 'State', longLabel: 'State Diagram' },
-      { value: 'eventSequence', label: 'Event Sequence' },
-      { value: 'stateTables', label: 'State Tables' },
+      { value: 'state', label: 'State', longLabel: 'State Machine Diagram' },
+      { value: 'eventSequence', label: 'Event Sequence', longLabel: 'Event Sequence Diagram' },
+      { value: 'stateTables', label: 'State Tables', longLabel: 'State Tables Diagram' },
     ],
   },
   {
@@ -43,6 +43,9 @@ export const VIEW_MODE_GROUPS: {
 ]
 
 export const ALL_VIEW_MODES = VIEW_MODE_GROUPS.flatMap((g) => g.modes)
+
+/** Pinned diagram types shown at the top of dropdowns for quick access */
+export const PINNED_VIEW_MODES: DiagramView[] = ['class', 'state']
 
 /** Display preference toggles per diagram view */
 export const DISPLAY_TOGGLES: Record<DiagramView, { key: DisplayPrefKey; label: string }[]> = {

@@ -19,7 +19,7 @@ import {
 import { Tip } from '@/components/ui/tooltip'
 import { lineTabClasses } from '@/components/ui/line-tab'
 import { cn } from '@/lib/utils'
-import { VIEW_MODE_GROUPS, ALL_VIEW_MODES } from '../../constants/diagram'
+import { VIEW_MODE_GROUPS, ALL_VIEW_MODES, PINNED_VIEW_MODES } from '../../constants/diagram'
 import { getGenerateTarget } from '../../generation/targets'
 
 export function CanvasBanner() {
@@ -108,11 +108,20 @@ export function CanvasBanner() {
           </Tip>
           <DropdownMenuContent align="start" className="w-48">
             <DropdownMenuRadioGroup value={viewMode} onValueChange={(v) => setViewMode(v as DiagramView)}>
+              {PINNED_VIEW_MODES.map((pv) => {
+                const m = ALL_VIEW_MODES.find((v) => v.value === pv)
+                if (!m) return null
+                return (
+                  <DropdownMenuRadioItem key={m.value} value={m.value} data-testid={`diagram-view-${m.value}`}>
+                    {m.label}
+                  </DropdownMenuRadioItem>
+                )
+              })}
               {VIEW_MODE_GROUPS.map((group, gi) => (
                 <DropdownMenuGroup key={group.label}>
-                  {gi > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuSeparator />
                   <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-                  {group.modes.map((m) => (
+                  {group.modes.filter((m) => !PINNED_VIEW_MODES.includes(m.value)).map((m) => (
                     <DropdownMenuRadioItem key={m.value} value={m.value} data-testid={`diagram-view-${m.value}`}>
                       {m.label}
                     </DropdownMenuRadioItem>
