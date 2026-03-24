@@ -126,6 +126,15 @@ function AgentPanel() {
     }
   }, [messages])
 
+  /* Scroll to bottom when the panel re-expands (scroll container remounts) */
+  useEffect(() => {
+    if (expanded && messages.length > 0) {
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
+      })
+    }
+  }, [expanded]) // eslint-disable-line react-hooks/exhaustive-deps
+
   /* ── Preview sync ── */
   const pendingPreview = useDiffPreviewSync(messages, code)
 
