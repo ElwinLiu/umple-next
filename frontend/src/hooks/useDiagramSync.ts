@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { api } from '../api/client'
-import { useEditorStore } from '../stores/editorStore'
+import { useSessionStore } from '../stores/sessionStore'
 
 interface SyncResult {
   success: boolean
@@ -25,7 +25,7 @@ export function useDiagramSync() {
     action: string,
     params: Record<string, string>,
   ): Promise<SyncResult> => {
-    let modelId = useEditorStore.getState().modelId ?? ''
+    let modelId = useSessionStore.getState().modelId ?? ''
 
     // If another request is already creating a model, wait for it
     if (!modelId && modelIdPromiseRef.current) {
@@ -52,7 +52,7 @@ export function useDiagramSync() {
 
       // Capture modelId from response if we didn't have one
       if (response.modelId && !modelId) {
-        useEditorStore.getState().setModelId(response.modelId)
+        useSessionStore.getState().setModelId(response.modelId)
         resolveGate?.(response.modelId)
         ownsGate = false
         modelIdPromiseRef.current = null
@@ -62,7 +62,7 @@ export function useDiagramSync() {
       // disk which reflects the actual state, even when umplesync also
       // produces warnings/errors.
       if (response.code) {
-        useEditorStore.getState().setCodeFromSync(response.code)
+        useSessionStore.getState().setCodeFromSync(response.code)
       }
 
       if (response.errors) {

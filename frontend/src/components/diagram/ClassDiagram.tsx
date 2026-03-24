@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useUiStore } from '../../stores/uiStore'
+import { usePreferencesStore } from '../../stores/preferencesStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -15,8 +16,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
 } from '@xyflow/react'
-import { EMPTY_DIAGRAM_ELEMENTS, useDiagramStore } from '../../stores/diagramStore'
-import { useEditorStore } from '../../stores/editorStore'
+import { EMPTY_DIAGRAM_ELEMENTS, useSessionStore } from '../../stores/sessionStore'
 import { ClassNode } from './nodes/ClassNode'
 import { AssociationEdge } from './edges/AssociationEdge'
 import { DiagramControls } from './DiagramControls'
@@ -34,7 +34,7 @@ const edgeTypes = { association: AssociationEdge }
 function AutoFitView({ view }: { view: 'class' | 'structure' }) {
   const { fitView } = useReactFlow()
   const nodesInitialized = useNodesInitialized()
-  const nodes = useDiagramStore((s) => s.diagramData[view]?.nodes ?? EMPTY_DIAGRAM_ELEMENTS.nodes)
+  const nodes = useSessionStore((s) => s.diagramData[view]?.nodes ?? EMPTY_DIAGRAM_ELEMENTS.nodes)
   const nodeKey = nodes.map((n) => n.id).join(',')
   const prevKeyRef = useRef('')
 
@@ -66,13 +66,13 @@ export function ClassDiagram({ view = 'class' }: { view?: 'class' | 'structure' 
 
 function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
   const isEditable = view === 'class'
-  const { nodes, edges } = useDiagramStore((s) => s.diagramData[view] ?? EMPTY_DIAGRAM_ELEMENTS)
-  const setDiagramData = useDiagramStore((s) => s.setDiagramData)
-  const setSelectedNode = useDiagramStore((s) => s.setSelectedNode)
-  const setSelectedEdge = useDiagramStore((s) => s.setSelectedEdge)
-  const updateNodePosition = useDiagramStore((s) => s.updateNodePosition)
-  const modelId = useEditorStore((s) => s.modelId)
-  const theme = useUiStore((s) => s.theme)
+  const { nodes, edges } = useSessionStore((s) => s.diagramData[view] ?? EMPTY_DIAGRAM_ELEMENTS)
+  const setDiagramData = useSessionStore((s) => s.setDiagramData)
+  const setSelectedNode = useEphemeralStore((s) => s.setSelectedNode)
+  const setSelectedEdge = useEphemeralStore((s) => s.setSelectedEdge)
+  const updateNodePosition = useSessionStore((s) => s.updateNodePosition)
+  const modelId = useSessionStore((s) => s.modelId)
+  const theme = usePreferencesStore((s) => s.theme)
   const rfColorMode = theme === 'system' ? 'system' : theme
   const { sync } = useDiagramSync()
   const { screenToFlowPosition } = useReactFlow()
@@ -219,7 +219,9 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
-      const { selectedNodeId, selectedEdgeId, diagramData, removeNode, removeEdge, setEditing } = useDiagramStore.getState()
+      const { selectedNodeId, selectedEdgeId } = useEphemeralStore.getState()
+      const { diagramData, removeNode, removeEdge } = useSessionStore.getState()
+      const { setEditing } = useEphemeralStore.getState()
       const currentEdges = diagramData.class?.edges ?? []
 
       if (e.key === 'Delete' || e.key === 'Backspace') {
@@ -247,12 +249,12 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
       }
 
       if (e.key === 'Escape') {
-        const { editingNodeId } = useDiagramStore.getState()
+        const { editingNodeId } = useEphemeralStore.getState()
         if (editingNodeId) {
           setEditing(null, null)
         } else {
-          useDiagramStore.getState().setSelectedNode(null)
-          useDiagramStore.getState().setSelectedEdge(null)
+          useEphemeralStore.getState().setSelectedNode(null)
+          useEphemeralStore.getState().setSelectedEdge(null)
         }
         closeAllMenus()
         return
@@ -261,10 +263,10 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
         if (e.shiftKey) {
           e.preventDefault()
-          useEditorStore.getState().redo()
+          useSessionStore.getState().redo()
         } else {
           e.preventDefault()
-          useEditorStore.getState().undo()
+          useSessionStore.getState().undo()
         }
         return
       }

@@ -2,7 +2,9 @@ import { memo, useCallback } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { useDiagramStore } from '@/stores/diagramStore'
+import { useSessionStore } from '@/stores/sessionStore'
+import { usePreferencesStore } from '@/stores/preferencesStore'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { useDiagramSync } from '@/hooks/useDiagramSync'
 import { EditableField } from './EditableField'
 
@@ -23,11 +25,11 @@ function validateClassName(value: string): string | null {
 
 export const ClassNode = memo(function ClassNode({ id, data, selected }: NodeProps) {
   const d = data as ClassNodeData
-  const isEditableView = useDiagramStore((s) => s.viewMode === 'class')
-  const showAttributes = useDiagramStore((s) => s.showAttributes)
-  const showMethods = useDiagramStore((s) => s.showMethods)
-  const editingNodeId = useDiagramStore((s) => s.editingNodeId)
-  const editingField = useDiagramStore((s) => s.editingField)
+  const isEditableView = useSessionStore((s) => s.viewMode === 'class')
+  const showAttributes = usePreferencesStore((s) => s.showAttributes)
+  const showMethods = usePreferencesStore((s) => s.showMethods)
+  const editingNodeId = useEphemeralStore((s) => s.editingNodeId)
+  const editingField = useEphemeralStore((s) => s.editingField)
   const { sync } = useDiagramSync()
 
   const isEditing = editingNodeId === id
@@ -36,19 +38,19 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
   const isAddingMethod = isEditing && editingField === 'newMethod'
 
   const clearEditing = useCallback(() => {
-    useDiagramStore.getState().setEditing(null, null)
+    useEphemeralStore.getState().setEditing(null, null)
   }, [])
 
   const handleNameDoubleClick = useCallback(() => {
     if (!isEditableView) return
-    useDiagramStore.getState().setEditing(id, 'name')
+    useEphemeralStore.getState().setEditing(id, 'name')
   }, [id, isEditableView])
 
   const handleRenameCommit = useCallback(async (newName: string) => {
     clearEditing()
     if (newName === d.name) return
     // Optimistic rename — update node id, data.name, and connected edges
-    useDiagramStore.getState().renameNode(id, newName)
+    useSessionStore.getState().renameNode(id, newName)
     await sync('editClass', { className: d.name, newName })
   }, [id, d.name, sync, clearEditing])
 

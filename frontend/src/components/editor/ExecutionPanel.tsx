@@ -1,24 +1,25 @@
 import { useRef, useEffect } from 'react'
-import { useUiStore } from '../../stores/uiStore'
-import { useAiConfigStore } from '@/stores/aiConfigStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { useSessionStore } from '../../stores/sessionStore'
+import { usePreferencesStore } from '@/stores/preferencesStore'
 import { ChevronDown, ChevronUp, Check, AlertTriangle, X, Sparkles, Loader2 } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 
 function useIsAiConfigured() {
-  return useAiConfigStore((s) => {
+  return usePreferencesStore((s) => {
     const cfg = s.configs[s.activeProvider]
     return !!(cfg.apiKey.trim() && cfg.model.trim())
   })
 }
 
 function triggerAIFix() {
-  const { executionOutput, executionErrors } = useUiStore.getState()
+  const { executionOutput, executionErrors } = useEphemeralStore.getState()
   const errorInfo = [executionOutput, executionErrors].filter(Boolean).join('\n')
   if (!errorInfo) return
-  useUiStore.getState().queueAgentMessage(
+  useEphemeralStore.getState().queueAgentMessage(
     `Fix the following compilation issues:\n\n\`\`\`\n${errorInfo}\n\`\`\``,
   )
-  useUiStore.getState().openAgentPanel()
+  useSessionStore.getState().openAgentPanel()
 }
 
 // ── Shared badge pills ──────────────────────────────────────────────
@@ -41,8 +42,8 @@ function BadgePills({ errorCount, warningCount }: { errorCount: number; warningC
 }
 
 function Badges() {
-  const errorCount = useUiStore((s) => s.outputErrorCount)
-  const warningCount = useUiStore((s) => s.outputWarningCount)
+  const errorCount = useEphemeralStore((s) => s.outputErrorCount)
+  const warningCount = useEphemeralStore((s) => s.outputWarningCount)
 
   if (!errorCount && !warningCount) return null
 
@@ -56,9 +57,9 @@ function Badges() {
 // ── OutputBadges (for TabBar — clickable toggle) ────────────────────
 
 export function OutputBadges() {
-  const errorCount = useUiStore((s) => s.outputErrorCount)
-  const warningCount = useUiStore((s) => s.outputWarningCount)
-  const toggleOutputPanel = useUiStore((s) => s.toggleOutputPanel)
+  const errorCount = useEphemeralStore((s) => s.outputErrorCount)
+  const warningCount = useEphemeralStore((s) => s.outputWarningCount)
+  const toggleOutputPanel = useEphemeralStore((s) => s.toggleOutputPanel)
 
   if (!errorCount && !warningCount) return null
 
@@ -76,11 +77,11 @@ export function OutputBadges() {
 // ── CompileStatusStrip (28px inline strip — success/warning) ────────
 
 export function CompileStatusStrip() {
-  const outputView = useUiStore((s) => s.outputView)
-  const errorCount = useUiStore((s) => s.outputErrorCount)
-  const warningCount = useUiStore((s) => s.outputWarningCount)
-  const executionOutput = useUiStore((s) => s.executionOutput)
-  const setOutputView = useUiStore((s) => s.setOutputView)
+  const outputView = useEphemeralStore((s) => s.outputView)
+  const errorCount = useEphemeralStore((s) => s.outputErrorCount)
+  const warningCount = useEphemeralStore((s) => s.outputWarningCount)
+  const executionOutput = useEphemeralStore((s) => s.executionOutput)
+  const setOutputView = useEphemeralStore((s) => s.setOutputView)
   const isAiConfigured = useIsAiConfigured()
 
   const isSuccess = errorCount === 0 && warningCount === 0
@@ -146,13 +147,13 @@ export function CompileStatusStrip() {
 // ── OutputPanel (full expanded panel with scrollable output) ────────
 
 export function OutputPanel() {
-  const setOutputView = useUiStore((s) => s.setOutputView)
-  const executing = useUiStore((s) => s.executing)
+  const setOutputView = useEphemeralStore((s) => s.setOutputView)
+  const executing = useEphemeralStore((s) => s.executing)
   const outputRef = useRef<HTMLPreElement>(null)
-  const executionOutput = useUiStore((s) => s.executionOutput)
-  const executionErrors = useUiStore((s) => s.executionErrors)
-  const errorCount = useUiStore((s) => s.outputErrorCount)
-  const warningCount = useUiStore((s) => s.outputWarningCount)
+  const executionOutput = useEphemeralStore((s) => s.executionOutput)
+  const executionErrors = useEphemeralStore((s) => s.executionErrors)
+  const errorCount = useEphemeralStore((s) => s.outputErrorCount)
+  const warningCount = useEphemeralStore((s) => s.outputWarningCount)
   const isAiConfigured = useIsAiConfigured()
   const hasIssues = errorCount > 0 || warningCount > 0
 

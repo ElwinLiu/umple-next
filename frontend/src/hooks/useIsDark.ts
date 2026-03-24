@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useUiStore } from '../stores/uiStore'
+import { usePreferencesStore } from '../stores/preferencesStore'
 
 export function useIsDark(): boolean {
-  const theme = useUiStore((s) => s.theme)
+  const theme = usePreferencesStore((s) => s.theme)
   const [systemDark, setSystemDark] = useState(
     () => window.matchMedia('(prefers-color-scheme: dark)').matches
   )

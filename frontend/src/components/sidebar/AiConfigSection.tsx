@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useAiConfigStore, type AiProvider } from '@/stores/aiConfigStore'
+import { usePreferencesStore, type AiProvider } from '@/stores/preferencesStore'
 import { fetchModels, type ModelInfo } from '@/ai/models'
 import { Input } from '@/components/ui/input'
 import { Combobox } from '@/components/ui/combobox'
@@ -14,11 +14,11 @@ const PROVIDERS: { value: AiProvider; label: string }[] = [
 ]
 
 export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const provider = useAiConfigStore((state) => state.activeProvider)
-  const { model, apiKey } = useAiConfigStore((state) => state.configs[state.activeProvider])
-  const setActiveProvider = useAiConfigStore((state) => state.setActiveProvider)
-  const setModel = useAiConfigStore((state) => state.setModel)
-  const setApiKey = useAiConfigStore((state) => state.setApiKey)
+  const provider = usePreferencesStore((state) => state.activeProvider)
+  const { model, apiKey } = usePreferencesStore((state) => state.configs[state.activeProvider])
+  const setActiveProvider = usePreferencesStore((state) => state.setActiveProvider)
+  const setModel = usePreferencesStore((state) => state.setModel)
+  const setApiKey = usePreferencesStore((state) => state.setApiKey)
   const [showKey, setShowKey] = useState(false)
   const [models, setModels] = useState<ModelInfo[]>([])
   const [loadingModels, setLoadingModels] = useState(false)

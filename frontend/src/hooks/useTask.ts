@@ -1,11 +1,11 @@
 import { useEffect, useState, useCallback } from 'react'
-import { useEditorStore } from '../stores/editorStore'
+import { useSessionStore } from '../stores/sessionStore'
 import { api } from '../api/client'
 import type { TaskResponse } from '../api/types'
 
 export function useTask() {
-  const setCode = useEditorStore((s) => s.setCode)
-  const code = useEditorStore((s) => s.code)
+  const setCode = useSessionStore((s) => s.setCode)
+  const code = useSessionStore((s) => s.code)
 
   const [task, setTask] = useState<TaskResponse | null>(null)
   const [loading, setLoading] = useState(false)

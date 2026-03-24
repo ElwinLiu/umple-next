@@ -1,5 +1,5 @@
 import type { LanguageModel } from 'ai'
-import type { AiProvider } from '@/stores/aiConfigStore'
+import type { AiProvider } from '@/stores/preferencesStore'
 
 /**
  * Create the correct AI SDK language model instance for the given provider.

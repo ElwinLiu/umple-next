@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { Type, ListPlus, Braces, Trash2 } from 'lucide-react'
-import { useDiagramStore } from '@/stores/diagramStore'
+import { useSessionStore } from '@/stores/sessionStore'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { useDiagramSync } from '@/hooks/useDiagramSync'
 import { useMenuClose } from '@/hooks/useMenuClose'
 import { extractClassName } from '@/lib/diagramHelpers'
@@ -22,25 +23,25 @@ export function NodeContextMenu({ position, nodeId, onClose }: NodeContextMenuPr
 
   const handleRename = useCallback(() => {
     if (!nodeId) return
-    useDiagramStore.getState().setEditing(nodeId, 'name')
+    useEphemeralStore.getState().setEditing(nodeId, 'name')
     onClose()
   }, [nodeId, onClose])
 
   const handleAddAttribute = useCallback(() => {
     if (!nodeId) return
-    useDiagramStore.getState().setEditing(nodeId, 'newAttribute')
+    useEphemeralStore.getState().setEditing(nodeId, 'newAttribute')
     onClose()
   }, [nodeId, onClose])
 
   const handleAddMethod = useCallback(() => {
     if (!nodeId) return
-    useDiagramStore.getState().setEditing(nodeId, 'newMethod')
+    useEphemeralStore.getState().setEditing(nodeId, 'newMethod')
     onClose()
   }, [nodeId, onClose])
 
   const handleDelete = useCallback(async () => {
     if (!nodeId) return
-    useDiagramStore.getState().removeNode(nodeId)
+    useSessionStore.getState().removeNode(nodeId)
     onClose()
     await sync('removeClass', { className })
   }, [nodeId, className, onClose, sync])

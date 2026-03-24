@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { useEditorStore } from '@/stores/editorStore'
+import { useSessionStore } from '@/stores/sessionStore'
 
 describe('tool definitions', () => {
   it('editCode has execute with needsApproval', async () => {
@@ -25,7 +25,7 @@ describe('tool definitions', () => {
 
 describe('editCode execute', () => {
   beforeEach(() => {
-    useEditorStore.setState({ code: 'class Student { name: String; id: Integer; }' })
+    useSessionStore.setState({ code: 'class Student { name: String; id: Integer; }' })
   })
 
   it('applies targeted edits and returns success message', async () => {
@@ -37,7 +37,7 @@ describe('editCode execute', () => {
     }, { messages: [], toolCallId: 'test' } as any)
 
     expect(result).toContain('applied')
-    expect(useEditorStore.getState().code).toBe('class Person { name: String; id: Integer; }')
+    expect(useSessionStore.getState().code).toBe('class Person { name: String; id: Integer; }')
   })
 
   it('applies multiple edits in sequence', async () => {
@@ -51,7 +51,7 @@ describe('editCode execute', () => {
       explanation: 'Rename class and field',
     }, { messages: [], toolCallId: 'test' } as any)
 
-    expect(useEditorStore.getState().code).toBe('class Person { fullName: String; id: Integer; }')
+    expect(useSessionStore.getState().code).toBe('class Person { fullName: String; id: Integer; }')
   })
 
   it('returns error when oldText is not found', async () => {
@@ -63,11 +63,11 @@ describe('editCode execute', () => {
     }, { messages: [], toolCallId: 'test' } as any)
 
     expect(result).toContain('not found')
-    expect(useEditorStore.getState().code).toBe('class Student { name: String; id: Integer; }')
+    expect(useSessionStore.getState().code).toBe('class Student { name: String; id: Integer; }')
   })
 
   it('returns error when oldText is ambiguous', async () => {
-    useEditorStore.setState({ code: 'class Student { Student mentor; }' })
+    useSessionStore.setState({ code: 'class Student { Student mentor; }' })
     const { agentTools } = await import('../tools')
 
     const result = await agentTools.editCode.execute!({
@@ -76,7 +76,7 @@ describe('editCode execute', () => {
     }, { messages: [], toolCallId: 'test' } as any)
 
     expect(result).toContain('Ambiguous edit target')
-    expect(useEditorStore.getState().code).toBe('class Student { Student mentor; }')
+    expect(useSessionStore.getState().code).toBe('class Student { Student mentor; }')
   })
 
   it('returns error when oldText is empty', async () => {
@@ -88,13 +88,13 @@ describe('editCode execute', () => {
     }, { messages: [], toolCallId: 'test' } as any)
 
     expect(result).toContain('oldText must not be empty')
-    expect(useEditorStore.getState().code).toBe('class Student { name: String; id: Integer; }')
+    expect(useSessionStore.getState().code).toBe('class Student { name: String; id: Integer; }')
   })
 })
 
 describe('replaceCode execute', () => {
   beforeEach(() => {
-    useEditorStore.setState({ code: 'class Student { name: String; }' })
+    useSessionStore.setState({ code: 'class Student { name: String; }' })
   })
 
   it('replaces the entire editor code', async () => {
@@ -107,6 +107,6 @@ describe('replaceCode execute', () => {
     }, { messages: [], toolCallId: 'test' } as any)
 
     expect(result).toContain('replaced')
-    expect(useEditorStore.getState().code).toBe(newCode)
+    expect(useSessionStore.getState().code).toBe(newCode)
   })
 })

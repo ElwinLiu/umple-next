@@ -5,15 +5,15 @@ import { OutputPanel, CompileStatusStrip } from '../editor/ExecutionPanel'
 import { DiagramPanel } from '../diagram/DiagramPanel'
 import { TaskPanel } from '../task/TaskPanel'
 import { CommandPalette } from '../command/CommandPalette'
-import { useUiStore } from '../../stores/uiStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useCompiler } from '../../hooks/useCompiler'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 export function AppShell() {
-  const showEditor = useUiStore((s) => s.showEditor)
-  const diagramOnly = useUiStore((s) => s.diagramOnly)
-  const outputView = useUiStore((s) => s.outputView)
-  const showTaskPanel = useUiStore((s) => s.showTaskPanel)
+  const showEditor = useEphemeralStore((s) => s.showEditor)
+  const diagramOnly = useEphemeralStore((s) => s.diagramOnly)
+  const outputView = useEphemeralStore((s) => s.outputView)
+  const showTaskPanel = useEphemeralStore((s) => s.showTaskPanel)
   useCompiler()
 
   const editorVisible = showEditor && !diagramOnly

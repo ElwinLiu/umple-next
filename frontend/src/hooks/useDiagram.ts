@@ -1,10 +1,10 @@
 import { useCallback } from 'react'
 import type { GvLayout, UmpleModel } from '../api/types'
-import { useDiagramStore } from '../stores/diagramStore'
+import { useSessionStore } from '../stores/sessionStore'
 import { convertClassDiagram } from './diagrams/classConverter'
 
 export function useDiagram() {
-  const { setDiagramData } = useDiagramStore()
+  const { setDiagramData } = useSessionStore()
 
   const updateClassDiagram = useCallback((
     model: UmpleModel,

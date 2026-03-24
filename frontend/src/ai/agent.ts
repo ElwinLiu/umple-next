@@ -1,5 +1,5 @@
 import { ToolLoopAgent, stepCountIs } from 'ai'
-import type { AiProvider } from '@/stores/aiConfigStore'
+import type { AiProvider } from '@/stores/preferencesStore'
 import { getModel } from './provider'
 import { agentTools } from './tools'
 

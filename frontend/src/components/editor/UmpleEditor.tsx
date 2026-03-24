@@ -7,7 +7,7 @@ import { indentWithTab } from '@codemirror/commands'
 import { umple } from '../../codemirror/lang-umple'
 import { getEditorTheme } from '../../codemirror/theme'
 import { useIsDark } from '../../hooks/useIsDark'
-import { useEditorStore } from '../../stores/editorStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
 
 interface UmpleEditorProps {
   code: string
@@ -38,7 +38,7 @@ export function UmpleEditor({ code, onChange, readOnly = false }: UmpleEditorPro
       if (update.selectionSet) {
         const { from, to } = update.state.selection.main
         if (from === to) {
-          useEditorStore.getState().setSelection(null)
+          useEphemeralStore.getState().setSelection(null)
         } else {
           const fromLine = update.state.doc.lineAt(from).number
           const toLine = update.state.doc.lineAt(to).number
@@ -48,7 +48,7 @@ export function UmpleEditor({ code, onChange, readOnly = false }: UmpleEditorPro
           const coords = fromCoords && toCoords
             ? { x: toCoords.left, yTop: fromCoords.top, yBottom: toCoords.bottom }
             : undefined
-          useEditorStore.getState().setSelection({ fromLine, toLine, text, coords })
+          useEphemeralStore.getState().setSelection({ fromLine, toLine, text, coords })
         }
       }
     })

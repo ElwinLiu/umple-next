@@ -1,4 +1,4 @@
-import type { DiagramView } from '../stores/diagramStore'
+import type { DiagramView } from '../stores/sessionStore'
 
 export interface GenerateTarget {
   id: string

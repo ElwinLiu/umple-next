@@ -2,7 +2,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { EditorPanel } from '../EditorPanel'
-import { useEditorStore } from '@/stores/editorStore'
+import { useSessionStore } from '@/stores/sessionStore'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
 
 vi.mock('../TabBar', () => ({
   TabBar: () => <div data-testid="tab-bar" />,
@@ -40,18 +41,18 @@ vi.mock('@/ai/useAgent', () => ({
 
 afterEach(() => {
   cleanup()
-  useEditorStore.setState({
+  useSessionStore.setState({
     code: '',
-    diffPreview: null,
     activeTabId: 'main',
     tabs: [{ id: 'main', name: 'model.ump', code: '', dirty: false, savedCode: '' }],
   })
+  useEphemeralStore.setState({ diffPreview: null })
 })
 
 describe('EditorPanel', () => {
   it('renders the diff preview when an approval preview is active', () => {
-    useEditorStore.setState({
-      code: 'class Student {}',
+    useSessionStore.setState({ code: 'class Student {}' })
+    useEphemeralStore.setState({
       diffPreview: {
         toolCallId: 'call-1',
         toolName: 'editCode',

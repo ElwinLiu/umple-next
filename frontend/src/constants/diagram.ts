@@ -1,4 +1,5 @@
-import type { DiagramView, DisplayPrefKey } from '../stores/diagramStore'
+import type { DiagramView } from '../stores/sessionStore'
+import type { DisplayPrefKey } from '../stores/preferencesStore'
 
 export const EXAMPLE_CATEGORY_TO_VIEW: Partial<Record<string, DiagramView>> = {
   'Class Diagrams': 'class',

@@ -1,11 +1,11 @@
 import { useState, useCallback } from 'react'
-import { useEditorStore } from '../../stores/editorStore'
+import { useSessionStore } from '../../stores/sessionStore'
 import { api } from '../../api/client'
 import { Button } from '@/components/ui/button'
 import { ErrorBanner } from '@/components/ui/error-banner'
 
 export function TaskCreator() {
-  const code = useEditorStore((s) => s.code)
+  const code = useSessionStore((s) => s.code)
 
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')

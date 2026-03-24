@@ -1,12 +1,12 @@
-import { useUiStore } from '../../stores/uiStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useTask } from '../../hooks/useTask'
 import { SidePanel } from '@/components/ui/side-panel'
 import { ErrorBanner } from '@/components/ui/error-banner'
 import { cn } from '@/lib/utils'
 
 export function TaskPanel() {
-  const showTaskPanel = useUiStore((s) => s.showTaskPanel)
-  const toggleTaskPanel = useUiStore((s) => s.toggleTaskPanel)
+  const showTaskPanel = useEphemeralStore((s) => s.showTaskPanel)
+  const toggleTaskPanel = useEphemeralStore((s) => s.toggleTaskPanel)
   const { task, loading, error, submitting, submitStatus, submitWork } = useTask()
 
   return (

@@ -11,8 +11,8 @@ import {
   RotateCcw,
   Loader2,
 } from 'lucide-react'
-import { useEditorStore } from '@/stores/editorStore'
-import { useUiStore } from '@/stores/uiStore'
+import { useSessionStore } from '@/stores/sessionStore'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { useAgent } from '@/ai/useAgent'
 import { useDiffPreviewSync } from '@/ai/useDiffPreviewSync'
 import { useResizablePanel } from './useResizablePanel'
@@ -31,11 +31,11 @@ const FOLD_THRESHOLD = 80
 function AgentPanel() {
   const { messages, status, error, send, stop, reset, approveToolCall, rejectToolCall } =
     useAgent()
-  const { showAgentPanel, openAgentPanel, closeAgentPanel } = useUiStore()
-  const code = useEditorStore((s) => s.code)
-  const selection = useEditorStore((s) => s.selection)
-  const clearSelection = useEditorStore((s) => s.setSelection)
-  const activeTabName = useEditorStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.name ?? 'model.ump')
+  const { showAgentPanel, openAgentPanel, closeAgentPanel } = useSessionStore()
+  const code = useSessionStore((s) => s.code)
+  const selection = useEphemeralStore((s) => s.selection)
+  const clearSelection = useEphemeralStore((s) => s.setSelection)
+  const activeTabName = useSessionStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.name ?? 'model.ump')
   const expanded = showAgentPanel
   const [focusExpandedInput, setFocusExpandedInput] = useState(false)
 
@@ -82,8 +82,8 @@ function AgentPanel() {
   }, [])
 
   /* ── Consume pending messages from SelectionToolbar ── */
-  const pendingAgentMessage = useUiStore((s) => s.pendingAgentMessage)
-  const consumeAgentMessage = useUiStore((s) => s.consumeAgentMessage)
+  const pendingAgentMessage = useEphemeralStore((s) => s.pendingAgentMessage)
+  const consumeAgentMessage = useEphemeralStore((s) => s.consumeAgentMessage)
 
   useEffect(() => {
     if (!pendingAgentMessage) return
@@ -100,7 +100,9 @@ function AgentPanel() {
   /* Auto-scroll on new messages — skip if the user has scrolled up */
   useEffect(() => {
     if (!userScrolledUp.current) {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      requestAnimationFrame(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
+      })
     }
   }, [messages])
 

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
-import { useEditorStore } from '../stores/editorStore'
-import { useUiStore } from '../stores/uiStore'
+import { useSessionStore } from '../stores/sessionStore'
+import { useEphemeralStore } from '../stores/ephemeralStore'
 import { useDiagram } from './useDiagram'
 import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
@@ -14,13 +14,13 @@ export function useExecute() {
     if (runningRef.current) return
     runningRef.current = true
 
-    const { setExecutionOutput, setOutputView, setExecuting } = useUiStore.getState()
+    const { setExecutionOutput, setOutputView, setExecuting } = useEphemeralStore.getState()
     setOutputView('panel')
     setExecutionOutput('')
     setExecuting(true)
 
-    const code = useEditorStore.getState().code
-    const language = languageOverride || useUiStore.getState().generatedLanguage
+    const code = useSessionStore.getState().code
+    const language = languageOverride || useEphemeralStore.getState().generatedLanguage
     try {
       const result = await api.execute({ code, language })
       setExecutionOutput(result.output || '', result.errors || null)
@@ -50,13 +50,13 @@ export function useCompile() {
     try {
       const { success } = await compileAndRefresh({ updateClassDiagram }, isDark)
       if (success) {
-        useUiStore.getState().setExecutionOutput('Compiled successfully.')
-        useUiStore.getState().setOutputView('strip')
+        useEphemeralStore.getState().setExecutionOutput('Compiled successfully.')
+        useEphemeralStore.getState().setOutputView('strip')
       } else {
         // Show strip for warnings-only (errors auto-open panel via setExecutionOutput)
-        const { outputWarningCount, outputErrorCount } = useUiStore.getState()
+        const { outputWarningCount, outputErrorCount } = useEphemeralStore.getState()
         if (outputWarningCount > 0 && outputErrorCount === 0) {
-          useUiStore.getState().setOutputView('strip')
+          useEphemeralStore.getState().setOutputView('strip')
         }
       }
     } catch {

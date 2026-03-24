@@ -1,15 +1,15 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowUp, Lightbulb } from 'lucide-react'
-import { useEditorStore } from '@/stores/editorStore'
-import { useUiStore } from '@/stores/uiStore'
+import { useSessionStore } from '@/stores/sessionStore'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { cn } from '@/lib/utils'
 
 const TOOLBAR_WIDTH = 260
 const GAP = 8
 
 export function SelectionToolbar() {
-  const selection = useEditorStore((s) => s.selection)
+  const selection = useEphemeralStore((s) => s.selection)
   const [input, setInput] = useState('')
   const [stable, setStable] = useState(selection)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -32,9 +32,9 @@ export function SelectionToolbar() {
   if (!stable?.coords) return null
 
   function buildMessage(prompt: string) {
-    const sel = useEditorStore.getState().selection
+    const sel = useEphemeralStore.getState().selection
     if (!sel) return null
-    const { tabs, activeTabId } = useEditorStore.getState()
+    const { tabs, activeTabId } = useSessionStore.getState()
     const tabName = tabs.find((t) => t.id === activeTabId)?.name ?? 'model.ump'
     const label =
       sel.fromLine === sel.toLine
@@ -46,9 +46,9 @@ export function SelectionToolbar() {
   function handleSend(prompt: string) {
     const message = buildMessage(prompt)
     if (!message) return
-    useUiStore.getState().queueAgentMessage(message)
-    useUiStore.getState().openAgentPanel()
-    useEditorStore.getState().setSelection(null)
+    useEphemeralStore.getState().queueAgentMessage(message)
+    useSessionStore.getState().openAgentPanel()
+    useEphemeralStore.getState().setSelection(null)
     setInput('')
   }
 
@@ -58,7 +58,7 @@ export function SelectionToolbar() {
       if (input.trim()) handleSend(input.trim())
     }
     if (e.key === 'Escape') {
-      useEditorStore.getState().setSelection(null)
+      useEphemeralStore.getState().setSelection(null)
     }
   }
 

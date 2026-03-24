@@ -1,4 +1,4 @@
-import type { AiProvider } from '@/stores/aiConfigStore'
+import type { AiProvider } from '@/stores/preferencesStore'
 
 export interface ModelInfo {
   id: string

@@ -7,9 +7,8 @@ import { HtmlDiagramView } from './HtmlDiagramView'
 import { CanvasToolbar } from './CanvasToolbar'
 import { GeneratedOutputView } from '../generation/GeneratedOutputView'
 import { CanvasBanner } from '../layout/CanvasBanner'
-import { EMPTY_DIAGRAM_ELEMENTS, type DiagramView, useDiagramStore, VIEW_OUTPUT_KIND } from '../../stores/diagramStore'
-import { useEditorStore } from '../../stores/editorStore'
-import { useUiStore } from '../../stores/uiStore'
+import { EMPTY_DIAGRAM_ELEMENTS, type DiagramView, useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
 import { ErrorBanner } from '@/components/ui/error-banner'
@@ -29,15 +28,24 @@ const RF_RENDERERS: Partial<Record<DiagramView, ComponentType>> = {
 }
 
 export function DiagramPanel() {
-  const { viewMode, renderMode, svgCache, htmlCache, diagramData, setRenderMode } = useDiagramStore()
-  const {
-    rightPanelView,
-    generatedCode, generatedHtml, generatedKind, generatedIframeUrl, generatedDownloads,
-    generatedLanguage, generatingCode, generatedError,
-    generationRequested,
-  } = useUiStore()
-
-  const { code, modelId } = useEditorStore()
+  const viewMode = useSessionStore((s) => s.viewMode)
+  const svgCache = useSessionStore((s) => s.svgCache)
+  const htmlCache = useSessionStore((s) => s.htmlCache)
+  const diagramData = useSessionStore((s) => s.diagramData)
+  const code = useSessionStore((s) => s.code)
+  const modelId = useSessionStore((s) => s.modelId)
+  const renderMode = useEphemeralStore((s) => s.renderMode)
+  const setRenderMode = useEphemeralStore((s) => s.setRenderMode)
+  const rightPanelView = useEphemeralStore((s) => s.rightPanelView)
+  const generatedCode = useEphemeralStore((s) => s.generatedCode)
+  const generatedHtml = useEphemeralStore((s) => s.generatedHtml)
+  const generatedKind = useEphemeralStore((s) => s.generatedKind)
+  const generatedIframeUrl = useEphemeralStore((s) => s.generatedIframeUrl)
+  const generatedDownloads = useEphemeralStore((s) => s.generatedDownloads)
+  const generatedLanguage = useEphemeralStore((s) => s.generatedLanguage)
+  const generatingCode = useEphemeralStore((s) => s.generatingCode)
+  const generatedError = useEphemeralStore((s) => s.generatedError)
+  const generationRequested = useEphemeralStore((s) => s.generationRequested)
 
   const currentSvg = svgCache[viewMode] ?? ''
   const currentHtml = htmlCache[viewMode] ?? ''

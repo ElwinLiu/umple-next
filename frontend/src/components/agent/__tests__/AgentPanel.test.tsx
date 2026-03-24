@@ -3,9 +3,9 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import AgentPanel from '../AgentPanel'
-import { createDefaultProviderConfigs, useAiConfigStore } from '@/stores/aiConfigStore'
-import { useEditorStore } from '@/stores/editorStore'
-import { useUiStore } from '@/stores/uiStore'
+import { createDefaultProviderConfigs, usePreferencesStore } from '@/stores/preferencesStore'
+import { useSessionStore } from '@/stores/sessionStore'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
 
 const mockSend = vi.fn()
 const mockStop = vi.fn()
@@ -51,22 +51,20 @@ afterEach(() => {
     approveToolCall: mockApproveToolCall,
     rejectToolCall: mockRejectToolCall,
   }
-  useAiConfigStore.setState({
+  usePreferencesStore.setState({
     activeProvider: 'openai',
     configs: createDefaultProviderConfigs(),
   })
-  useUiStore.setState({ showAgentPanel: false })
-  useEditorStore.setState({
-    code: '',
-    diffPreview: null,
-  })
+  useSessionStore.setState({ showAgentPanel: false, code: '' })
+  useEphemeralStore.setState({ diffPreview: null })
 })
 
 describe('AgentPanel', () => {
   it('renders approval UI for static tool parts', async () => {
     const user = userEvent.setup()
-    useUiStore.setState({ showAgentPanel: true })
-    useEditorStore.setState({ code: 'class Student {}', diffPreview: null })
+    useSessionStore.setState({ showAgentPanel: true })
+    useSessionStore.setState({ code: 'class Student {}' })
+    useEphemeralStore.setState({ diffPreview: null })
 
     mockAgentState = {
       ...mockAgentState,
@@ -96,7 +94,7 @@ describe('AgentPanel', () => {
     expect(screen.getByText('Edit proposed')).toBeDefined()
     expect(screen.getByText('Rename Student to Person')).toBeDefined()
     expect(screen.getByText('Preview shown in the editor above.')).toBeDefined()
-    expect(useEditorStore.getState().diffPreview?.proposedCode).toBe('class Person {}')
+    expect(useEphemeralStore.getState().diffPreview?.proposedCode).toBe('class Person {}')
 
     await user.click(screen.getByRole('button', { name: 'Approve' }))
     expect(mockApproveToolCall).toHaveBeenCalledWith(
@@ -113,7 +111,7 @@ describe('AgentPanel', () => {
   })
 
   it('keeps the panel collapsed after drag-fold release', () => {
-    useUiStore.setState({ showAgentPanel: true })
+    useSessionStore.setState({ showAgentPanel: true })
 
     mockAgentState = {
       ...mockAgentState,
@@ -150,7 +148,7 @@ describe('AgentPanel', () => {
   })
 
   it('ignores the synthetic release click after drag-folding', () => {
-    useUiStore.setState({ showAgentPanel: true })
+    useSessionStore.setState({ showAgentPanel: true })
 
     mockAgentState = {
       ...mockAgentState,

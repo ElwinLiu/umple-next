@@ -1,6 +1,6 @@
 import { useCallback, useRef } from 'react'
 import { Trash2 } from 'lucide-react'
-import { useDiagramStore } from '@/stores/diagramStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import { useDiagramSync } from '@/hooks/useDiagramSync'
 import { useMenuClose } from '@/hooks/useMenuClose'
 import { edgeDeletionParams } from '@/lib/diagramHelpers'
@@ -19,7 +19,7 @@ export function EdgeContextMenu({ position, edgeId, onClose }: EdgeContextMenuPr
 
   const handleDelete = useCallback(async () => {
     if (!edgeId) return
-    const { getDiagramData, removeEdge } = useDiagramStore.getState()
+    const { getDiagramData, removeEdge } = useSessionStore.getState()
     const edges = getDiagramData('class').edges
     const edge = edges.find((e) => e.id === edgeId)
     if (!edge) { onClose(); return }

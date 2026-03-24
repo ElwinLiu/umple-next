@@ -7,8 +7,9 @@ import {
   type InferUITools,
   type UIMessage,
 } from 'ai'
-import { useAiConfigStore } from '@/stores/aiConfigStore'
-import { useEditorStore } from '@/stores/editorStore'
+import { usePreferencesStore } from '@/stores/preferencesStore'
+import { useSessionStore, type ChatMessage } from '@/stores/sessionStore'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { createAgent } from './agent'
 import { agentTools } from './tools'
 
@@ -30,9 +31,9 @@ type Agent = Awaited<ReturnType<typeof createAgent>>
  * So we execute approved tools manually and inject results via addToolOutput.
  */
 export function useAgent() {
-  const provider = useAiConfigStore((state) => state.activeProvider)
-  const { model, apiKey } = useAiConfigStore((state) => state.configs[state.activeProvider])
-  const clearDiffPreview = useEditorStore((state) => state.clearDiffPreview)
+  const provider = usePreferencesStore((state) => state.activeProvider)
+  const { model, apiKey } = usePreferencesStore((state) => state.configs[state.activeProvider])
+  const clearDiffPreview = useEphemeralStore((state) => state.clearDiffPreview)
 
   const [agent, setAgent] = useState<Agent | null>(null)
 
@@ -93,6 +94,28 @@ export function useAgent() {
     addToolApprovalResponse,
   } = useChat<AgentUIMessage>({ chat })
 
+  // Restore chat history from session store whenever the chat instance is recreated
+  const restoredChatRef = useRef<typeof chat | null>(null)
+  useEffect(() => {
+    if (restoredChatRef.current === chat) return
+    restoredChatRef.current = chat
+    const saved = useSessionStore.getState().chatMessages
+    if (saved.length > 0) {
+      setMessages(saved as AgentUIMessage[])
+    }
+  }, [chat, setMessages])
+
+  // Sync messages to session store on change
+  useEffect(() => {
+    const serializable: ChatMessage[] = messages.map((m) => ({
+      id: m.id,
+      role: m.role as 'user' | 'assistant',
+      content: '',
+      parts: m.parts as unknown[],
+    }))
+    useSessionStore.getState().setChatMessages(serializable)
+  }, [messages])
+
   const send = useCallback(
     (text: string) => {
       if (!transport) return
@@ -104,6 +127,7 @@ export function useAgent() {
   const reset = useCallback(() => {
     clearDiffPreview()
     setMessages([])
+    useSessionStore.getState().setChatMessages([])
   }, [clearDiffPreview, setMessages])
 
   /** Approve a tool call — execute the tool ourselves, then inject the result. */

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import type { DiagramView } from '../../stores/diagramStore'
+import type { DiagramView } from '../../stores/sessionStore'
 import { useIsDark } from '../../hooks/useIsDark'
 
 interface HtmlDiagramViewProps {

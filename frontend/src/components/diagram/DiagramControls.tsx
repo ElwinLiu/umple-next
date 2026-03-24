@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { ZoomIn, ZoomOut, Maximize, MousePointer2, Plus } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
-import { useDiagramStore } from '@/stores/diagramStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import { useDiagramSync } from '@/hooks/useDiagramSync'
 import { generateClassName } from '@/lib/diagramHelpers'
 import type { ClassNodeData } from './nodes/ClassNode'
@@ -18,7 +18,7 @@ export function DiagramControls({ allowClassEditing = false }: { allowClassEditi
     (e: React.MouseEvent) => {
       if (mode !== 'addClass') return
       const flowPos = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-      const { getDiagramData, addNode } = useDiagramStore.getState()
+      const { getDiagramData, addNode } = useSessionStore.getState()
       const nodes = getDiagramData('class').nodes
 
       const className = generateClassName(nodes)

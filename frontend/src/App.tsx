@@ -1,10 +1,10 @@
 import { useEffect } from 'react'
 import { AppShell } from './components/layout/AppShell'
-import { useUiStore } from './stores/uiStore'
+import { usePreferencesStore } from './stores/preferencesStore'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
 function useThemeEffect() {
-  const theme = useUiStore((s) => s.theme)
+  const theme = usePreferencesStore((s) => s.theme)
 
   useEffect(() => {
     const apply = (resolved: 'light' | 'dark') => {

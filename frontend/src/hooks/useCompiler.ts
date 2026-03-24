@@ -1,13 +1,12 @@
 import { useEffect, useRef } from 'react'
-import { useEditorStore } from '../stores/editorStore'
-import { useUiStore } from '../stores/uiStore'
+import { useSessionStore, type DiagramView } from '../stores/sessionStore'
+import { useEphemeralStore } from '../stores/ephemeralStore'
 import {
-  useDiagramStore,
+  usePreferencesStore,
   getEffectiveDiagramType,
   buildSuboptions,
   selectSuboptionsKey,
-  type DiagramView,
-} from '../stores/diagramStore'
+} from '../stores/preferencesStore'
 import { useIsDark } from './useIsDark'
 import { useDiagram } from './useDiagram'
 import { api } from '../api/client'
@@ -22,7 +21,7 @@ interface CompileCallbacks {
 
 /** Build the diagram request params from current store state + isDark flag. */
 function getDiagramRequestParams(code: string, view: DiagramView, modelId: string, isDark: boolean) {
-  const s = useDiagramStore.getState()
+  const s = usePreferencesStore.getState()
   return {
     code,
     diagramType: getEffectiveDiagramType(view, s.showTraits),
@@ -38,9 +37,10 @@ export async function compileAndRefresh(
   isDark: boolean,
   signal?: AbortSignal,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
-  const { code, modelId, setModelId } = useEditorStore.getState()
-  const { viewMode, setCompiling, setLastError, clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useDiagramStore.getState()
-  const { setExecutionOutput } = useUiStore.getState()
+  const { code, modelId, setModelId } = useSessionStore.getState()
+  const { viewMode, clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
+  const { setCompiling, setLastError } = useEphemeralStore.getState()
+  const { setExecutionOutput } = useEphemeralStore.getState()
 
   if (!code.trim()) return { success: false, model: null }
 
@@ -107,13 +107,13 @@ export async function compileAndRefresh(
 }
 
 export function useCompiler() {
-  const code = useEditorStore((s) => s.code)
-  const modelId = useEditorStore((s) => s.modelId)
-  const viewMode = useDiagramStore((s) => s.viewMode)
-  const setSvgForView = useDiagramStore((s) => s.setSvgForView)
-  const setHtmlForView = useDiagramStore((s) => s.setHtmlForView)
-  const setLastError = useDiagramStore((s) => s.setLastError)
-  const suboptionsKey = useDiagramStore(selectSuboptionsKey)
+  const code = useSessionStore((s) => s.code)
+  const modelId = useSessionStore((s) => s.modelId)
+  const viewMode = useSessionStore((s) => s.viewMode)
+  const setSvgForView = useSessionStore((s) => s.setSvgForView)
+  const setHtmlForView = useSessionStore((s) => s.setHtmlForView)
+  const setLastError = useEphemeralStore((s) => s.setLastError)
+  const suboptionsKey = usePreferencesStore(selectSuboptionsKey)
   const isDark = useIsDark()
   const { updateClassDiagram } = useDiagram()
 
@@ -188,7 +188,7 @@ export function useCompiler() {
       }
       if (res.errors) {
         setLastError(res.errors)
-        useUiStore.getState().setExecutionOutput('', res.errors)
+        useEphemeralStore.getState().setExecutionOutput('', res.errors)
       }
     } catch (err: any) {
       if (err.name !== 'AbortError') {

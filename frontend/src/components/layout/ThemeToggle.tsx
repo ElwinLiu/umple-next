@@ -1,5 +1,5 @@
 import { Moon, Sun, Monitor } from 'lucide-react'
-import { useUiStore } from '../../stores/uiStore'
+import { usePreferencesStore } from '../../stores/preferencesStore'
 
 const options = [
   { value: 'dark' as const, icon: Moon, label: 'Dark' },
@@ -8,8 +8,8 @@ const options = [
 ]
 
 export function ThemeToggle() {
-  const theme = useUiStore((s) => s.theme)
-  const setTheme = useUiStore((s) => s.setTheme)
+  const theme = usePreferencesStore((s) => s.theme)
+  const setTheme = usePreferencesStore((s) => s.setTheme)
 
   function handleSwitch(value: (typeof options)[number]['value']) {
     document.documentElement.classList.add('disable-transitions')

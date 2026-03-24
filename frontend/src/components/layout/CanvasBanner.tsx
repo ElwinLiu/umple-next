@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { useUiStore } from '../../stores/uiStore'
-import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
 import { useCompile } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
 import { GENERATE_TARGETS } from '../../generation/targets'
@@ -28,11 +28,12 @@ export function CanvasBanner() {
     rightPanelView, setRightPanelView,
     generatedTargetId, generatingCode,
     generationRequested, executing,
-  } = useUiStore()
-  const { viewMode, setViewMode } = useDiagramStore()
+  } = useEphemeralStore()
+  const viewMode = useSessionStore((s) => s.viewMode)
+  const setViewMode = useSessionStore((s) => s.setViewMode)
   const { compile } = useCompile()
-  const compiling = useDiagramStore((s) => s.compiling)
-  const errorCount = useUiStore((s) => s.outputErrorCount)
+  const compiling = useEphemeralStore((s) => s.compiling)
+  const errorCount = useEphemeralStore((s) => s.outputErrorCount)
   const handleGenerate = useGenerate()
 
   // Compile success micro-interaction
@@ -58,19 +59,19 @@ export function CanvasBanner() {
       if ((e.metaKey || e.ctrlKey) && e.key === '1') {
         e.preventDefault()
         e.stopPropagation()
-        useUiStore.getState().setRightPanelView('diagram')
+        useEphemeralStore.getState().setRightPanelView('diagram')
       }
       if ((e.metaKey || e.ctrlKey) && e.key === '2') {
-        if (useUiStore.getState().generationRequested) {
+        if (useEphemeralStore.getState().generationRequested) {
           e.preventDefault()
           e.stopPropagation()
-          useUiStore.getState().setRightPanelView('generated')
+          useEphemeralStore.getState().setRightPanelView('generated')
         }
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "'") {
         e.preventDefault()
         e.stopPropagation()
-        useUiStore.getState().toggleOutputPanel()
+        useEphemeralStore.getState().toggleOutputPanel()
       }
     }
     window.addEventListener('keydown', handler, true)

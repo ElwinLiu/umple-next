@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { useEditorStore, type Tab } from '../../stores/editorStore'
-import { useUiStore } from '../../stores/uiStore'
+import { useSessionStore, type Tab } from '../../stores/sessionStore'
+import { usePreferencesStore } from '../../stores/preferencesStore'
 import { Plus, X, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 import { OutputBadges } from './ExecutionPanel'
@@ -16,13 +16,13 @@ import { cn } from '@/lib/utils'
 // ── TabBar ────────────────────────────────────────────────────────────
 
 export function TabBar() {
-  const tabs = useEditorStore((s) => s.tabs)
-  const activeTabId = useEditorStore((s) => s.activeTabId)
-  const setActiveTab = useEditorStore((s) => s.setActiveTab)
-  const removeTab = useEditorStore((s) => s.removeTab)
-  const addNewTab = useEditorStore((s) => s.addNewTab)
-  const renameTab = useEditorStore((s) => s.renameTab)
-  const closeOtherTabs = useEditorStore((s) => s.closeOtherTabs)
+  const tabs = useSessionStore((s) => s.tabs)
+  const activeTabId = useSessionStore((s) => s.activeTabId)
+  const setActiveTab = useSessionStore((s) => s.setActiveTab)
+  const removeTab = useSessionStore((s) => s.removeTab)
+  const addNewTab = useSessionStore((s) => s.addNewTab)
+  const renameTab = useSessionStore((s) => s.renameTab)
+  const closeOtherTabs = useSessionStore((s) => s.closeOtherTabs)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -76,8 +76,8 @@ export function TabBar() {
     [tabs.length, activeTabId, removeTab]
   )
 
-  const showSidebar = useUiStore((s) => s.showSidebar)
-  const toggleSidebar = useUiStore((s) => s.toggleSidebar)
+  const showSidebar = usePreferencesStore((s) => s.showSidebar)
+  const toggleSidebar = usePreferencesStore((s) => s.toggleSidebar)
 
   const activeIndex = tabs.findIndex((t) => t.id === activeTabId)
 

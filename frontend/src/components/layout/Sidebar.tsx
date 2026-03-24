@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
-import { useUiStore } from '../../stores/uiStore'
-import { useEditorStore } from '../../stores/editorStore'
-import { useDiagramStore, VIEW_OUTPUT_KIND, type GvLayoutAlgorithm } from '../../stores/diagramStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
+import { usePreferencesStore, type GvLayoutAlgorithm } from '../../stores/preferencesStore'
 import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
@@ -79,7 +79,7 @@ function Section({
 // ── Sidebar content (shared between pinned and floating) ──
 
 function SidebarContent() {
-  const openCommandPalette = useUiStore((s) => s.openCommandPalette)
+  const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette)
   const [toolsOpen, setToolsOpen] = useState(true)
   const [aiOpen, setAiOpen] = useState(false)
 
@@ -120,7 +120,7 @@ function SidebarContent() {
 // ── Main Sidebar ──
 
 export function Sidebar() {
-  const { showSidebar, sidebarWidth } = useUiStore()
+  const { showSidebar, sidebarWidth } = usePreferencesStore()
   const [peekState, setPeekState] = useState<'hidden' | 'open' | 'closing'>('hidden')
   const peekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -205,12 +205,12 @@ export function Sidebar() {
 // ── Resize handle (right edge of sidebar) ──
 
 function ResizeHandle() {
-  const setSidebarWidth = useUiStore((s) => s.setSidebarWidth)
+  const setSidebarWidth = usePreferencesStore((s) => s.setSidebarWidth)
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
     const startX = e.clientX
-    const startWidth = useUiStore.getState().sidebarWidth
+    const startWidth = usePreferencesStore.getState().sidebarWidth
 
     const handleMouseMove = (e: MouseEvent) => {
       setSidebarWidth(startWidth + (e.clientX - startX))
@@ -245,18 +245,20 @@ function ResizeHandle() {
 // ── SECTION: Tools (Examples + Generate Code + Layout) ──
 
 function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
-  const { viewMode, setViewMode, layoutAlgorithm, setLayoutAlgorithm } = useDiagramStore()
-  const code = useEditorStore((s) => s.code)
-  const generatingCode = useUiStore((s) => s.generatingCode)
+  const { viewMode, setViewMode } = useSessionStore()
+  const { layoutAlgorithm, setLayoutAlgorithm } = usePreferencesStore()
+  const code = useSessionStore((s) => s.code)
+  const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const { execute } = useExecute()
-  const running = useUiStore((s) => s.executing)
+  const running = useEphemeralStore((s) => s.executing)
   const generate = useGenerate()
-  const loadExample = useEditorStore((s) => s.loadExample)
+  const loadExample = useSessionStore((s) => s.loadExample)
 
   const [allCategories, setAllCategories] = useState<ExampleCategory[]>([])
   const [loaded, setLoaded] = useState(false)
-  const [targetId, setTargetId] = useState('Java')
-  const [selectedExample, setSelectedExample] = useState<string | undefined>(undefined)
+  const targetId = useSessionStore((s) => s.generateTargetId)
+  const setTargetId = useSessionStore((s) => s.setGenerateTargetId)
+  const selectedExample = useSessionStore((s) => s.selectedExample)
 
   const viewLabel = ALL_VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'
   const showLayout = VIEW_OUTPUT_KIND[viewMode] !== 'html'
@@ -290,8 +292,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
     try {
       const res = await api.getExample(name)
       loadExample(res.name, res.code)
-      setSelectedExample(name)
-      useUiStore.getState().setRightPanelView('diagram')
+      useEphemeralStore.getState().setRightPanelView('diagram')
     } catch { /* ignore */ }
   }, [loadExample])
 
@@ -332,7 +333,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
             <Combobox
               key={viewMode}
               options={exampleOptions}
-              value={selectedExample}
+              value={selectedExample ?? undefined}
               onSelect={handleLoadExample}
               placeholder={exampleOptions.length > 0 ? 'Load an example...' : 'No examples'}
               searchPlaceholder="Search examples..."
@@ -476,7 +477,7 @@ function SidebarFooter() {
 // ── Layout toggle button (toggles sidebar) ──
 
 function LayoutToggle({ side = 'bottom' }: { side?: 'bottom' | 'right' }) {
-  const toggleSidebar = useUiStore((s) => s.toggleSidebar)
+  const toggleSidebar = usePreferencesStore((s) => s.toggleSidebar)
 
   return (
     <Tip content="Toggle sidebar" side={side}>

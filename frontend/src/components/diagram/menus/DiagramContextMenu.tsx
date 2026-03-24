@@ -1,7 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { Plus, Maximize } from 'lucide-react'
-import { useDiagramStore } from '@/stores/diagramStore'
+import { useSessionStore } from '@/stores/sessionStore'
 import { useDiagramSync } from '@/hooks/useDiagramSync'
 import { useMenuClose } from '@/hooks/useMenuClose'
 import { generateClassName } from '@/lib/diagramHelpers'
@@ -22,7 +22,7 @@ export function DiagramContextMenu({ position, flowPosition, onClose }: DiagramC
   useMenuClose(menuRef, position, onClose)
 
   const handleAddClass = useCallback(async () => {
-    const { getDiagramData, addNode } = useDiagramStore.getState()
+    const { getDiagramData, addNode } = useSessionStore.getState()
     const nodes = getDiagramData('class').nodes
     const className = generateClassName(nodes)
     const pos = flowPosition ?? { x: 100, y: 100 }

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useUiStore } from '../../stores/uiStore'
-import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
-import { useEditorStore } from '../../stores/editorStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
 import { useGenerate } from '../../hooks/useGenerate'
 import { api } from '../../api/client'
 import type { ExampleCategory } from '../../api/types'
@@ -42,9 +41,10 @@ export function CommandPalette() {
   const {
     commandPaletteOpen, closeCommandPalette,
     toggleTaskPanel, setDiagramOnly, diagramOnly, toggleOutputPanel,
-  } = useUiStore()
-  const { setViewMode, setRenderMode, renderMode } = useDiagramStore()
-  const loadExample = useEditorStore((s) => s.loadExample)
+    setRenderMode, renderMode,
+  } = useEphemeralStore()
+  const { setViewMode } = useSessionStore()
+  const loadExample = useSessionStore((s) => s.loadExample)
   const generate = useGenerate()
 
   const [categories, setCategories] = useState<ExampleCategory[]>([])
@@ -74,7 +74,7 @@ export function CommandPalette() {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault()
         e.stopPropagation()
-        const state = useUiStore.getState()
+        const state = useEphemeralStore.getState()
         if (state.commandPaletteOpen) {
           state.closeCommandPalette()
         } else {
@@ -120,7 +120,7 @@ export function CommandPalette() {
       if (view) {
         setViewMode(view)
       }
-      useUiStore.getState().setRightPanelView('diagram')
+      useEphemeralStore.getState().setRightPanelView('diagram')
     } catch { /* ignore */ }
   }, [closeCommandPalette, loadExample, setViewMode])
 
@@ -176,7 +176,7 @@ export function CommandPalette() {
                   key={dt.value}
                   onSelect={() => {
                     setViewMode(dt.value)
-                    useUiStore.getState().setRightPanelView('diagram')
+                    useEphemeralStore.getState().setRightPanelView('diagram')
                     closeCommandPalette()
                   }}
                   data-testid={`command-item-diagram-${dt.value}`}

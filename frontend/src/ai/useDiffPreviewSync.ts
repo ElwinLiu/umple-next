@@ -1,6 +1,6 @@
 import { useMemo, useEffect } from 'react'
 import { isToolUIPart, getToolName, type UIMessage } from 'ai'
-import { useEditorStore } from '@/stores/editorStore'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { buildToolCallDiffPreview, type ToolPreviewInfo } from './editPreview'
 
 function getLatestToolPreview(
@@ -35,9 +35,9 @@ function getLatestToolPreview(
  */
 export function useDiffPreviewSync(messages: UIMessage[], code: string): ToolPreviewInfo | null {
   const pendingPreview = useMemo(() => getLatestToolPreview(messages, code), [messages, code])
-  const diffPreview = useEditorStore((s) => s.diffPreview)
-  const showDiffPreview = useEditorStore((s) => s.showDiffPreview)
-  const clearDiffPreview = useEditorStore((s) => s.clearDiffPreview)
+  const diffPreview = useEphemeralStore((s) => s.diffPreview)
+  const showDiffPreview = useEphemeralStore((s) => s.showDiffPreview)
+  const clearDiffPreview = useEphemeralStore((s) => s.clearDiffPreview)
 
   useEffect(() => {
     if (!pendingPreview) {

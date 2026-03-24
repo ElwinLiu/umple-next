@@ -3,17 +3,18 @@ import { TabBar } from './TabBar'
 import { UmpleEditor } from './UmpleEditor'
 import { UmpleDiffEditor } from './UmpleDiffEditor'
 import { SelectionToolbar } from './SelectionToolbar'
-import { useEditorStore } from '../../stores/editorStore'
-import { useAiConfigStore } from '@/stores/aiConfigStore'
+import { useSessionStore } from '../../stores/sessionStore'
+import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { usePreferencesStore } from '@/stores/preferencesStore'
 
 const AgentPanel = lazy(() => import('../agent/AgentPanel'))
 
 export function EditorPanel() {
-  const code = useEditorStore((s) => s.code)
-  const setCode = useEditorStore((s) => s.setCode)
-  const activeTabId = useEditorStore((s) => s.activeTabId)
-  const diffPreview = useEditorStore((s) => s.diffPreview)
-  const isAiConfigured = useAiConfigStore(
+  const code = useSessionStore((s) => s.code)
+  const setCode = useSessionStore((s) => s.setCode)
+  const activeTabId = useSessionStore((s) => s.activeTabId)
+  const diffPreview = useEphemeralStore((s) => s.diffPreview)
+  const isAiConfigured = usePreferencesStore(
     (s) => {
       const activeConfig = s.configs[s.activeProvider]
       return !!(activeConfig.apiKey.trim() && activeConfig.model.trim())

@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { useDiagramStore, type DisplayPrefKey } from '../../stores/diagramStore'
+import { useSessionStore } from '../../stores/sessionStore'
+import { usePreferencesStore, type DisplayPrefKey } from '../../stores/preferencesStore'
 import { DISPLAY_TOGGLES } from '../../constants/diagram'
 import { Switch } from '@/components/ui/switch'
 import { Eye, ChevronDown } from 'lucide-react'
 
 export function CanvasToolbar() {
-  const viewMode = useDiagramStore((s) => s.viewMode)
+  const viewMode = useSessionStore((s) => s.viewMode)
   const [expanded, setExpanded] = useState(false)
 
   const toggles = DISPLAY_TOGGLES[viewMode]
@@ -41,8 +42,8 @@ function CanvasToggleItem({
   prefKey: DisplayPrefKey
   label: string
 }) {
-  const checked = useDiagramStore((s) => s[prefKey])
-  const toggleDisplayPref = useDiagramStore((s) => s.toggleDisplayPref)
+  const checked = usePreferencesStore((s) => s[prefKey])
+  const toggleDisplayPref = usePreferencesStore((s) => s.toggleDisplayPref)
 
   return (
     <label
