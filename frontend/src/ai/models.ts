@@ -26,6 +26,42 @@ export async function fetchModels(provider: AiProvider, apiKey: string): Promise
       const { fetchOpenRouterModels } = await import('./adapters/openrouter')
       return fetchOpenRouterModels(apiKey)
     }
+    case 'mistral': {
+      const { fetchMistralModels } = await import('./adapters/mistral')
+      return fetchMistralModels(apiKey)
+    }
+    case 'xai': {
+      const { fetchXaiModels } = await import('./adapters/xai')
+      return fetchXaiModels(apiKey)
+    }
+    case 'groq': {
+      const { fetchGroqModels } = await import('./adapters/groq')
+      return fetchGroqModels(apiKey)
+    }
+    case 'deepseek': {
+      const { fetchDeepSeekModels } = await import('./adapters/deepseek')
+      return fetchDeepSeekModels(apiKey)
+    }
+    case 'fireworks': {
+      const { fetchFireworksModels } = await import('./adapters/fireworks')
+      return fetchFireworksModels(apiKey)
+    }
+    case 'cerebras': {
+      const { fetchCerebrasModels } = await import('./adapters/cerebras')
+      return fetchCerebrasModels(apiKey)
+    }
+    case 'moonshot': {
+      const { fetchMoonshotModels } = await import('./adapters/moonshot')
+      return fetchMoonshotModels(apiKey)
+    }
+    case 'minimax': {
+      const { fetchMinimaxModels } = await import('./adapters/minimax')
+      return fetchMinimaxModels(apiKey)
+    }
+    case 'zhipu': {
+      const { fetchZhipuModels } = await import('./adapters/zhipu')
+      return fetchZhipuModels(apiKey)
+    }
     default: {
       const _exhaustive: never = provider
       throw new Error(`Unknown provider: ${_exhaustive}`)

@@ -2,20 +2,39 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { usePreferencesStore, type AiProvider } from '@/stores/preferencesStore'
 import { fetchModels, type ModelInfo } from '@/ai/models'
 import { Input } from '@/components/ui/input'
-import { Combobox } from '@/components/ui/combobox'
+import { Combobox, type ComboboxGroup } from '@/components/ui/combobox'
 import { Tip } from '@/components/ui/tooltip'
 import { ChevronDown, ChevronRight, Eye, EyeOff, Info, Loader2, RefreshCw } from 'lucide-react'
 
-const PROVIDERS: { value: AiProvider; label: string }[] = [
-  { value: 'openai', label: 'OpenAI' },
-  { value: 'anthropic', label: 'Anthropic' },
-  { value: 'google', label: 'Gemini' },
-  { value: 'openrouter', label: 'OpenRouter' },
+const PROVIDER_GROUPS: ComboboxGroup[] = [
+  {
+    label: 'Popular',
+    options: [
+      { value: 'openai', label: 'OpenAI' },
+      { value: 'anthropic', label: 'Anthropic' },
+      { value: 'google', label: 'Gemini' },
+      { value: 'openrouter', label: 'OpenRouter' },
+    ],
+  },
+  {
+    label: 'Open Source',
+    options: [
+      { value: 'mistral', label: 'Mistral' },
+      { value: 'xai', label: 'xAI Grok' },
+      { value: 'groq', label: 'Groq' },
+      { value: 'deepseek', label: 'DeepSeek' },
+      { value: 'fireworks', label: 'Fireworks' },
+      { value: 'cerebras', label: 'Cerebras' },
+      { value: 'moonshot', label: 'Kimi (Moonshot)' },
+      { value: 'minimax', label: 'Minimax' },
+      { value: 'zhipu', label: 'Zhipu GLM' },
+    ],
+  },
 ]
 
 export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const provider = usePreferencesStore((state) => state.activeProvider)
-  const { model, apiKey } = usePreferencesStore((state) => state.configs[state.activeProvider])
+  const { model, apiKey } = usePreferencesStore((state) => state.configs[state.activeProvider] ?? { apiKey: '', model: '' })
   const setActiveProvider = usePreferencesStore((state) => state.setActiveProvider)
   const setModel = usePreferencesStore((state) => state.setModel)
   const setApiKey = usePreferencesStore((state) => state.setApiKey)
@@ -97,55 +116,46 @@ export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: (
       </button>
       {open && (
         <div className="px-4 pb-3 pt-1 ml-5.5 space-y-2.5">
-          {/* Provider pills */}
-          <div className="grid grid-cols-2 gap-1">
-            {PROVIDERS.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => setActiveProvider(p.value)}
-                className={`px-2 py-1 rounded-md text-xxs font-medium transition-colors cursor-pointer text-center ${
-                  provider === p.value
-                    ? 'bg-brand-light text-brand'
-                    : 'bg-surface-1 text-ink-muted hover:bg-surface-2 hover:text-ink'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
+          {/* Provider selector */}
+          <Combobox
+            groups={PROVIDER_GROUPS}
+            value={provider}
+            onSelect={(v) => setActiveProvider(v as AiProvider)}
+            placeholder="Select provider..."
+            searchPlaceholder="Search providers..."
+          />
 
           {/* API Key */}
           <div className="relative">
-            <Input
-              id="ai-api-key-input"
-              type={showKey ? 'text' : 'password'}
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              placeholder="API key"
-              className="pr-12 font-mono"
-            />
-            <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-              <Tip content="Your key is proxied through our server but is never stored or logged." side="top">
+              <Input
+                id="ai-api-key-input"
+                type={showKey ? 'text' : 'password'}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder="API key"
+                className="pr-12 font-mono"
+              />
+              <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+                <Tip content="Your key is proxied through our server but is never stored or logged." side="top">
+                  <button
+                    type="button"
+                    className="p-0.5 text-ink-faint hover:text-ink transition-colors cursor-pointer"
+                    aria-label="Key security info"
+                    tabIndex={-1}
+                  >
+                    <Info className="size-3" />
+                  </button>
+                </Tip>
                 <button
                   type="button"
+                  onClick={() => setShowKey((v) => !v)}
                   className="p-0.5 text-ink-faint hover:text-ink transition-colors cursor-pointer"
-                  aria-label="Key security info"
-                  tabIndex={-1}
+                  aria-label={showKey ? 'Hide API key' : 'Show API key'}
                 >
-                  <Info className="size-3" />
+                  {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
                 </button>
-              </Tip>
-              <button
-                type="button"
-                onClick={() => setShowKey((v) => !v)}
-                className="p-0.5 text-ink-faint hover:text-ink transition-colors cursor-pointer"
-                aria-label={showKey ? 'Hide API key' : 'Show API key'}
-              >
-                {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-              </button>
+              </div>
             </div>
-          </div>
 
           {/* Model */}
           <div>

@@ -107,7 +107,7 @@ export function SelectionToolbar() {
 
       {/* Quick actions */}
       <button
-        onClick={() => handleSend('Explain this code')}
+        onClick={() => handleSend('Read the code in the editor and explain the snippet above')}
         className="flex w-full cursor-pointer items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-ink-muted transition-colors hover:bg-surface-1 hover:text-ink"
       >
         <Lightbulb className="size-4 shrink-0" />

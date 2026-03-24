@@ -49,6 +49,79 @@ export async function getModel(
       }).chat(model)
     }
 
+    case 'mistral': {
+      const { createMistral } = await import('@ai-sdk/mistral')
+      return createMistral({
+        apiKey,
+        baseURL: '/api/ai/mistral/v1',
+      }).chat(model)
+    }
+
+    case 'xai': {
+      const { createXai } = await import('@ai-sdk/xai')
+      return createXai({
+        apiKey,
+        baseURL: '/api/ai/xai/v1',
+      }).chat(model)
+    }
+
+    case 'groq': {
+      const { createGroq } = await import('@ai-sdk/groq')
+      return createGroq({
+        apiKey,
+        baseURL: '/api/ai/groq/openai/v1',
+      })(model)
+    }
+
+    case 'deepseek': {
+      const { createDeepSeek } = await import('@ai-sdk/deepseek')
+      return createDeepSeek({
+        apiKey,
+        baseURL: '/api/ai/deepseek',
+      }).languageModel(model)
+    }
+
+    case 'fireworks': {
+      const { createFireworks } = await import('@ai-sdk/fireworks')
+      return createFireworks({
+        apiKey,
+        baseURL: '/api/ai/fireworks/inference/v1',
+      }).languageModel(model)
+    }
+
+    case 'cerebras': {
+      const { createCerebras } = await import('@ai-sdk/cerebras')
+      return createCerebras({
+        apiKey,
+        baseURL: '/api/ai/cerebras/v1',
+      }).chat(model)
+    }
+
+    case 'moonshot': {
+      const { createMoonshotAI } = await import('@ai-sdk/moonshotai')
+      return createMoonshotAI({
+        apiKey,
+        baseURL: '/api/ai/moonshot/v1',
+      }).languageModel(model)
+    }
+
+    case 'minimax': {
+      const { createAnthropic } = await import('@ai-sdk/anthropic')
+      return createAnthropic({
+        apiKey,
+        baseURL: '/api/ai/minimax/anthropic/v1',
+      }).languageModel(model)
+    }
+
+    case 'zhipu': {
+      const { createOpenAI } = await import('@ai-sdk/openai')
+      return createOpenAI({
+        apiKey,
+        baseURL: '/api/ai/zhipu/api/paas/v4',
+        name: 'zhipu',
+      }).chat(model)
+    }
+
     default: {
       const _exhaustive: never = provider
       throw new Error(`Unknown AI provider: ${_exhaustive}`)

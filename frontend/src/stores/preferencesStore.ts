@@ -3,7 +3,11 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 
 // ── AI Config types ──
 
-export type AiProvider = 'openai' | 'anthropic' | 'google' | 'openrouter'
+export type AiProvider =
+  | 'openai' | 'anthropic' | 'google' | 'openrouter'
+  | 'mistral' | 'xai' | 'groq' | 'deepseek'
+  | 'fireworks' | 'cerebras'
+  | 'moonshot' | 'minimax' | 'zhipu'
 
 export interface ProviderConfig {
   apiKey: string
@@ -15,13 +19,16 @@ export const DEFAULT_PROVIDER_CONFIG: ProviderConfig = {
   model: '',
 }
 
+const ALL_PROVIDERS: AiProvider[] = [
+  'openai', 'anthropic', 'google', 'openrouter',
+  'mistral', 'xai', 'groq', 'deepseek',
+  'fireworks', 'cerebras', 'moonshot', 'minimax', 'zhipu',
+]
+
 export function createDefaultProviderConfigs(): Record<AiProvider, ProviderConfig> {
-  return {
-    openai: { ...DEFAULT_PROVIDER_CONFIG },
-    anthropic: { ...DEFAULT_PROVIDER_CONFIG },
-    google: { ...DEFAULT_PROVIDER_CONFIG },
-    openrouter: { ...DEFAULT_PROVIDER_CONFIG },
-  }
+  return Object.fromEntries(
+    ALL_PROVIDERS.map((p) => [p, { ...DEFAULT_PROVIDER_CONFIG }]),
+  ) as Record<AiProvider, ProviderConfig>
 }
 
 // ── Diagram display pref types ──
@@ -121,6 +128,13 @@ export const usePreferencesStore = create<PreferencesState>()(
     {
       name: 'umple-preferences-v1',
       storage: createJSONStorage(() => localStorage),
+      merge: (persisted, current) => {
+        const merged = { ...current, ...(persisted as object) }
+        // Backfill any new providers missing from persisted localStorage
+        const defaults = createDefaultProviderConfigs()
+        const configs = { ...defaults, ...(merged as any).configs }
+        return { ...merged, configs } as any
+      },
       partialize: (state) => ({
         theme: state.theme,
         showSidebar: state.showSidebar,

@@ -1,8 +1,9 @@
-import { useCallback, lazy, Suspense } from 'react'
+import { useCallback, useRef, lazy, Suspense } from 'react'
 import { TabBar } from './TabBar'
-import { UmpleEditor } from './UmpleEditor'
+import { UmpleEditor, type UmpleEditorHandle } from './UmpleEditor'
 import { UmpleDiffEditor } from './UmpleDiffEditor'
 import { SelectionToolbar } from './SelectionToolbar'
+import { EditorContextMenu } from './EditorContextMenu'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
@@ -20,6 +21,8 @@ export function EditorPanel() {
       return !!(activeConfig.apiKey.trim() && activeConfig.model.trim())
     },
   )
+
+  const editorRef = useRef<UmpleEditorHandle>(null)
 
   const handleChange = useCallback((newCode: string) => {
     setCode(newCode)
@@ -44,7 +47,11 @@ export function EditorPanel() {
             </div>
           </div>
         ) : (
-          <UmpleEditor key={activeTabId} code={code} onChange={handleChange} />
+          <EditorContextMenu editorRef={editorRef}>
+            <div className="h-full w-full">
+              <UmpleEditor ref={editorRef} key={activeTabId} code={code} onChange={handleChange} />
+            </div>
+          </EditorContextMenu>
         )}
         {isAiConfigured && (
           <>

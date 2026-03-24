@@ -19,9 +19,13 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.63",
+    "@ai-sdk/cerebras": "^2.0.41",
     "@ai-sdk/google": "^3.0.52",
+    "@ai-sdk/groq": "^3.0.31",
+    "@ai-sdk/mistral": "^3.0.27",
     "@ai-sdk/openai": "^3.0.47",
     "@ai-sdk/react": "^3.0.136",
+    "@ai-sdk/xai": "^3.0.74",
     "@codemirror/autocomplete": "^6.18.0",
     "@codemirror/commands": "^6.7.0",
     "@codemirror/lang-java": "^6.0.1",

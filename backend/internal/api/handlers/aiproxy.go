@@ -14,6 +14,15 @@ var allowedProviders = map[string]string{
 	"anthropic":  "https://api.anthropic.com",
 	"google":     "https://generativelanguage.googleapis.com",
 	"openrouter": "https://openrouter.ai/api",
+	"mistral":    "https://api.mistral.ai",
+	"xai":        "https://api.x.ai",
+	"groq":       "https://api.groq.com",
+	"deepseek":   "https://api.deepseek.com",
+	"fireworks":  "https://api.fireworks.ai",
+	"cerebras":   "https://api.cerebras.ai",
+	"moonshot":   "https://api.moonshot.ai",
+	"minimax":    "https://api.minimax.io",
+	"zhipu":      "https://open.bigmodel.cn",
 }
 
 // forwardHeaders is the set of request headers proxied to the upstream provider.

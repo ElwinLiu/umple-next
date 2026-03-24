@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
 import { EditorView, ViewUpdate, scrollPastEnd } from '@codemirror/view'
 import { EditorState, Compartment } from '@codemirror/state'
 import { basicSetup } from 'codemirror'
@@ -9,19 +9,27 @@ import { getEditorTheme } from '../../codemirror/theme'
 import { useIsDark } from '../../hooks/useIsDark'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 
+export interface UmpleEditorHandle {
+  view: EditorView | null
+}
+
 interface UmpleEditorProps {
   code: string
   onChange: (code: string) => void
   readOnly?: boolean
 }
 
-export function UmpleEditor({ code, onChange, readOnly = false }: UmpleEditorProps) {
+export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(function UmpleEditor({ code, onChange, readOnly = false }, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const themeCompartment = useRef(new Compartment())
   const isDark = useIsDark()
+
+  useImperativeHandle(ref, () => ({
+    get view() { return viewRef.current },
+  }), [])
 
   // Track whether the last change was external (from props) to avoid echo
   const isExternalUpdate = useRef(false)
@@ -114,4 +122,4 @@ export function UmpleEditor({ code, onChange, readOnly = false }: UmpleEditorPro
       data-testid="umple-editor"
     />
   )
-}
+})

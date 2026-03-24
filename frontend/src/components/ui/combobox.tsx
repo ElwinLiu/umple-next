@@ -9,8 +9,16 @@ export interface ComboboxOption {
   label: string
 }
 
-interface ComboboxProps {
+export interface ComboboxGroup {
+  label: string
   options: ComboboxOption[]
+}
+
+interface ComboboxProps {
+  /** Flat option list (renders a single group). */
+  options?: ComboboxOption[]
+  /** Grouped option list (renders labelled sections). Takes precedence over `options`. */
+  groups?: ComboboxGroup[]
   value?: string
   onSelect: (value: string) => void
   placeholder?: string
@@ -23,6 +31,7 @@ interface ComboboxProps {
 
 export function Combobox({
   options,
+  groups,
   value,
   onSelect,
   placeholder = 'Select...',
@@ -33,7 +42,23 @@ export function Combobox({
 }: ComboboxProps) {
   const [open, setOpen] = useState(false)
 
-  const selected = options.find((o) => o.value === value)
+  const allOptions = groups ? groups.flatMap((g) => g.options) : options ?? []
+  const selected = allOptions.find((o) => o.value === value)
+
+  const renderItem = (option: ComboboxOption) => (
+    <CommandItem
+      key={option.value}
+      value={option.label}
+      onSelect={() => {
+        onSelect(option.value)
+        setOpen(false)
+      }}
+      className="gap-1.5 px-2 py-1 text-xs"
+    >
+      <CheckIcon className={cn('size-3 shrink-0', option.value === value ? 'opacity-100' : 'opacity-0')} />
+      <span className="truncate">{option.label}</span>
+    </CommandItem>
+  )
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -61,22 +86,17 @@ export function Combobox({
             <CommandEmpty className="py-3 text-center text-xs text-ink-faint">
               {emptyText}
             </CommandEmpty>
-            <CommandGroup>
-              {options.map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.label}
-                  onSelect={() => {
-                    onSelect(option.value)
-                    setOpen(false)
-                  }}
-                  className="gap-1.5 px-2 py-1 text-xs"
-                >
-                  <CheckIcon className={cn('size-3 shrink-0', option.value === value ? 'opacity-100' : 'opacity-0')} />
-                  <span className="truncate">{option.label}</span>
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {groups ? (
+              groups.map((group) => (
+                <CommandGroup key={group.label} heading={group.label}>
+                  {group.options.map(renderItem)}
+                </CommandGroup>
+              ))
+            ) : (
+              <CommandGroup>
+                {(options ?? []).map(renderItem)}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

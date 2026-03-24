@@ -13,6 +13,7 @@ frontend/test-results/
 
 # Runtime state
 backend/versionRunning.txt
+backend/commandcount.txt
 
 # Data
 data/models/tmp*
