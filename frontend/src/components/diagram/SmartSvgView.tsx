@@ -14,8 +14,8 @@ interface SmartSvgViewProps {
  */
 const SVG_THEME_CSS = `
   .graph > polygon { fill: var(--color-surface-0); stroke: none; }
-  .cluster > polygon, .cluster > path { fill: var(--color-surface-1); stroke: var(--color-border); }
-  .cluster > text { fill: var(--color-ink); }
+  .cluster polygon, .cluster path { fill: var(--color-surface-1); stroke: var(--color-border); }
+  .cluster text { fill: var(--color-ink); }
   .node polygon, .node ellipse, .node path, .node polyline { stroke: var(--color-border-strong); fill: var(--color-surface-1); }
   .node text { fill: var(--color-ink); }
   .edge path { stroke: var(--color-ink-muted); fill: none; }
@@ -50,17 +50,18 @@ const SVG_THEME_CSS = `
   }
 `
 
-/** Colors that Graphviz hardcodes which we want CSS to control instead.
- *  NOTE: Do NOT include 'none' — it's intentional transparency (e.g. box
- *  outline polygons). Stripping it would let CSS fill them opaque, covering text. */
-const STRIP_COLORS = new Set([
-  'black', '#000000', '#000',
-  'white', '#ffffff', '#fff',
-])
-
-/** Should this inline color be stripped so CSS rules take over? */
+/**
+ * Should this inline color be stripped so CSS rules take over?
+ * Strips ALL hardcoded colors — CSS custom properties in SVG_THEME_CSS are
+ * the single source of truth for theming. Only `none` (intentional
+ * transparency) and `url(…)` (gradient/marker refs) are preserved.
+ */
 function shouldStripColor(value: string): boolean {
-  return STRIP_COLORS.has(value.toLowerCase())
+  const v = value.trim().toLowerCase()
+  if (v === 'none' || v === 'transparent' || v.startsWith('url(') || v.startsWith('var(')) {
+    return false
+  }
+  return true
 }
 
 /**
@@ -94,22 +95,23 @@ function processSvg(raw: string): { html: string; dims: { width: number; height:
   styleEl.textContent = SVG_THEME_CSS
   svgEl.insertBefore(styleEl, svgEl.firstChild)
 
-  // Strip hardcoded fill/stroke so CSS rules take effect.
-  // Only strip black/white — preserve intentional colors (e.g. colored edges).
-  // Special handling for fill="none": promote to inline style so it beats CSS
-  // specificity (presentation attributes lose to CSS rules, inline styles don't).
-  // This is critical for Graphviz class diagram box-outline polygons which use
-  // fill="none" and are drawn AFTER text — making them opaque would hide labels.
-  doc.querySelectorAll('.node *, .edge *, .graph > polygon, .cluster > polygon, .cluster > path, .cluster > text').forEach((el) => {
+  // Strip ALL hardcoded fill/stroke so CSS theme rules take effect.
+  // Special handling for fill="none" / stroke="none": promote to inline style
+  // so it beats CSS specificity (presentation attributes lose to CSS rules,
+  // inline styles don't). This is critical for Graphviz class diagram
+  // box-outline polygons which use fill="none" and are drawn AFTER text —
+  // making them opaque would hide labels.
+  doc.querySelectorAll('.node *, .edge *, .graph > polygon, .cluster polygon, .cluster path, .cluster text').forEach((el) => {
     for (const attr of ['fill', 'stroke']) {
       const val = el.getAttribute(attr)
       if (!val) continue
-      if (val.toLowerCase() === 'none') {
+      const v = val.trim().toLowerCase()
+      if (v === 'none') {
         // Promote to inline style so it overrides CSS rules
         el.removeAttribute(attr)
         const existing = el.getAttribute('style') ?? ''
         el.setAttribute('style', `${existing}${existing ? ';' : ''}${attr}:none`)
-      } else if (shouldStripColor(val)) {
+      } else if (shouldStripColor(v)) {
         el.removeAttribute(attr)
       }
     }

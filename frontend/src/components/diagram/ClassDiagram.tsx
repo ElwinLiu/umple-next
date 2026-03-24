@@ -36,14 +36,14 @@ function AutoFitView({ view }: { view: 'class' | 'structure' }) {
   const nodesInitialized = useNodesInitialized()
   const nodes = useDiagramStore((s) => s.diagramData[view]?.nodes ?? EMPTY_DIAGRAM_ELEMENTS.nodes)
   const nodeKey = nodes.map((n) => n.id).join(',')
-  const prevKeyRef = useRef(nodeKey)
+  const prevKeyRef = useRef('')
 
   useEffect(() => {
     if (!nodesInitialized) return
     if (prevKeyRef.current === nodeKey) return
     prevKeyRef.current = nodeKey
     requestAnimationFrame(() => {
-      fitView({ padding: 0.15, duration: 200, maxZoom: 1 })
+      fitView({ padding: 0.15, duration: 0, maxZoom: 1 })
     })
   }, [nodesInitialized, nodeKey, fitView])
 
@@ -293,8 +293,6 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
         onConnect={isEditable ? onConnect : undefined}
         onMouseMove={handleMouseMove}
         colorMode={rfColorMode}
-        fitView
-        fitViewOptions={{ padding: 0.15, maxZoom: 1 }}
         minZoom={0.2}
         maxZoom={2}
         defaultEdgeOptions={{ type: 'association' }}

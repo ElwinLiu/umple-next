@@ -39,7 +39,7 @@ export async function compileAndRefresh(
   signal?: AbortSignal,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
   const { code, modelId, setModelId } = useEditorStore.getState()
-  const { viewMode, setCompiling, setLastError, clearSvgCache, clearHtmlCache, clearDiagramData, setSvgForView, setHtmlForView } = useDiagramStore.getState()
+  const { viewMode, setCompiling, setLastError, clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useDiagramStore.getState()
   const { setExecutionOutput } = useUiStore.getState()
 
   if (!code.trim()) return { success: false, model: null }
@@ -49,7 +49,6 @@ export async function compileAndRefresh(
   setExecutionOutput('')
   clearSvgCache()
   clearHtmlCache()
-  clearDiagramData()
 
   let success = false
   let model: UmpleModel | null = null
