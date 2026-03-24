@@ -37,8 +37,14 @@ function countOccurrences(haystack: string, needle: string) {
   }
 }
 
+/** Normalize CRLF → LF so model-produced oldText (always LF) matches CRLF source. */
+function normalizeToLF(text: string): string {
+  return text.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
+}
+
 export function applyCodeEdits(code: string, edits: CodeEdit[]): CodeEditResult {
-  let nextCode = code
+  const normalizedCode = normalizeToLF(code)
+  let nextCode = normalizedCode
   const errors: string[] = []
 
   for (const { oldText, newText } of edits) {
@@ -47,7 +53,9 @@ export function applyCodeEdits(code: string, edits: CodeEdit[]): CodeEditResult 
       continue
     }
 
-    const occurrences = countOccurrences(nextCode, oldText)
+    const normalizedOld = normalizeToLF(oldText)
+    const normalizedNew = normalizeToLF(newText)
+    const occurrences = countOccurrences(nextCode, normalizedOld)
 
     if (occurrences === 0) {
       errors.push(`Text not found: "${oldText.slice(0, 50)}"`)
@@ -59,7 +67,7 @@ export function applyCodeEdits(code: string, edits: CodeEdit[]): CodeEditResult 
       continue
     }
 
-    nextCode = nextCode.replace(oldText, newText)
+    nextCode = nextCode.replace(normalizedOld, normalizedNew)
   }
 
   return {
