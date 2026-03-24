@@ -408,7 +408,8 @@ function ShowHideSection({ open, onToggle }: { open: boolean; onToggle: () => vo
 function GenerateCodeSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const code = useEditorStore((s) => s.code)
   const generatingCode = useUiStore((s) => s.generatingCode)
-  const { execute, running } = useExecute()
+  const { execute } = useExecute()
+  const running = useUiStore((s) => s.executing)
   const generate = useGenerate()
 
   const [targetId, setTargetId] = useState('Java')

@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { useUiStore } from '../../stores/uiStore'
 import { useAiConfigStore } from '@/stores/aiConfigStore'
-import { ChevronDown, ChevronUp, Check, AlertTriangle, X, Sparkles } from 'lucide-react'
+import { ChevronDown, ChevronUp, Check, AlertTriangle, X, Sparkles, Loader2 } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 
 function useIsAiConfigured() {
@@ -147,6 +147,7 @@ export function CompileStatusStrip() {
 
 export function OutputPanel() {
   const setOutputView = useUiStore((s) => s.setOutputView)
+  const executing = useUiStore((s) => s.executing)
   const outputRef = useRef<HTMLPreElement>(null)
   const executionOutput = useUiStore((s) => s.executionOutput)
   const executionErrors = useUiStore((s) => s.executionErrors)
@@ -166,7 +167,10 @@ export function OutputPanel() {
       {/* Header */}
       <div className="flex h-[38px] shrink-0 items-center justify-between border-b border-border px-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold text-ink-muted">Output</span>
+          <span className="text-xs font-semibold text-ink-muted flex items-center gap-1.5">
+            Output
+            {executing && <Loader2 className="size-3 animate-spin text-brand" />}
+          </span>
           <Badges />
           {isAiConfigured && hasIssues && (
             <button

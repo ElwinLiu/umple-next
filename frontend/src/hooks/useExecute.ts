@@ -8,17 +8,16 @@ import { compileAndRefresh } from './useCompiler'
 
 /** Sends code to the backend execute endpoint (code-exec service). */
 export function useExecute() {
-  const [running, setRunning] = useState(false)
   const runningRef = useRef(false)
 
   const execute = useCallback(async (languageOverride?: string) => {
     if (runningRef.current) return
     runningRef.current = true
-    setRunning(true)
 
-    const { setExecutionOutput, setOutputView } = useUiStore.getState()
+    const { setExecutionOutput, setOutputView, setExecuting } = useUiStore.getState()
     setOutputView('panel')
     setExecutionOutput('')
+    setExecuting(true)
 
     const code = useEditorStore.getState().code
     const language = languageOverride || useUiStore.getState().generatedLanguage
@@ -29,11 +28,11 @@ export function useExecute() {
       setExecutionOutput('', err instanceof Error ? err.message : 'Execution failed')
     } finally {
       runningRef.current = false
-      setRunning(false)
+      setExecuting(false)
     }
   }, [])
 
-  return { execute, running }
+  return { execute }
 }
 
 /** Triggers an immediate compile + diagram refresh (bypasses the auto-compile debounce). */

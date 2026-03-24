@@ -1,10 +1,10 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useUiStore } from '../../stores/uiStore'
 import { useDiagramStore, type DiagramView } from '../../stores/diagramStore'
 import { useCompile } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
 import { GENERATE_TARGETS } from '../../generation/targets'
-import { Hammer, Loader2, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
+import { Hammer, Loader2, Check, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,12 +27,26 @@ export function CanvasBanner() {
     diagramOnly, setDiagramOnly,
     rightPanelView, setRightPanelView,
     generatedTargetId, generatingCode,
-    generationRequested,
+    generationRequested, executing,
   } = useUiStore()
   const { viewMode, setViewMode } = useDiagramStore()
   const { compile } = useCompile()
   const compiling = useDiagramStore((s) => s.compiling)
+  const errorCount = useUiStore((s) => s.outputErrorCount)
   const handleGenerate = useGenerate()
+
+  // Compile success micro-interaction
+  const prevCompilingRef = useRef(compiling)
+  const [justCompiled, setJustCompiled] = useState(false)
+
+  useEffect(() => {
+    if (prevCompilingRef.current && !compiling && errorCount === 0) {
+      setJustCompiled(true)
+      const timer = setTimeout(() => setJustCompiled(false), 1200)
+      return () => clearTimeout(timer)
+    }
+    prevCompilingRef.current = compiling
+  }, [compiling, errorCount])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -76,10 +90,12 @@ export function CanvasBanner() {
           >
             {compiling ? (
               <Loader2 className="size-3.5 animate-spin" />
+            ) : justCompiled ? (
+              <Check className="size-3.5 text-status-success animate-fade-in" />
             ) : (
               <Hammer className="size-3.5" />
             )}
-            {compiling ? 'Compiling...' : 'Compile'}
+            {compiling ? 'Compiling...' : justCompiled ? <span className="text-status-success animate-fade-in">Compiled</span> : 'Compile'}
           </button>
         </Tip>
 
@@ -167,6 +183,12 @@ export function CanvasBanner() {
           </button>
         </Tip>
       </div>
+      {/* Indeterminate progress bar */}
+      {(compiling || generatingCode || executing) && (
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden">
+          <div className="h-full w-1/4 bg-brand animate-progress-indeterminate" />
+        </div>
+      )}
     </div>
   )
 }

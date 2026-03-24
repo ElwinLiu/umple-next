@@ -33,6 +33,7 @@ interface UiState {
   showAgentPanel: boolean
   executionOutput: string
   executionErrors: string | null
+  executing: boolean
   /** Parsed error/warning counts from Umple JSON error output */
   outputErrorCount: number
   outputWarningCount: number
@@ -58,6 +59,7 @@ interface UiState {
   generatedError: string | null
   generationRequested: boolean
 
+  setExecuting: (executing: boolean) => void
   toggleEditor: () => void
   toggleSidebar: () => void
   setSidebarWidth: (width: number) => void
@@ -108,6 +110,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   showAgentPanel: false,
   executionOutput: '',
   executionErrors: null,
+  executing: false,
   outputErrorCount: 0,
   outputWarningCount: 0,
   theme: loadThemePref(),
@@ -134,6 +137,7 @@ export const useUiStore = create<UiState>((set, get) => ({
   generatedError: null,
   generationRequested: false,
 
+  setExecuting: (executing) => set({ executing }),
   toggleEditor: () => set((s) => ({ showEditor: !s.showEditor })),
   toggleSidebar: () => set((s) => {
     const next = !s.showSidebar

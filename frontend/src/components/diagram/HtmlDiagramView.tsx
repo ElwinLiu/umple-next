@@ -1,12 +1,14 @@
 import { useMemo } from 'react'
+import type { DiagramView } from '../../stores/diagramStore'
 import { useIsDark } from '../../hooks/useIsDark'
 
 interface HtmlDiagramViewProps {
   html: string
+  viewMode?: DiagramView
 }
 
-/** Renders jar HTML output (EventSequence, StateTables) in a sandboxed iframe */
-export function HtmlDiagramView({ html }: HtmlDiagramViewProps) {
+/** Renders jar HTML output (EventSequence, StateTables, StructureDiagram) in a sandboxed iframe */
+export function HtmlDiagramView({ html, viewMode }: HtmlDiagramViewProps) {
   const isDark = useIsDark()
 
   const srcDoc = useMemo(() => {
@@ -41,6 +43,90 @@ export function HtmlDiagramView({ html }: HtmlDiagramViewProps) {
   }
 ` : ''
 
+    // Structure diagram: the JS runtime creates SVG elements with hardcoded
+    // light-mode colors via setAttribute("fill",...) and inline style strings.
+    // Presentation attributes (fill="white") are overridden by regular CSS;
+    // inline styles (style="fill: #000000") need !important.
+    const structureDarkOverrides = isDark && viewMode === 'structure' ? `
+  /* Text: black → light */
+  #svgCanvas text {
+    fill: ${textColor} !important;
+  }
+
+  /* White fills on shapes — both attribute and inline style forms */
+  #svgCanvas [fill="white"],
+  #svgCanvas [fill="#FFFFFF"],
+  #svgCanvas [fill="#fff"],
+  #svgCanvas [fill="rgb(255,255,255)"] {
+    fill: #252525;
+  }
+  #svgCanvas [style*="fill: rgb(255"],
+  #svgCanvas [style*="fill:rgb(255"] {
+    fill: #252525 !important;
+  }
+
+  /* Container label highlight: light gray → dark gray (attribute + inline style) */
+  #svgCanvas [fill="#e6e6e6"] {
+    fill: #383838;
+  }
+  #svgCanvas [style*="fill:#e6e6e6"],
+  #svgCanvas [style*="fill: #e6e6e6"] {
+    fill: #383838 !important;
+  }
+
+  /* Part highlight: bright cyan → muted teal for dark mode */
+  #svgCanvas [fill="#5DBCD2"] {
+    fill: #2a7d8d;
+  }
+
+  /* Port fills: light yellow → dark-mode yellow */
+  #svgCanvas [fill="#FFFFCC"] {
+    fill: #3d3920;
+  }
+
+  /* Black fills — attribute form (port symbols, arrowheads) */
+  #svgCanvas [fill="#000000"]:not(text),
+  #svgCanvas [fill="black"]:not(text) {
+    fill: #999;
+  }
+
+  /* Black fills — inline style form */
+  #svgCanvas [style*="fill: #000000"],
+  #svgCanvas [style*="fill:#000000"],
+  #svgCanvas [style*="fill:black"],
+  #svgCanvas [style*="fill: black"],
+  #svgCanvas [style*="fill: #222"],
+  #svgCanvas [style*="fill:#222"],
+  #svgCanvas [style*="fill: #444"],
+  #svgCanvas [style*="fill:#444"] {
+    fill: #999 !important;
+  }
+
+  /* Dark strokes — inline style → lighter for dark bg */
+  #svgCanvas [style*="stroke: #000000"],
+  #svgCanvas [style*="stroke:#000000"],
+  #svgCanvas [style*="stroke: black"],
+  #svgCanvas [style*="stroke:black"],
+  #svgCanvas [style*="stroke: #222"],
+  #svgCanvas [style*="stroke:#222"],
+  #svgCanvas [style*="stroke: #444"],
+  #svgCanvas [style*="stroke:#444"] {
+    stroke: #666 !important;
+  }
+
+  /* Dark strokes — attribute form */
+  #svgCanvas [stroke="#000000"],
+  #svgCanvas [stroke="black"] {
+    stroke: #666;
+  }
+
+  /* White strokes (containers using this.color default) → subtle border */
+  #svgCanvas [style*="stroke: rgb(255"],
+  #svgCanvas [style*="stroke:rgb(255"] {
+    stroke: #555 !important;
+  }
+` : ''
+
     return `<!DOCTYPE html>
 <html>
 <head>
@@ -71,10 +157,11 @@ export function HtmlDiagramView({ html }: HtmlDiagramViewProps) {
   }
   img { max-width: 100%; }
   ${darkOverrides}
+  ${structureDarkOverrides}
 </style>
 </body>
 </html>`
-  }, [html, isDark])
+  }, [html, isDark, viewMode])
 
   if (!html) {
     return (

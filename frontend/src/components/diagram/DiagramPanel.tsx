@@ -110,7 +110,7 @@ export function DiagramPanel() {
             </div>
           )}
           {showHtml ? (
-            <HtmlDiagramView html={currentHtml} />
+            <HtmlDiagramView html={currentHtml} viewMode={viewMode} />
           ) : showGv ? (
             <SmartSvgView svg={currentSvg} />
           ) : (
@@ -126,13 +126,17 @@ export function DiagramPanel() {
               </ErrorBanner>
             )}
             {generatingCode ? (
-              <div className="flex-1 flex items-center justify-center text-ink-faint text-sm">
-                <span className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
-                  Generating {generatedLanguage}...
-                </span>
+              <div className="flex-1 flex flex-col items-center justify-center gap-4 text-ink-faint text-sm">
+                <div className="flex flex-col gap-2.5 w-3/4 max-w-sm">
+                  <div className="h-3 rounded animate-shimmer" style={{ width: '90%' }} />
+                  <div className="h-3 rounded animate-shimmer" style={{ width: '70%', animationDelay: '0.15s' }} />
+                  <div className="h-3 rounded animate-shimmer" style={{ width: '80%', animationDelay: '0.3s' }} />
+                  <div className="h-3 rounded animate-shimmer" style={{ width: '55%', animationDelay: '0.45s' }} />
+                </div>
+                <span>Generating {generatedLanguage}...</span>
               </div>
             ) : (generatedCode || generatedHtml || generatedIframeUrl) ? (
+              <div className="flex-1 flex flex-col animate-fade-in">
               <GeneratedOutputView
                 kind={generatedKind}
                 code={generatedCode}
@@ -141,6 +145,7 @@ export function DiagramPanel() {
                 language={generatedLanguage}
                 downloads={generatedDownloads}
               />
+              </div>
             ) : (
               <div className="flex-1 flex items-center justify-center text-ink-faint text-sm">
                 No output returned — try a different model or language
