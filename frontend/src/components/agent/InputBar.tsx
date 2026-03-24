@@ -102,7 +102,7 @@ export function InputBar({
         {isStreaming ? (
           <button
             onClick={onStop}
-            className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-ink text-ink-inverse transition-colors hover:bg-ink-muted"
+            className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full bg-ink text-ink-inverse transition-all duration-100 hover:bg-ink-muted active:scale-90"
             aria-label="Stop generation"
           >
             <Square className="size-3.5" />
@@ -112,9 +112,9 @@ export function InputBar({
             onClick={onSend}
             disabled={!canSend}
             className={cn(
-              'flex size-8 shrink-0 items-center justify-center rounded-full transition-colors',
+              'flex size-8 shrink-0 items-center justify-center rounded-full transition-all duration-100',
               canSend
-                ? 'cursor-pointer bg-ink text-ink-inverse hover:bg-ink-muted'
+                ? 'cursor-pointer bg-ink text-ink-inverse hover:bg-ink-muted active:scale-90'
                 : 'cursor-default bg-surface-2 text-ink-faint',
             )}
             aria-label="Send message"

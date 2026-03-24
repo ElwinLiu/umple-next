@@ -11,7 +11,6 @@ import {
   Maximize2,
   Minimize2,
   RotateCcw,
-  Loader2,
 } from 'lucide-react'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
@@ -264,9 +263,15 @@ function AgentPanel() {
       {/* Messages */}
       <div ref={scrollRef} className="scrollbar-thin flex-1 overflow-y-auto px-4 py-3">
         {messages.length === 0 && (
-          <div className="flex h-full items-center justify-center">
+          <div className="flex h-full flex-col items-center justify-center gap-2">
+            <div className="flex size-10 items-center justify-center rounded-full bg-surface-1">
+              <span className="text-base text-ink-faint">U</span>
+            </div>
             <p className="text-sm text-ink-faint">
               Ask anything about your Umple model.
+            </p>
+            <p className="text-xs text-ink-faint/60">
+              Edit code, explain patterns, generate diagrams
             </p>
           </div>
         )}
@@ -284,8 +289,11 @@ function AgentPanel() {
 
           {isStreaming && (
             <div className="flex items-center gap-1.5 px-2 py-1">
-              <Loader2 className="size-3 animate-spin text-ink-faint" />
-              <span className="text-xs text-ink-faint">Working…</span>
+              <span className="typing-dots flex gap-0.5 text-ink-faint">
+                <span className="size-1.5 rounded-full bg-current" />
+                <span className="size-1.5 rounded-full bg-current" />
+                <span className="size-1.5 rounded-full bg-current" />
+              </span>
             </div>
           )}
 

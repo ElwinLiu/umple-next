@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from 'react'
+import { useState, useEffect, useRef, type ReactNode } from 'react'
 import { ChevronRight, Loader2, Check, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -30,14 +30,26 @@ export function ActionRow({
   const [open, setOpen] = useState(
     status === 'approval' || status === 'error',
   )
+  const prevStatus = useRef(status)
+  const [flash, setFlash] = useState(false)
 
   /* Auto-expand when approval is requested or an error occurs */
   useEffect(() => {
     if (status === 'approval' || status === 'error') setOpen(true)
   }, [status])
 
+  /* Flash green when transitioning to done */
+  useEffect(() => {
+    if (status === 'done' && prevStatus.current === 'running') {
+      setFlash(true)
+      const t = setTimeout(() => setFlash(false), 600)
+      return () => clearTimeout(t)
+    }
+    prevStatus.current = status
+  }, [status])
+
   return (
-    <div>
+    <div className={cn(flash && 'animate-action-done rounded-md')}>
       <button
         type="button"
         onClick={() => hasContent && setOpen((o) => !o)}

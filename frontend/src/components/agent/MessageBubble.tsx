@@ -244,7 +244,7 @@ export function MessageBubble({
   const isUser = message.role === 'user'
 
   return (
-    <div className={cn('flex flex-col gap-1', isUser && 'items-end')}>
+    <div className={cn('flex flex-col gap-1 animate-message-in', isUser && 'items-end')}>
       {message.parts.map((part, i) => {
         if (part.type === 'text') {
           if (!part.text) return null
