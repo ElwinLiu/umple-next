@@ -6,10 +6,6 @@ on:
   push:
     branches: [master]
 
-env:
-  REGISTRY: ghcr.io
-  IMAGE_PREFIX: ghcr.io/${{ github.repository }}
-
 jobs:
   frontend:
     name: Frontend
@@ -82,9 +78,10 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image tag
-        id: tag
+      - name: Set image metadata
+        id: meta
         run: |
+          echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
           if [ "${{ github.ref }}" = "refs/heads/master" ]; then
             echo "tag=latest" >> "$GITHUB_OUTPUT"
           else
@@ -99,8 +96,8 @@ jobs:
           file: backend/Dockerfile
           push: ${{ github.ref == 'refs/heads/master' }}
           tags: |
-            ${{ env.IMAGE_PREFIX }}/backend:${{ steps.tag.outputs.tag }}
-            ${{ env.IMAGE_PREFIX }}/backend:${{ steps.tag.outputs.sha }}
+            ${{ steps.meta.outputs.prefix }}/backend:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.prefix }}/backend:${{ steps.meta.outputs.sha }}
 
       - name: Build and push frontend
         uses: docker/build-push-action@v6
@@ -108,8 +105,8 @@ jobs:
           context: frontend
           push: ${{ github.ref == 'refs/heads/master' }}
           tags: |
-            ${{ env.IMAGE_PREFIX }}/frontend:${{ steps.tag.outputs.tag }}
-            ${{ env.IMAGE_PREFIX }}/frontend:${{ steps.tag.outputs.sha }}
+            ${{ steps.meta.outputs.prefix }}/frontend:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.prefix }}/frontend:${{ steps.meta.outputs.sha }}
 
       - name: Build and push code-exec
         uses: docker/build-push-action@v6
@@ -117,5 +114,5 @@ jobs:
           context: code-exec
           push: ${{ github.ref == 'refs/heads/master' }}
           tags: |
-            ${{ env.IMAGE_PREFIX }}/code-exec:${{ steps.tag.outputs.tag }}
-            ${{ env.IMAGE_PREFIX }}/code-exec:${{ steps.tag.outputs.sha }}
+            ${{ steps.meta.outputs.prefix }}/code-exec:${{ steps.meta.outputs.tag }}
+            ${{ steps.meta.outputs.prefix }}/code-exec:${{ steps.meta.outputs.sha }}
