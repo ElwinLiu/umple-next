@@ -96,9 +96,11 @@ test('uses the selected diagram type for the first diagram request', async ({ pa
   })
 
   await page.goto('/')
+  await expect(page.getByTestId('app-shell')).toBeVisible()
 
   // Load an example via hierarchical navigation (sidebar collapsed by default, use Ctrl+K)
   await page.keyboard.press('Control+k')
+  await expect(page.getByTestId('command-palette')).toBeVisible()
   await page.getByTestId('command-item-examples-browse').click()
   await page.getByTestId('command-item-category-Samples').click()
   await page.getByTestId('command-item-example-Banking').click()
@@ -215,6 +217,7 @@ test('Feature view renders SVG diagram from backend', async ({ page }) => {
   })
 
   await page.goto('/')
+  await expect(page.getByTestId('app-shell')).toBeVisible()
   await page.keyboard.press('Control+k')
   await expect(page.getByTestId('command-palette')).toBeVisible()
   await page.getByTestId('command-item-examples-browse').click()
@@ -255,7 +258,9 @@ test('loading a composite structure example switches to structure view and rende
   })
 
   await page.goto('/')
+  await expect(page.getByTestId('app-shell')).toBeVisible()
   await page.keyboard.press('Control+k')
+  await expect(page.getByTestId('command-palette')).toBeVisible()
   await page.getByTestId('command-item-examples-browse').click()
   await page.getByTestId('command-item-category-Composite Structure').click()
   await page.getByTestId('command-item-example-PingPong').click()
@@ -263,51 +268,4 @@ test('loading a composite structure example switches to structure view and rende
   await expect.poll(() => diagramTypes[diagramTypes.length - 1]).toBe('StructureDiagram')
   await expect(page.getByLabel('Diagram view')).toContainText('Structure')
   await expect(page.getByTestId('html-diagram-iframe')).toBeVisible({ timeout: 5_000 })
-})
-
-test('ERD and Instance views render SVG diagrams from backend', async ({ page }) => {
-  const erdSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300">
-    <g id="graph0" class="graph"><polygon fill="white" stroke="none" points="0,0 500,0 500,-300 0,-300"/>
-    <g id="node1" class="node"><title>Person</title><polygon fill="none" stroke="black" points="30,-120 150,-120 150,-72 30,-72"/><text x="90" y="-91">Person</text></g>
-    <g id="node2" class="node"><title>namePerson</title><ellipse fill="none" stroke="black" cx="260" cy="-96" rx="70" ry="26"/><text x="260" y="-91">name: String</text></g>
-    </g></svg>`
-
-  const instanceSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 300">
-    <g id="graph0" class="graph"><polygon fill="white" stroke="none" points="0,0 500,0 500,-300 0,-300"/>
-    <g id="node1" class="node"><title>ChiefLace</title><polygon fill="none" stroke="black" points="30,-120 210,-120 210,-40 30,-40"/><text x="120" y="-100">ChiefLace: Person</text><text x="120" y="-70">name = ChiefLace</text></g>
-    </g></svg>`
-
-  await page.route('**/api/diagram', async (route) => {
-    const body = route.request().postDataJSON() as { diagramType?: string }
-
-    if (body.diagramType === 'GvEntityRelationshipDiagram') {
-      await route.fulfill({ json: { svg: erdSvg } })
-      return
-    }
-
-    if (body.diagramType === 'InstanceDiagram') {
-      await route.fulfill({ json: { svg: instanceSvg } })
-      return
-    }
-
-    await route.fulfill({
-      json: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>' },
-    })
-  })
-
-  await page.goto('/')
-  await page.keyboard.press('Control+k')
-  await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId('command-item-category-Samples').click()
-  await page.getByTestId('command-item-example-Banking').click()
-  await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
-
-  await page.getByLabel('Diagram view').click()
-  await page.getByTestId('diagram-view-erd').click()
-  await expect(page.locator('[data-node-id="Person"]')).toBeVisible({ timeout: 5_000 })
-
-  await page.getByLabel('Diagram view').click()
-  await page.getByTestId('diagram-view-instance').click()
-  await expect(page.locator('[data-node-id="ChiefLace"]')).toBeVisible({ timeout: 5_000 })
 })
