@@ -1,3 +1,5 @@
+name: umple-next-dev
+
 services:
   backend:
     build:
@@ -13,7 +15,7 @@ services:
       - /usr/local/bin/txl:/usr/local/bin/txl:ro
       - /usr/local/lib/txl:/usr/local/lib/txl:ro
     environment:
-      - UMPLE_JAR=/jars/umple.jar
+      - UMPLE_SYNC_JAR=/jars/umplesync.jar
       - MODEL_STORE_PATH=/data/models
       - EXAMPLE_PATH=/examples
       - EXECUTION_URL=http://code-exec:4400

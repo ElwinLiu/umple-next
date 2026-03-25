@@ -1,31 +1,43 @@
+name: umple-next-prod
+
 services:
   backend:
-    build: ./backend
+    image: ghcr.io/elwinliu/umple-next/backend:latest
     restart: unless-stopped
     volumes:
       - ./data/models:/data/models
-      - ./jars:/jars:ro
-      - ./examples:/examples:ro
       - /usr/local/bin/txl:/usr/local/bin/txl:ro
       - /usr/local/lib/txl:/usr/local/lib/txl:ro
     environment:
-      - UMPLE_JAR=/jars/umple.jar
+      - UMPLE_SYNC_JAR=/jars/umplesync.jar
       - MODEL_STORE_PATH=/data/models
       - EXAMPLE_PATH=/examples
       - EXECUTION_URL=http://code-exec:4400
       - PORT=3001
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3100}
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
 
   frontend:
-    build: ./frontend
+    image: ghcr.io/elwinliu/umple-next/frontend:latest
     restart: unless-stopped
     ports:
       - "3100:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   code-exec:
-    build:
-      context: ./code-exec
+    image: ghcr.io/elwinliu/umple-next/code-exec:latest
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock

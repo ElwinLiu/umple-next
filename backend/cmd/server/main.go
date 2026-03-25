@@ -24,7 +24,7 @@ func main() {
 		log.Fatalf("failed to initialize model store: %v", err)
 	}
 
-	pool, err := compiler.NewPool(cfg.UmpleJar, cfg.UmplePort)
+	pool, err := compiler.NewPool(cfg.UmpleSyncJar, cfg.UmplePort)
 	if err != nil {
 		log.Fatalf("failed to initialize compiler pool: %v", err)
 	}

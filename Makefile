@@ -69,15 +69,9 @@ tidy:
 
 # ── Jar Management ──
 
-# Download the latest umple.jar from GitHub releases
+# Download the latest umplesync.jar from GitHub releases
 fetch-jar:
 	@mkdir -p jars
-	@echo "Fetching latest umple.jar from GitHub releases..."
-	@gh release download --repo umple/umple --pattern '*.jar' --dir jars --clobber
-	@cd jars && JAR=$$(ls -1 umple-*.jar 2>/dev/null | head -1) && \
-		if [ -n "$$JAR" ]; then \
-			ln -sf "$$JAR" umple.jar && \
-			echo "Downloaded $$JAR → jars/umple.jar"; \
-		else \
-			echo "Error: no umple-*.jar found in release assets" && exit 1; \
-		fi
+	@echo "Fetching latest umplesync.jar from GitHub releases..."
+	@gh release download --repo umple/umple --pattern 'umplesync.jar' --dir jars --clobber
+	@echo "Downloaded jars/umplesync.jar"

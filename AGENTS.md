@@ -10,15 +10,12 @@ Rewrite of UmpleOnline from legacy stack (PHP, jQuery) to modern stack. Old repo
 - **Code Exec**: Node.js service for running compiled code (`code-exec/`)
 
 ## Domain & Port Mapping
+| Service | Dev Port | Prod Port |
+|---------|----------|-----------|
+| Frontend | 3200 (Vite) | 3100 (nginx in Docker) |
+| Backend API | 3001 | 3001 |
 
-`umple-next.elwin.cc` resolves to this machine. Vite is configured with `allowedHosts: ['umple-next.elwin.cc']`.
-
-| Service | Dev Port | Prod Port | URL |
-|---------|----------|-----------|-----|
-| Frontend | 3100 (Vite) | 3100 (nginx) | `http://umple-next.elwin.cc:3100` |
-| Backend API | 3001 | 3001 | proxied via `/api/` |
-
-In dev, Vite proxies `/api/*` to `http://localhost:3001`. In prod, nginx handles this.
+In dev, Vite proxies `/api/*` to `http://localhost:3001`. In prod, the frontend nginx container proxies `/api/*` to the backend container.
 
 ## Development Workflow
 
@@ -102,4 +99,41 @@ All colors are semantic tokens defined in `frontend/src/index.css` `@theme`. Use
 
 Source: [uOttawa brand guidelines](https://www.uottawa.ca/about-us/administration-services/brand)
 
-**Important**: When previewing the app in a browser (including Chrome MCP), always use `http://umple-next.elwin.cc` without port. The external hostname is required for Chrome screenshot tools and cross-device access.
+**Important**: When previewing the app in a browser (including Chrome MCP), always use `https://umple-next.elwin.cc` (no port). Caddy handles TLS and proxies to localhost:3100.
+
+## CI/CD
+
+CI runs on every push/PR via GitHub Actions (`.github/workflows/ci.yml`): TypeScript check, frontend build, E2E tests, Go vet/build, Docker image builds.
+
+CD (`.github/workflows/deploy.yml`) triggers after CI succeeds on `master`: SSHs into the server, pulls pre-built images from GitHub Container Registry, and restarts services. No source code needed on the server.
+
+Images are pushed to `ghcr.io/elwinliu/umple-next/{backend,frontend,code-exec}`.
+
+| Secret | Value |
+|--------|-------|
+| `DEPLOY_HOST` | Server hostname/IP |
+| `DEPLOY_USER` | SSH username |
+| `DEPLOY_SSH_KEY` | SSH private key |
+| `DEPLOY_SSH_PORT` | SSH port (default 22) |
+| `DEPLOY_PATH` | Path to deploy directory (contains docker-compose.prod.yml + .env) |
+
+### Server setup (one-time)
+
+The deploy directory only needs two files and one data directory:
+
+```
+~/deploy/umple-next/
+├── docker-compose.prod.yml   # copy from repo
+├── .env                      # ALLOWED_ORIGINS=https://your-domain.example.com
+└── data/models/              # persistent model storage (created automatically)
+```
+
+No repo clone needed. Docker pulls images from the registry.
+
+### Migrating to prof's server
+
+1. Install Docker on the new server
+2. Create the deploy directory with `docker-compose.prod.yml` and `.env`
+3. Configure a reverse proxy (nginx, Caddy, Apache, or Cloudflare Tunnel) to forward the domain to `localhost:3100`
+4. Update the 5 GitHub secrets to point to the new server
+5. Push to master — CD deploys automatically

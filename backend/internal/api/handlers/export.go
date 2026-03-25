@@ -146,7 +146,7 @@ func (h *ExportHandler) exportGraphviz(w http.ResponseWriter, dir, modelID, form
 	_ = result // errors already checked
 }
 
-// exportUmple generates output directly via umple.jar (Yuml, Mermaid, etc.).
+// exportUmple generates output via umplesync.jar (Yuml, Mermaid, etc.).
 func (h *ExportHandler) exportUmple(w http.ResponseWriter, dir, modelID, generator string) {
 	command := fmt.Sprintf("-generate %s %s/model.ump", generator, dir)
 	result, err := h.pool.Execute(compiler.CompileRequest{

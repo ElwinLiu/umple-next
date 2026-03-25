@@ -1,8 +1,8 @@
 FROM golang:1.23-alpine AS builder
 WORKDIR /app
-COPY go.mod ./
+COPY backend/go.mod backend/go.sum* ./
 RUN go mod download || true
-COPY . .
+COPY backend/ .
 RUN go mod tidy && CGO_ENABLED=0 go build -o /server ./cmd/server
 
 FROM eclipse-temurin:17-jdk-alpine
@@ -21,6 +21,8 @@ RUN wget -q -O /etc/apk/keys/sgerrand.rsa.pub https://alpine-pkgs.sgerrand.com/s
  && ln -sf /usr/glibc-compat/lib/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
 WORKDIR /app
 COPY --from=builder /server /app/server
-RUN mkdir -p /data/models /examples
+COPY jars/ /jars/
+COPY examples/ /examples/
+RUN mkdir -p /data/models
 EXPOSE 3001
 CMD ["/app/server"]

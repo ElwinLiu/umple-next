@@ -31,11 +31,7 @@ type GenerateHandler struct {
 }
 
 func NewGenerateHandler(pool *compiler.Pool, store *model.Store, cfg *config.Config) *GenerateHandler {
-	jarPath := cfg.UmpleSyncJar
-	if _, err := os.Stat(jarPath); err != nil {
-		jarPath = cfg.UmpleJar
-	}
-	return &GenerateHandler{pool: pool, store: store, jarPath: jarPath}
+	return &GenerateHandler{pool: pool, store: store, jarPath: cfg.UmpleSyncJar}
 }
 
 type GenerateRequest struct {
