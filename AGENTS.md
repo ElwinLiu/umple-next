@@ -123,7 +123,15 @@ Images are pushed to `ghcr.io/elwinliu/umple-next/{backend,frontend,code-exec}` 
 | `DEPLOY_SSH_KEY` | SSH private key |
 | `DEPLOY_SSH_PORT` | SSH port (default 22) |
 | `DEPLOY_PATH` | Path to deploy directory (CD creates it + syncs compose file) |
-| `DEPLOY_HOST_FINGERPRINT` | SSH host key fingerprint used to verify the deployment target |
+| `DEPLOY_HOST_FINGERPRINT` | SSH host key fingerprint used to verify the deployment target (store as `SHA256:<hash>`, including the `SHA256:` prefix) |
+
+To generate it on your machine:
+
+```bash
+ssh-keyscan -p "$DEPLOY_SSH_PORT" "$DEPLOY_HOST" | ssh-keygen -lf -
+```
+
+From the output, copy the `SHA256:<hash>` value for the **ECDSA** key (`ecdsa-sha2-nistp256`). The release workflow uses `appleboy/scp-action` → `drone-scp` → Go's `crypto/ssh`, which negotiates ECDSA — not ED25519 like OpenSSH does. Using the wrong key type's fingerprint will cause a handshake mismatch.
 
 ### Server setup (one-time)
 
