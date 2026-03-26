@@ -14,6 +14,14 @@ compose() {
   fi
 }
 
+cleanup_docker_storage() {
+  echo "==> Pruning unused Docker images..."
+  docker image prune -a -f || true
+
+  echo "==> Pruning Docker build cache..."
+  docker builder prune -a -f || true
+}
+
 require_path() {
   local path="$1"
   local description="$2"
@@ -96,6 +104,8 @@ echo "    BACKEND_IMAGE=$BACKEND_IMAGE"
 echo "    FRONTEND_IMAGE=$FRONTEND_IMAGE"
 echo "    CODE_EXEC_IMAGE=$CODE_EXEC_IMAGE"
 
+cleanup_docker_storage
+
 echo "==> Pulling release images..."
 compose -f docker-compose.prod.yml pull
 
@@ -111,7 +121,6 @@ if ! curl -sf http://localhost:3100/ > /dev/null; then
   exit 1
 fi
 
-echo "==> Cleaning up old images..."
-docker image prune -f
+cleanup_docker_storage
 
 echo "==> Release complete!"
