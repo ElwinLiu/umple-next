@@ -65,7 +65,7 @@ export function DiagramPanel() {
       if (viewport) {
         const convert = format === 'png' ? toPng : toSvg
         const dataUrl = await convert(viewport, {
-          backgroundColor: document.documentElement.classList.contains('dark') ? '#1a1a1a' : '#ffffff',
+          backgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--color-surface-0').trim() || '#ffffff',
         })
         triggerDownload(dataUrl, filename)
         return

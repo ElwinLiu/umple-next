@@ -30,6 +30,66 @@ import { extractClassName, edgeDeletionParams } from '../../lib/diagramHelpers'
 const nodeTypes = { classNode: ClassNode }
 const edgeTypes = { association: AssociationEdge }
 
+function handleDeleteKey(e: KeyboardEvent, sync: (action: string, params: Record<string, string>) => Promise<unknown>): boolean {
+  if (e.key !== 'Delete' && e.key !== 'Backspace') return false
+
+  const { selectedNodeId, selectedEdgeId } = useEphemeralStore.getState()
+  const { diagramData, removeNode, removeEdge } = useSessionStore.getState()
+  const currentEdges = diagramData.class?.edges ?? []
+
+  if (selectedNodeId) {
+    e.preventDefault()
+    const className = extractClassName(selectedNodeId)
+    removeNode(selectedNodeId)
+    sync('removeClass', { className })
+    return true
+  }
+  if (selectedEdgeId) {
+    e.preventDefault()
+    const edge = currentEdges.find((ed) => ed.id === selectedEdgeId)
+    if (edge) {
+      const { action, params } = edgeDeletionParams(edge)
+      removeEdge(selectedEdgeId)
+      sync(action, params)
+    }
+    return true
+  }
+  return false
+}
+
+function handleRenameKey(e: KeyboardEvent): boolean {
+  if (e.key !== 'F2') return false
+  const { selectedNodeId, setEditing } = useEphemeralStore.getState()
+  if (!selectedNodeId) return false
+  e.preventDefault()
+  setEditing(selectedNodeId, 'name')
+  return true
+}
+
+function handleEscapeKey(e: KeyboardEvent, closeAllMenus: () => void): boolean {
+  if (e.key !== 'Escape') return false
+  const { editingNodeId, setEditing, setSelectedNode, setSelectedEdge } = useEphemeralStore.getState()
+  if (editingNodeId) {
+    setEditing(null, null)
+  } else {
+    setSelectedNode(null)
+    setSelectedEdge(null)
+  }
+  closeAllMenus()
+  return true
+}
+
+function handleUndoRedo(e: KeyboardEvent): boolean {
+  if (!(e.ctrlKey || e.metaKey) || e.key !== 'z') return false
+  e.preventDefault()
+  if (e.shiftKey) {
+    useSessionStore.getState().redo()
+  } else {
+    useSessionStore.getState().undo()
+  }
+  return true
+}
+
 /** Fits the viewport to all nodes whenever the node set changes */
 function AutoFitView({ view }: { view: 'class' | 'structure' }) {
   const { fitView } = useReactFlow()
@@ -219,57 +279,10 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
-      const { selectedNodeId, selectedEdgeId } = useEphemeralStore.getState()
-      const { diagramData, removeNode, removeEdge } = useSessionStore.getState()
-      const { setEditing } = useEphemeralStore.getState()
-      const currentEdges = diagramData.class?.edges ?? []
-
-      if (e.key === 'Delete' || e.key === 'Backspace') {
-        if (selectedNodeId) {
-          e.preventDefault()
-          const className = extractClassName(selectedNodeId)
-          removeNode(selectedNodeId)
-          sync('removeClass', { className })
-        } else if (selectedEdgeId) {
-          e.preventDefault()
-          const edge = currentEdges.find((ed) => ed.id === selectedEdgeId)
-          if (edge) {
-            const { action, params } = edgeDeletionParams(edge)
-            removeEdge(selectedEdgeId)
-            sync(action, params)
-          }
-        }
-        return
-      }
-
-      if (e.key === 'F2' && selectedNodeId) {
-        e.preventDefault()
-        setEditing(selectedNodeId, 'name')
-        return
-      }
-
-      if (e.key === 'Escape') {
-        const { editingNodeId } = useEphemeralStore.getState()
-        if (editingNodeId) {
-          setEditing(null, null)
-        } else {
-          useEphemeralStore.getState().setSelectedNode(null)
-          useEphemeralStore.getState().setSelectedEdge(null)
-        }
-        closeAllMenus()
-        return
-      }
-
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
-        if (e.shiftKey) {
-          e.preventDefault()
-          useSessionStore.getState().redo()
-        } else {
-          e.preventDefault()
-          useSessionStore.getState().undo()
-        }
-        return
-      }
+      if (handleDeleteKey(e, sync)) return
+      if (handleRenameKey(e)) return
+      if (handleEscapeKey(e, closeAllMenus)) return
+      if (handleUndoRedo(e)) return
     }
 
     document.addEventListener('keydown', handleKeyDown)

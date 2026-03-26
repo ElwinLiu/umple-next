@@ -37,8 +37,6 @@ class DockerExecution {
         if(path.endsWith('/')) {
             path = path.substring(0, path.length - 1);
         }
-        const pathArr=path.split('/');
-
         if(this.language=="Python"){
             return path ? `${path}/${this.mainFile}.py` : `${this.mainFile}.py`;
         }

@@ -17,6 +17,11 @@ const MAX_REQUESTS = 20;
 let mainFileName;
 let numberOfRequests = 0;
 
+function sendAndRelease(res, payload) {
+    numberOfRequests--;
+    return res.send(payload);
+}
+
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', requestsInFlight: numberOfRequests });
 });
@@ -40,8 +45,7 @@ app.post('/run' , (req, res)  =>
 
             const pathError = validatePath(path);
             if(pathError) {
-                numberOfRequests--;
-                return res.send(pathError);
+                return sendAndRelease(res, pathError);
             }
 
             // Check for main file error
@@ -50,11 +54,9 @@ app.post('/run' , (req, res)  =>
             // If there were error previously and now
             // It means, there was compilation error
             if(mainFileError && compileError) {
-                numberOfRequests--;
-                return res.send({errors:"", output:""});
-            } else if(mainFileError) { 
-                numberOfRequests--;
-                return res.send(mainFileError);
+                return sendAndRelease(res, {errors:"", output:""});
+            } else if(mainFileError) {
+                return sendAndRelease(res, mainFileError);
             }
 
             console.log("Given path:",req.body.path);
@@ -63,8 +65,7 @@ app.post('/run' , (req, res)  =>
             // Read main file content
             const mainFunctions = readMainFile(path);
             if(mainFunctions.length == 0 || mainFunctions[0] === '') {
-                numberOfRequests--;
-                return res.send({errors: "Main function name is not provided.", output:""});
+                return sendAndRelease(res, {errors: "Main function name is not provided.", output:""});
             }
 
             let output = "";
@@ -90,8 +91,8 @@ app.post('/run' , (req, res)  =>
                     {
                         output += `<strong>For main method in class ${mainFunction}:</strong>\n`
                         output += `${err || ""}\n`;
-                        linelimit=1000;
-                        lines = data.split("\n");
+                        const linelimit=1000;
+                        const lines = data.split("\n");
                         output += lines.slice(0,linelimit).join("\n")+"\n";
                         if(lines.length > linelimit+1) {
                           output += "...\n"+lines[lines.length-1]+"\n";
@@ -100,8 +101,7 @@ app.post('/run' , (req, res)  =>
                         totalServed++;
                         console.log("Processed request ", totalServed);
                         if(totalServed >= mainFunctions.length) {
-                            numberOfRequests--;
-                            return res.send({errors: "", output:output});
+                            return sendAndRelease(res, {errors: "", output:output});
                         }
                     });
                 } catch(err) {
@@ -110,8 +110,7 @@ app.post('/run' , (req, res)  =>
                     output += "Error processing Umple code execution request\n"
                     totalServed++;
                     if(totalServed >= mainFunctions.length) {
-                        numberOfRequests--;
-                        return res.send({errors: "", output:output});
+                        return sendAndRelease(res, {errors: "", output:output});
                     }
                 }
             });
@@ -161,7 +160,7 @@ const validatePath = (path) => {
     try {
         fs.accessSync(path, fs.constants.R_OK)
     } catch {
-        return {errors: 'Internal problem accessing oath for Umple Code Execution, Access to '+path+' denied.', output:""};
+        return {errors: 'Internal problem accessing path for Umple Code Execution, Access to '+path+' denied.', output:""};
     }
 
     return null;

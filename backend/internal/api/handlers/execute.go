@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
 
 	"github.com/umple/umple-next/backend/internal/compiler"
 	"github.com/umple/umple-next/backend/internal/execution"
@@ -51,27 +49,11 @@ func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure model directory exists
-	modelID := req.ModelID
-	if modelID == "" {
-		m, err := h.store.Create(req.Code)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to create model")
-			return
-		}
-		modelID = m.ID
-	} else {
-		dir := h.store.ModelDir(modelID)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to create model dir")
-			return
-		}
-		if err := os.WriteFile(filepath.Join(dir, "model.ump"), []byte(req.Code), 0644); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to write model")
-			return
-		}
+	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
+		return
 	}
-
-	dir := h.store.ModelDir(modelID)
 
 	// First: compile/generate the target language
 	command := fmt.Sprintf("-generate %s %s/model.ump -cx", req.Language, dir)

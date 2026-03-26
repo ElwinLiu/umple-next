@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -57,27 +58,11 @@ func (h *ExportHandler) Export(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure model directory exists
-	modelID := req.ModelID
-	if modelID == "" {
-		m, err := h.store.Create(req.Code)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to create model")
-			return
-		}
-		modelID = m.ID
-	} else {
-		dir := h.store.ModelDir(modelID)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to create model dir")
-			return
-		}
-		if err := os.WriteFile(filepath.Join(dir, "model.ump"), []byte(req.Code), 0644); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to write model")
-			return
-		}
+	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
+		return
 	}
-
-	dir := h.store.ModelDir(modelID)
 
 	switch req.Format {
 	case "svg":
@@ -106,7 +91,10 @@ func (h *ExportHandler) exportGraphviz(w http.ResponseWriter, dir, modelID, form
 
 	// Find the generated .gv file
 	gvFile := ""
-	entries, _ := os.ReadDir(dir)
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		log.Printf("warning: failed to read model directory %s: %v", dir, err)
+	}
 	for _, e := range entries {
 		if strings.HasSuffix(e.Name(), ".gv") {
 			gvFile = filepath.Join(dir, e.Name())

@@ -9,6 +9,13 @@ import (
 	"time"
 )
 
+const (
+	dialTimeout       = 5 * time.Second
+	restartDelay      = 2 * time.Second
+	startupMaxRetries = 20
+	startupPollDelay  = 250 * time.Millisecond
+)
+
 // Pool manages a long-running umplesync.jar server process and provides
 // TCP socket connections to it. If the JVM crashes, the pool auto-restarts it.
 type Pool struct {
@@ -48,15 +55,15 @@ func (p *Pool) Execute(req CompileRequest) (*CompileResult, error) {
 	}
 
 	// Connect
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("localhost:%d", p.port), 5*time.Second)
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("localhost:%d", p.port), dialTimeout)
 	if err != nil {
 		// Server might have died — try restart once
 		log.Printf("connection failed, restarting server: %v", err)
 		if restartErr := p.startServer(); restartErr != nil {
 			return nil, fmt.Errorf("restart failed: %w", restartErr)
 		}
-		time.Sleep(2 * time.Second)
-		conn, err = net.DialTimeout("tcp", fmt.Sprintf("localhost:%d", p.port), 5*time.Second)
+		time.Sleep(restartDelay)
+		conn, err = net.DialTimeout("tcp", fmt.Sprintf("localhost:%d", p.port), dialTimeout)
 		if err != nil {
 			return nil, fmt.Errorf("connect after restart failed: %w", err)
 		}
@@ -97,8 +104,8 @@ func (p *Pool) startServer() error {
 	}()
 
 	// Wait for server to be ready
-	for i := 0; i < 20; i++ {
-		time.Sleep(250 * time.Millisecond)
+	for i := 0; i < startupMaxRetries; i++ {
+		time.Sleep(startupPollDelay)
 		conn, err := net.DialTimeout("tcp", fmt.Sprintf("localhost:%d", p.port), time.Second)
 		if err == nil {
 			conn.Close()
@@ -107,7 +114,7 @@ func (p *Pool) startServer() error {
 		}
 	}
 
-	return fmt.Errorf("umplesync server did not become ready within 5s")
+	return fmt.Errorf("umplesync server did not become ready within %v", startupMaxRetries*startupPollDelay)
 }
 
 func (p *Pool) ensureRunning() error {

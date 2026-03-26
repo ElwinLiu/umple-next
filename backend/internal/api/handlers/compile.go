@@ -44,29 +44,13 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure model directory exists
-	modelID := req.ModelID
-	if modelID == "" {
-		m, err := h.store.Create(req.Code)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to create model")
-			return
-		}
-		modelID = m.ID
-	} else {
-		// Update existing model
-		dir := h.store.ModelDir(modelID)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to create model dir")
-			return
-		}
-		if err := os.WriteFile(filepath.Join(dir, "model.ump"), []byte(req.Code), 0644); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to write model")
-			return
-		}
+	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
+		return
 	}
 
 	// Compile to JSON using umplesync
-	dir := h.store.ModelDir(modelID)
 	command := fmt.Sprintf("-generate Json %s/model.ump", dir)
 
 	result, err := h.pool.Execute(compiler.CompileRequest{
@@ -93,8 +77,3 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func writeError(w http.ResponseWriter, code int, msg string) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(code)
-	json.NewEncoder(w).Encode(map[string]string{"error": msg})
-}

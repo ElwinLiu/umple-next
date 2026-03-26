@@ -40,6 +40,18 @@ type SyncResponse struct {
 
 const modelDelimiter = "//$?[End_of_model]$?"
 
+// Default dimensions for newly created classes (in pixels).
+const (
+	defaultClassWidth  = "109"
+	defaultClassHeight = "41"
+)
+
+// Default multiplicity and navigability for new associations.
+const (
+	defaultMultiplicity = "*"
+	defaultAssocPrefix  = "umpleAssociation_"
+)
+
 // validSyncActions lists the actions currently used by the frontend.
 // The adapter below translates them into the raw legacy umplesync commands.
 var validSyncActions = map[string]bool{
@@ -263,8 +275,8 @@ func (h *SyncHandler) buildLegacySyncCommand(req SyncRequest, umpFile string, di
 			Position: syncPosition{
 				X:      req.Params["x"],
 				Y:      req.Params["y"],
-				Width:  "109",
-				Height: "41",
+				Width:  defaultClassWidth,
+				Height: defaultClassHeight,
 			},
 			Attributes:   []syncAttribute{},
 			Methods:      []syncMethod{},
@@ -295,12 +307,12 @@ func (h *SyncHandler) buildLegacySyncCommand(req SyncRequest, umpFile string, di
 				Width:  "0",
 				Height: "0",
 			},
-			ID:                   "umpleAssociation_0",
+			ID:                   defaultAssocPrefix + "0",
 			ClassOneID:           req.Params["classOneId"],
 			ClassTwoID:           req.Params["classTwoId"],
 			Name:                 req.Params["classOneId"] + "__" + req.Params["classTwoId"],
-			MultiplicityOne:      "*",
-			MultiplicityTwo:      "*",
+			MultiplicityOne:      defaultMultiplicity,
+			MultiplicityTwo:      defaultMultiplicity,
 			RoleOne:              "",
 			RoleTwo:              "",
 			IsLeftNavigable:      "true",
@@ -319,7 +331,7 @@ func (h *SyncHandler) buildLegacySyncCommand(req SyncRequest, umpFile string, di
 			if cls := findClass(model.UmpleClasses, assoc.ClassTwoID); cls != nil {
 				assoc.ClassTwoPosition = cls.Position
 			}
-			assoc.ID = fmt.Sprintf("umpleAssociation_%d", len(model.UmpleAssociations))
+			assoc.ID = fmt.Sprintf("%s%d", defaultAssocPrefix, len(model.UmpleAssociations))
 		}
 
 		payload, err := json.Marshal(assoc)
@@ -367,7 +379,7 @@ func (h *SyncHandler) buildLegacySyncCommand(req SyncRequest, umpFile string, di
 		cls.OldName = cls.Name
 		cls.Name = newName
 		cls.ID = newName
-		cls.Position.Width = "109"
+		cls.Position.Width = defaultClassWidth
 
 		for i := range model.UmpleAssociations {
 			if model.UmpleAssociations[i].ClassOneID == className {

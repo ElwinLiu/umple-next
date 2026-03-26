@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@xyflow/react'
-import type { GvEdgeLayout, GvLayout, GvNodeLayout, Position, UmpleAttribute, UmpleMethod, UmpleModel } from '../../api/types'
+import type { GvEdgeLayout, GvLayout, GvNodeLayout, Position, UmpleAssociation, UmpleAttribute, UmpleMethod, UmpleModel } from '../../api/types'
 import type { ClassNodeData } from '../../components/diagram/nodes/ClassNode'
 import type { AssociationEdgeData } from '../../components/diagram/edges/AssociationEdge'
 import { buildGridPositions, buildGvPositions, clamp, createLayoutEdgeMatcher, estimateTextWidth, type DiagramNodeMetrics, type LayoutEntry } from './positions'
@@ -131,6 +131,99 @@ function buildDisplayMethods(methods: UmpleMethod[], layoutNode: GvNodeLayout | 
     })
 }
 
+const GENERALIZATION_EDGE_DATA: AssociationEdgeData = {
+  sourceMultiplicity: '',
+  targetMultiplicity: '',
+  sourceRole: '',
+  targetRole: '',
+  sourceDecoration: 'none',
+  targetDecoration: 'triangle',
+  type: 'generalization',
+}
+
+type LayoutEdgeMatcher = (predicate: (edge: GvEdgeLayout) => boolean) => GvEdgeLayout | undefined
+
+function buildAssociationEdge(
+  assoc: UmpleAssociation,
+  index: number,
+  matchLayoutEdge: LayoutEdgeMatcher,
+): Edge {
+  const source = assoc.classOneId
+    ? `class-${assoc.classOneId}`
+    : `class-${assoc.end1!.className}`
+  const target = assoc.classTwoId
+    ? `class-${assoc.classTwoId}`
+    : `class-${assoc.end2!.className}`
+
+  const srcMult = assoc.multiplicityOne ?? assoc.end1?.multiplicity ?? ''
+  const tgtMult = assoc.multiplicityTwo ?? assoc.end2?.multiplicity ?? ''
+  const srcRole = assoc.roleOne ?? assoc.end1?.roleName ?? ''
+  const tgtRole = assoc.roleTwo ?? assoc.end2?.roleName ?? ''
+
+  const leftComp = asBoolean(assoc.isLeftComposition, false)
+  const rightComp = asBoolean(assoc.isRightComposition, false)
+  const leftNav = asBoolean(assoc.isLeftNavigable, true)
+  const rightNav = asBoolean(assoc.isRightNavigable, true)
+
+  let edgeType: AssociationEdgeData['type'] = 'association'
+  if (leftComp || rightComp) {
+    edgeType = 'composition'
+  } else if (!leftNav && rightNav) {
+    edgeType = 'unidirectional'
+  } else if (leftNav && !rightNav) {
+    edgeType = 'unidirectional-reverse'
+  }
+
+  const isSelfLoop = source === target
+
+  const layoutEdge = matchLayoutEdge((edge) =>
+    edge.source === assoc.classOneId && edge.target === assoc.classTwoId &&
+    (edge.headLabel ?? '') === tgtMult && (edge.tailLabel ?? '') === srcMult,
+  ) ?? matchLayoutEdge((edge) =>
+    edge.source === source.replace(/^class-/, '') && edge.target === target.replace(/^class-/, '') &&
+    (edge.headLabel ?? '') === tgtMult && (edge.tailLabel ?? '') === srcMult,
+  )
+
+  return withExactEdgeLayout({
+    id: `assoc-${index}`,
+    source,
+    target,
+    ...(isSelfLoop ? { sourceHandle: 'right-source', targetHandle: 'right-target' } : {}),
+    type: 'association',
+    data: {
+      sourceMultiplicity: srcMult,
+      targetMultiplicity: tgtMult,
+      sourceRole: srcRole,
+      targetRole: tgtRole,
+      sourceDecoration: leftComp
+        ? 'diamond-filled'
+        : (!rightNav && leftNav ? 'arrow' : 'none'),
+      targetDecoration: rightComp
+        ? 'diamond-filled'
+        : (!leftNav && rightNav ? 'arrow' : 'none'),
+      type: edgeType,
+      assocId: assoc.id ?? '',
+    } satisfies AssociationEdgeData,
+  }, layoutEdge)
+}
+
+function buildInheritanceEdge(
+  id: string,
+  sourceName: string,
+  targetName: string,
+  matchLayoutEdge: LayoutEdgeMatcher,
+): Edge {
+  return withExactEdgeLayout({
+    id,
+    source: `class-${sourceName}`,
+    target: `class-${targetName}`,
+    type: 'association',
+    data: GENERALIZATION_EDGE_DATA,
+  }, matchLayoutEdge((edge) =>
+    edge.source === sourceName && edge.target === targetName && !edge.headLabel && !edge.tailLabel,
+  ))
+}
+
 export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): DiagramResult {
   const classes = model.umpleClasses || []
   const associations = model.umpleAssociations || []
@@ -203,102 +296,18 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
 
   const assocEdges: Edge[] = associations
     .filter((a) => (a.classOneId && a.classTwoId) || (a.end1 && a.end2))
-    .map((assoc, i): Edge => {
-      const source = assoc.classOneId
-        ? `class-${assoc.classOneId}`
-        : `class-${assoc.end1!.className}`
-      const target = assoc.classTwoId
-        ? `class-${assoc.classTwoId}`
-        : `class-${assoc.end2!.className}`
-
-      const srcMult = assoc.multiplicityOne ?? assoc.end1?.multiplicity ?? ''
-      const tgtMult = assoc.multiplicityTwo ?? assoc.end2?.multiplicity ?? ''
-      const srcRole = assoc.roleOne ?? assoc.end1?.roleName ?? ''
-      const tgtRole = assoc.roleTwo ?? assoc.end2?.roleName ?? ''
-
-      const leftComp = asBoolean(assoc.isLeftComposition, false)
-      const rightComp = asBoolean(assoc.isRightComposition, false)
-      const leftNav = asBoolean(assoc.isLeftNavigable, true)
-      const rightNav = asBoolean(assoc.isRightNavigable, true)
-
-      let edgeType: AssociationEdgeData['type'] = 'association'
-      if (leftComp || rightComp) {
-        edgeType = 'composition'
-      } else if (!leftNav && rightNav) {
-        edgeType = 'unidirectional'
-      } else if (leftNav && !rightNav) {
-        edgeType = 'unidirectional-reverse'
-      }
-
-      const isSelfLoop = source === target
-
-      const layoutEdge = matchLayoutEdge((edge) =>
-        edge.source === assoc.classOneId && edge.target === assoc.classTwoId &&
-        (edge.headLabel ?? '') === tgtMult && (edge.tailLabel ?? '') === srcMult,
-      ) ?? matchLayoutEdge((edge) =>
-        edge.source === source.replace(/^class-/, '') && edge.target === target.replace(/^class-/, '') &&
-        (edge.headLabel ?? '') === tgtMult && (edge.tailLabel ?? '') === srcMult,
-      )
-
-      return withExactEdgeLayout({
-        id: `assoc-${i}`,
-        source,
-        target,
-        ...(isSelfLoop ? { sourceHandle: 'right-source', targetHandle: 'right-target' } : {}),
-        type: 'association',
-        data: {
-          sourceMultiplicity: srcMult,
-          targetMultiplicity: tgtMult,
-          sourceRole: srcRole,
-          targetRole: tgtRole,
-          sourceDecoration: leftComp
-            ? 'diamond-filled'
-            : (!rightNav && leftNav ? 'arrow' : 'none'),
-          targetDecoration: rightComp
-            ? 'diamond-filled'
-            : (!leftNav && rightNav ? 'arrow' : 'none'),
-          type: edgeType,
-          assocId: assoc.id ?? '',
-        } satisfies AssociationEdgeData,
-      }, layoutEdge)
-    })
+    .map((assoc, i) => buildAssociationEdge(assoc, i, matchLayoutEdge))
 
   const genEdges: Edge[] = classes
     .filter((cls) => cls.extendsClass)
-    .map((cls): Edge => withExactEdgeLayout({
-      id: `gen-${cls.name}`,
-      source: `class-${cls.name}`,
-      target: `class-${cls.extendsClass}`,
-      type: 'association',
-      data: {
-        sourceMultiplicity: '',
-        targetMultiplicity: '',
-        sourceRole: '',
-        targetRole: '',
-        sourceDecoration: 'none',
-        targetDecoration: 'triangle',
-        type: 'generalization',
-      } satisfies AssociationEdgeData,
-    }, matchLayoutEdge((edge) => edge.source === cls.name && edge.target === cls.extendsClass && !edge.headLabel && !edge.tailLabel)))
+    .map((cls) => buildInheritanceEdge(`gen-${cls.name}`, cls.name, cls.extendsClass!, matchLayoutEdge))
 
   const implEdges: Edge[] = classes
     .filter((cls) => cls.implementedInterfaces?.length)
     .flatMap((cls) =>
-      cls.implementedInterfaces!.map((iface): Edge => withExactEdgeLayout({
-        id: `impl-${cls.name}-${iface}`,
-        source: `class-${cls.name}`,
-        target: `class-${iface}`,
-        type: 'association',
-        data: {
-          sourceMultiplicity: '',
-          targetMultiplicity: '',
-          sourceRole: '',
-          targetRole: '',
-          sourceDecoration: 'none',
-          targetDecoration: 'triangle',
-          type: 'generalization',
-        } satisfies AssociationEdgeData,
-      }, matchLayoutEdge((edge) => edge.source === cls.name && edge.target === iface && !edge.headLabel && !edge.tailLabel))),
+      cls.implementedInterfaces!.map((iface) =>
+        buildInheritanceEdge(`impl-${cls.name}-${iface}`, cls.name, iface, matchLayoutEdge),
+      ),
     )
 
   return {

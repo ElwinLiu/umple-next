@@ -4,6 +4,7 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"os/exec"
@@ -322,27 +323,11 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure model directory exists
-	modelID := req.ModelID
-	if modelID == "" {
-		m, err := h.store.Create(req.Code)
-		if err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to create model")
-			return
-		}
-		modelID = m.ID
-	} else {
-		dir := h.store.ModelDir(modelID)
-		if err := os.MkdirAll(dir, 0755); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to create model dir")
-			return
-		}
-		if err := os.WriteFile(filepath.Join(dir, "model.ump"), []byte(req.Code), 0644); err != nil {
-			writeError(w, http.StatusInternalServerError, "failed to write model")
-			return
-		}
+	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
+		return
 	}
-
-	dir := h.store.ModelDir(modelID)
 
 	// Remove stale .gv files so the directory scan after generation
 	// always picks the newly generated file, not a leftover from a
@@ -350,7 +335,9 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	if cleanEntries, err := os.ReadDir(dir); err == nil {
 		for _, e := range cleanEntries {
 			if strings.HasSuffix(e.Name(), ".gv") {
-				os.Remove(filepath.Join(dir, e.Name()))
+				if removeErr := os.Remove(filepath.Join(dir, e.Name())); removeErr != nil {
+					log.Printf("warning: failed to remove stale .gv file %s: %v", e.Name(), removeErr)
+				}
 			}
 		}
 	}
