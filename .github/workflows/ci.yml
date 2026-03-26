@@ -64,6 +64,7 @@ jobs:
 
   images:
     name: Build & Push Images
+    needs: [frontend, backend]
     runs-on: ubuntu-latest
     permissions:
       contents: read

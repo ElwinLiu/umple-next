@@ -1,6 +1,6 @@
 import { defineConfig, devices } from '@playwright/test'
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3100'
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? 'http://127.0.0.1:3200'
 const useExistingServer = process.env.PLAYWRIGHT_USE_EXISTING_SERVER === '1'
 
 export default defineConfig({
@@ -20,7 +20,7 @@ export default defineConfig({
   webServer: useExistingServer
     ? undefined
     : {
-        command: 'bun run dev -- --host 127.0.0.1 --port 3100',
+        command: 'bun run dev -- --host 127.0.0.1',
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

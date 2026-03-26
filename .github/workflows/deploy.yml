@@ -18,6 +18,18 @@ jobs:
     if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     environment: production
     steps:
+      - uses: actions/checkout@v4
+
+      - name: Copy compose file to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_SSH_PORT }}
+          source: docker-compose.prod.yml
+          target: ${{ secrets.DEPLOY_PATH }}
+
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -28,6 +40,12 @@ jobs:
           script: |
             set -euo pipefail
             cd ${{ secrets.DEPLOY_PATH }}
+
+            # Create .env with defaults if it doesn't exist
+            if [ ! -f .env ]; then
+              echo "ALLOWED_ORIGINS=http://localhost:3100" > .env
+              echo "WARNING: Created .env with default ALLOWED_ORIGINS — update for production"
+            fi
 
             echo "==> Pulling latest images..."
             docker compose -f docker-compose.prod.yml pull

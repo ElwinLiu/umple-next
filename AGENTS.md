@@ -105,7 +105,9 @@ Source: [uOttawa brand guidelines](https://www.uottawa.ca/about-us/administratio
 
 CI runs on every push/PR via GitHub Actions (`.github/workflows/ci.yml`): TypeScript check, frontend build, E2E tests, Go vet/build, Docker image builds.
 
-CD (`.github/workflows/deploy.yml`) triggers after CI succeeds on `master`: SSHs into the server, pulls pre-built images from GitHub Container Registry, and restarts services. No source code needed on the server.
+CD (`.github/workflows/deploy.yml`) triggers after CI succeeds on `master`: SSHs into the server, pulls pre-built images from GitHub Container Registry, and restarts services. No source code needed on the server. The `production` environment requires reviewer approval before deploy runs — this lets maintainers batch multiple merged PRs before shipping.
+
+Rollback (`.github/workflows/rollback.yml`) is a manual workflow: Actions → Rollback → enter an image tag (e.g. `sha-abc1234`) to redeploy a previous version.
 
 Images are pushed to `ghcr.io/elwinliu/umple-next/{backend,frontend,code-exec}`.
 
@@ -115,25 +117,28 @@ Images are pushed to `ghcr.io/elwinliu/umple-next/{backend,frontend,code-exec}`.
 | `DEPLOY_USER` | SSH username |
 | `DEPLOY_SSH_KEY` | SSH private key |
 | `DEPLOY_SSH_PORT` | SSH port (default 22) |
-| `DEPLOY_PATH` | Path to deploy directory (contains docker-compose.prod.yml + .env) |
+| `DEPLOY_PATH` | Path to deploy directory (CD creates it + syncs compose file) |
 
 ### Server setup (one-time)
 
-The deploy directory only needs two files and one data directory:
+CD automatically copies `docker-compose.prod.yml` from the repo and creates a default `.env` if missing. The only manual step is creating the deploy directory and configuring the `.env` for production:
 
-```
-~/deploy/umple-next/
-├── docker-compose.prod.yml   # copy from repo
-├── .env                      # ALLOWED_ORIGINS=https://your-domain.example.com
-└── data/models/              # persistent model storage (created automatically)
+```bash
+mkdir -p ~/deploy/umple-next
+echo "ALLOWED_ORIGINS=https://your-domain.example.com" > ~/deploy/umple-next/.env
 ```
 
-No repo clone needed. Docker pulls images from the registry.
+### GitHub environment setup
+
+Create a `production` environment in repo Settings → Environments:
+- **Required reviewers**: add maintainers who can approve deploys
+- **Deployment branches**: restrict to `master`
 
 ### Migrating to prof's server
 
 1. Install Docker on the new server
-2. Create the deploy directory with `docker-compose.prod.yml` and `.env`
+2. Create the deploy directory and `.env` (see above)
 3. Configure a reverse proxy (nginx, Caddy, Apache, or Cloudflare Tunnel) to forward the domain to `localhost:3100`
 4. Update the 5 GitHub secrets to point to the new server
-5. Push to master — CD deploys automatically
+5. Configure the `production` environment with required reviewers (see above)
+6. Push to master — CD deploys after reviewer approval
