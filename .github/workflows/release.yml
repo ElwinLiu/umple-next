@@ -121,6 +121,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT }}
           fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
+          debug: true
           source: docker-compose.prod.yml,scripts/release.sh
           target: ${{ secrets.DEPLOY_PATH }}
 
