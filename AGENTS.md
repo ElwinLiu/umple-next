@@ -99,7 +99,7 @@ All colors are semantic tokens defined in `frontend/src/index.css` `@theme`. Use
 
 Source: [uOttawa brand guidelines](https://www.uottawa.ca/about-us/administration-services/brand)
 
-**Important**: When previewing the app in a browser (including Chrome MCP), always use `https://umple-next.elwin.cc` (no port). Caddy handles TLS and proxies to localhost:3100.
+**Important**: When previewing the app in a browser (including Chrome MCP), always use `https://umple-next.elwin.cc` (no port). Cloudflare Tunnel handles TLS and proxies to localhost:3100.
 
 ## CI/CD
 
@@ -138,7 +138,7 @@ Create a `production` environment in repo Settings → Environments:
 
 1. Install Docker on the new server
 2. Create the deploy directory and `.env` (see above)
-3. Configure a reverse proxy (nginx, Caddy, Apache, or Cloudflare Tunnel) to forward the domain to `localhost:3100`
+3. Configure a reverse proxy (nginx or Cloudflare Tunnel) to forward the domain to `localhost:3100`
 4. Update the 5 GitHub secrets to point to the new server
 5. Configure the `production` environment with required reviewers (see above)
 6. Push to master — CD deploys after reviewer approval
