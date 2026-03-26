@@ -90,6 +90,13 @@ jobs:
           fi
           echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
 
+      - name: Fetch umplesync.jar
+        run: |
+          mkdir -p jars
+          gh release download --repo umple/umple --pattern 'umplesync.jar' --dir jars --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Build and push backend
         uses: docker/build-push-action@v6
         with:
