@@ -36,3 +36,4 @@ jars/*.jar
 # Environment
 .env
 .env.*
+!.env.example
