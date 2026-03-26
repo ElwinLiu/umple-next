@@ -25,6 +25,10 @@ app.all('*', (req, res, next) =>
     next();
 });
 
+app.get('/health', (req, res) => {
+    res.json({ status: 'ok', requestsInFlight: numberOfRequests });
+});
+
 app.post('/run' , (req, res)  => 
 {
     canProceed((err) => {
@@ -186,6 +190,5 @@ const canProceed = (callback) => {
 server.listen(port, () => {
     console.log("Listening at "+port)
 });
-
 
 

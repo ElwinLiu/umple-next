@@ -3,8 +3,6 @@ name: CI
 on:
   workflow_call:
   pull_request:
-  push:
-    branches: [master]
 
 jobs:
   frontend:
@@ -61,66 +59,3 @@ jobs:
 
       - name: Build
         run: CGO_ENABLED=0 go build -o /dev/null ./cmd/server
-
-  images:
-    name: Build & Push Images
-    needs: [frontend, backend]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Set image metadata
-        id: meta
-        run: |
-          echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.ref }}" = "refs/heads/master" ]; then
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=pr-${{ github.event.number }}" >> "$GITHUB_OUTPUT"
-          fi
-          echo "sha=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-
-      - name: Fetch umplesync.jar
-        run: |
-          mkdir -p jars
-          gh release download jars/v1.36.0 --pattern 'umplesync.jar' --dir jars --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build and push backend
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          file: backend/Dockerfile
-          push: ${{ github.ref == 'refs/heads/master' }}
-          tags: |
-            ${{ steps.meta.outputs.prefix }}/backend:${{ steps.meta.outputs.tag }}
-            ${{ steps.meta.outputs.prefix }}/backend:${{ steps.meta.outputs.sha }}
-
-      - name: Build and push frontend
-        uses: docker/build-push-action@v6
-        with:
-          context: frontend
-          push: ${{ github.ref == 'refs/heads/master' }}
-          tags: |
-            ${{ steps.meta.outputs.prefix }}/frontend:${{ steps.meta.outputs.tag }}
-            ${{ steps.meta.outputs.prefix }}/frontend:${{ steps.meta.outputs.sha }}
-
-      - name: Build and push code-exec
-        uses: docker/build-push-action@v6
-        with:
-          context: code-exec
-          push: ${{ github.ref == 'refs/heads/master' }}
-          tags: |
-            ${{ steps.meta.outputs.prefix }}/code-exec:${{ steps.meta.outputs.tag }}
-            ${{ steps.meta.outputs.prefix }}/code-exec:${{ steps.meta.outputs.sha }}

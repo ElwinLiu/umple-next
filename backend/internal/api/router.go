@@ -30,7 +30,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 	// Existing handlers
 	compileH := handlers.NewCompileHandler(pool, store)
 	exampleH := handlers.NewExampleHandler(cfg.ExamplePath)
-	healthH := handlers.NewHealthHandler()
+	healthH := handlers.NewHealthHandler(cfg)
 
 	// New handlers
 	generateH := handlers.NewGenerateHandler(pool, store, cfg)

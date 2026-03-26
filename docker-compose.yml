@@ -20,6 +20,9 @@ services:
       - EXAMPLE_PATH=/examples
       - EXECUTION_URL=http://code-exec:4400
       - PORT=3001
+    depends_on:
+      code-exec:
+        condition: service_healthy
 
   code-exec:
     build:
@@ -28,3 +31,9 @@ services:
       - "4400:4400"
     volumes:
       - ./data/models:/data/models
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4400/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

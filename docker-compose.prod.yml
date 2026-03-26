@@ -2,7 +2,7 @@ name: umple-next-prod
 
 services:
   backend:
-    image: ghcr.io/elwinliu/umple-next/backend:latest
+    image: ${BACKEND_IMAGE:-ghcr.io/elwinliu/umple-next/backend:latest}
     restart: unless-stopped
     volumes:
       - ./data/models:/data/models
@@ -15,6 +15,9 @@ services:
       - EXECUTION_URL=http://code-exec:4400
       - PORT=3001
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3100}
+    depends_on:
+      code-exec:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/health"]
       interval: 30s
@@ -23,7 +26,7 @@ services:
       start_period: 15s
 
   frontend:
-    image: ghcr.io/elwinliu/umple-next/frontend:latest
+    image: ${FRONTEND_IMAGE:-ghcr.io/elwinliu/umple-next/frontend:latest}
     restart: unless-stopped
     ports:
       - "3100:80"
@@ -37,8 +40,14 @@ services:
       retries: 3
 
   code-exec:
-    image: ghcr.io/elwinliu/umple-next/code-exec:latest
+    image: ${CODE_EXEC_IMAGE:-ghcr.io/elwinliu/umple-next/code-exec:latest}
     restart: unless-stopped
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/models:/data/models
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4400/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
