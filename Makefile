@@ -72,6 +72,6 @@ tidy:
 # Download the latest umplesync.jar from GitHub releases
 fetch-jar:
 	@mkdir -p jars
-	@echo "Fetching latest umplesync.jar from GitHub releases..."
-	@gh release download --repo umple/umple --pattern 'umplesync.jar' --dir jars --clobber
+	@echo "Fetching umplesync.jar from GitHub releases..."
+	@gh release download jars/v1.36.0 --pattern 'umplesync.jar' --dir jars --clobber
 	@echo "Downloaded jars/umplesync.jar"
