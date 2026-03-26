@@ -1,4 +1,4 @@
-FROM golang:1.22.12-alpine3.21 AS builder
+FROM golang:1.24.4-alpine3.21 AS builder
 WORKDIR /app
 COPY backend/go.mod backend/go.sum* ./
 RUN go mod download || true
@@ -9,7 +9,7 @@ FROM eclipse-temurin:17-jdk-alpine-3.23
 
 ARG GLIBC_VERSION=2.35-r1
 
-RUN apk add --no-cache graphviz python3
+RUN apk upgrade --no-cache && apk add --no-cache graphviz python3
 
 # TXL (required for Python code generation) is a glibc binary.
 # Install glibc compatibility layer for Alpine.
