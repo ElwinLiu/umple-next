@@ -30,6 +30,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT }}
           script: |
+            bash <<'ROLLBACK'
             set -euo pipefail
             cd ${{ secrets.DEPLOY_PATH }}
 
@@ -48,22 +49,23 @@ jobs:
                 image: ${PREFIX}/code-exec:${TAG}
             EOF
 
-            docker compose -f docker-compose.prod.yml -f docker-compose.override.yml pull
-            docker compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d --remove-orphans
+            docker-compose -f docker-compose.prod.yml -f docker-compose.override.yml pull
+            docker-compose -f docker-compose.prod.yml -f docker-compose.override.yml up -d --remove-orphans
 
             echo "==> Waiting for backend health..."
             for i in $(seq 1 30); do
-              if docker compose -f docker-compose.prod.yml exec -T backend wget -q --spider http://localhost:3001/api/health 2>/dev/null; then
+              if docker-compose -f docker-compose.prod.yml exec -T backend wget -q --spider http://localhost:3001/api/health 2>/dev/null; then
                 echo "Backend healthy!"
                 break
               fi
               if [ "$i" -eq 30 ]; then
                 echo "ERROR: Backend did not become healthy within 30s"
-                docker compose -f docker-compose.prod.yml logs backend --tail=50
+                docker-compose -f docker-compose.prod.yml logs backend --tail=50
                 exit 1
               fi
               sleep 1
             done
 
             echo "==> Rollback complete!"
-            docker compose -f docker-compose.prod.yml ps
+            docker-compose -f docker-compose.prod.yml ps
+            ROLLBACK
