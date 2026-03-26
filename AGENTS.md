@@ -62,6 +62,7 @@ If you add new Go dependencies: run `docker-compose exec backend go mod tidy`.
 | `make tidy` | Run `go mod tidy` for backend |
 | `make clean` | Stop services + remove temp model data |
 | `make fetch-jar` | Download latest umple.jar from GitHub releases |
+| `make check` | Run the local equivalent of the CI validation suite |
 
 ## Playwright
 
@@ -122,10 +123,11 @@ Images are pushed to `ghcr.io/elwinliu/umple-next/{backend,frontend,code-exec}` 
 | `DEPLOY_SSH_KEY` | SSH private key |
 | `DEPLOY_SSH_PORT` | SSH port (default 22) |
 | `DEPLOY_PATH` | Path to deploy directory (CD creates it + syncs compose file) |
+| `DEPLOY_HOST_FINGERPRINT` | SSH host key fingerprint used to verify the deployment target |
 
 ### Server setup (one-time)
 
-Release automatically copies `docker-compose.prod.yml` from the repo and creates a default `.env` if missing. The server still needs a few manual prerequisites:
+Release automatically copies `docker-compose.prod.yml` from the repo, but the server `.env` must already exist with a production `ALLOWED_ORIGINS` value. The server still needs a few manual prerequisites:
 
 ```bash
 mkdir -p ~/deploy/umple-next
@@ -150,6 +152,6 @@ Create a `production` environment in repo Settings → Environments:
 3. Create the deploy directory, `.env`, and `data/models` directory (see above)
 4. Copy any existing `data/models` contents if you need persisted models on the new server
 5. Configure a reverse proxy (nginx or Cloudflare Tunnel) to forward the domain to `localhost:3100`
-6. Update the 5 GitHub secrets to point to the new server
+6. Update the 6 GitHub secrets to point to the new server
 7. Configure the `production` environment with required reviewers (see above)
 8. Run the Release workflow for the commit you want in production

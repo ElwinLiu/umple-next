@@ -1,11 +1,11 @@
-FROM golang:1.23-alpine AS builder
+FROM golang:1.22.12-alpine3.21 AS builder
 WORKDIR /app
 COPY backend/go.mod backend/go.sum* ./
 RUN go mod download || true
 COPY backend/ .
 RUN go mod tidy && CGO_ENABLED=0 go build -o /server ./cmd/server
 
-FROM eclipse-temurin:17-jdk-alpine
+FROM eclipse-temurin:17-jdk-alpine-3.23
 
 ARG GLIBC_VERSION=2.35-r1
 

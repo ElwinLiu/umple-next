@@ -25,6 +25,7 @@ jobs:
   release:
     name: Release to Production
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     environment: production
     permissions:
       contents: write
@@ -34,6 +35,15 @@ jobs:
         with:
           ref: ${{ inputs.git_ref }}
           fetch-depth: 0
+
+      - name: Validate deployment secrets
+        env:
+          DEPLOY_HOST_FINGERPRINT: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
+        run: |
+          if [ -z "$DEPLOY_HOST_FINGERPRINT" ]; then
+            echo "DEPLOY_HOST_FINGERPRINT secret is required for SSH host key verification."
+            exit 1
+          fi
 
       - name: Resolve release metadata
         id: meta
@@ -62,6 +72,32 @@ jobs:
             echo "code_exec_image=${PREFIX}/code-exec:sha-${SHA}"
           } >> "$GITHUB_OUTPUT"
 
+      - name: Determine latest release behavior
+        id: latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_SHA: ${{ steps.meta.outputs.sha }}
+        run: |
+          latest_target="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq '.target_commitish' 2>/dev/null || true)"
+
+          if [ -z "$latest_target" ]; then
+            echo "mark_latest=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          latest_sha="$(git rev-parse "${latest_target}^{commit}" 2>/dev/null || true)"
+
+          if [ -z "$latest_sha" ]; then
+            echo "mark_latest=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if git merge-base --is-ancestor "$latest_sha" "$TARGET_SHA"; then
+            echo "mark_latest=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "mark_latest=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -85,6 +121,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT }}
+          fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
           source: docker-compose.prod.yml,scripts/release.sh
           target: ${{ secrets.DEPLOY_PATH }}
 
@@ -95,6 +132,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT }}
+          fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
           script: |
             bash "${{ secrets.DEPLOY_PATH }}/scripts/release.sh" \
               "${{ secrets.DEPLOY_PATH }}" \
@@ -106,10 +144,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           INPUT_NOTES: ${{ inputs.notes }}
+          MARK_LATEST: ${{ steps.latest.outputs.mark_latest }}
         run: |
           SUMMARY="$(cat <<EOF
           Deployed commit: \`${{ steps.meta.outputs.sha }}\`
           Source ref: \`${{ inputs.git_ref }}\`
+          Updated latest release pointer: \`${MARK_LATEST}\`
 
           Images:
           - \`${{ steps.meta.outputs.backend_image }}\`
@@ -125,12 +165,21 @@ jobs:
           ${INPUT_NOTES}"
           fi
 
-          gh release create "${{ steps.meta.outputs.release_tag }}" \
-            --target "${{ steps.meta.outputs.sha }}" \
-            --title "${{ steps.meta.outputs.release_title }}" \
-            --latest \
-            --generate-notes \
+          release_cmd=(
+            gh release create "${{ steps.meta.outputs.release_tag }}"
+            --target "${{ steps.meta.outputs.sha }}"
+            --title "${{ steps.meta.outputs.release_title }}"
+            --generate-notes
             --notes "$SUMMARY"
+          )
+
+          if [ "$MARK_LATEST" = "true" ]; then
+            release_cmd+=(--latest)
+          else
+            release_cmd+=(--latest=false)
+          fi
+
+          "${release_cmd[@]}"
 
       - name: Summarize release
         run: |
@@ -141,4 +190,5 @@ jobs:
             echo "- Backend: \`${{ steps.meta.outputs.backend_image }}\`"
             echo "- Frontend: \`${{ steps.meta.outputs.frontend_image }}\`"
             echo "- Code Exec: \`${{ steps.meta.outputs.code_exec_image }}\`"
+            echo "- Updated latest release pointer: \`${{ steps.latest.outputs.mark_latest }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

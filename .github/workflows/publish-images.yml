@@ -3,27 +3,53 @@ name: Publish Images
 on:
   push:
     branches: [master]
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: 'Commit SHA to build (leave empty for branch HEAD)'
+        required: false
+        default: ''
+
+concurrency:
+  group: publish-images-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
     uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.commit || github.sha }}
 
   images:
     name: Build & Push Images
     needs: validate
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     permissions:
       contents: read
+      id-token: write
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit || github.sha }}
+
+      - name: Read shared versions
+        id: versions
+        run: |
+          echo "umplesync_version=$(cat .umplesync-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve effective SHA
+        id: resolve
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Set image metadata
         id: meta
         run: |
+          SHA="${{ steps.resolve.outputs.sha }}"
           echo "prefix=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
-          echo "sha_tag=sha-${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
-          echo "short_sha=${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          echo "sha_tag=sha-${SHA}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHA::12}" >> "$GITHUB_OUTPUT"
           echo "created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
 
       - name: Log in to GitHub Container Registry
@@ -33,14 +59,18 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Fetch umplesync.jar
         run: |
           mkdir -p jars
-          gh release download jars/v1.36.0 --pattern 'umplesync.jar' --dir jars --clobber
+          gh release download "jars/${{ steps.versions.outputs.umplesync_version }}" --pattern 'umplesync.jar' --dir jars --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push backend
+        id: backend_build
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -51,10 +81,18 @@ jobs:
             ${{ steps.meta.outputs.prefix }}/backend:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.resolve.outputs.sha }}
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+            org.opencontainers.image.vendor=University of Ottawa
+            org.opencontainers.image.description=Umple Next backend API
+          cache-from: type=gha,scope=backend
+          cache-to: type=gha,mode=max,scope=backend
+          sbom: true
+          provenance: true
 
       - name: Build and push frontend
+        id: frontend_build
         uses: docker/build-push-action@v6
         with:
           context: frontend
@@ -64,10 +102,18 @@ jobs:
             ${{ steps.meta.outputs.prefix }}/frontend:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.resolve.outputs.sha }}
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+            org.opencontainers.image.vendor=University of Ottawa
+            org.opencontainers.image.description=Umple Next frontend
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+          sbom: true
+          provenance: true
 
       - name: Build and push code-exec
+        id: code_exec_build
         uses: docker/build-push-action@v6
         with:
           context: code-exec
@@ -77,8 +123,51 @@ jobs:
             ${{ steps.meta.outputs.prefix }}/code-exec:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.resolve.outputs.sha }}
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+            org.opencontainers.image.vendor=University of Ottawa
+            org.opencontainers.image.description=Umple Next code execution service
+          cache-from: type=gha,scope=code-exec
+          cache-to: type=gha,mode=max,scope=code-exec
+          sbom: true
+          provenance: true
+
+      - name: Scan backend image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ steps.meta.outputs.prefix }}/backend@${{ steps.backend_build.outputs.digest }}
+          format: table
+          ignore-unfixed: true
+          severity: CRITICAL
+          exit-code: '1'
+
+      - name: Scan frontend image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ steps.meta.outputs.prefix }}/frontend@${{ steps.frontend_build.outputs.digest }}
+          format: table
+          ignore-unfixed: true
+          severity: CRITICAL
+          exit-code: '1'
+
+      - name: Scan code-exec image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ steps.meta.outputs.prefix }}/code-exec@${{ steps.code_exec_build.outputs.digest }}
+          format: table
+          ignore-unfixed: true
+          severity: CRITICAL
+          exit-code: '1'
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.8.1
+
+      - name: Sign published images
+        run: |
+          cosign sign --yes "${{ steps.meta.outputs.prefix }}/backend@${{ steps.backend_build.outputs.digest }}"
+          cosign sign --yes "${{ steps.meta.outputs.prefix }}/frontend@${{ steps.frontend_build.outputs.digest }}"
+          cosign sign --yes "${{ steps.meta.outputs.prefix }}/code-exec@${{ steps.code_exec_build.outputs.digest }}"
 
       - name: Summarize published images
         run: |
@@ -88,4 +177,7 @@ jobs:
             echo "- Backend: \`${{ steps.meta.outputs.prefix }}/backend:${{ steps.meta.outputs.sha_tag }}\`"
             echo "- Frontend: \`${{ steps.meta.outputs.prefix }}/frontend:${{ steps.meta.outputs.sha_tag }}\`"
             echo "- Code Exec: \`${{ steps.meta.outputs.prefix }}/code-exec:${{ steps.meta.outputs.sha_tag }}\`"
+            echo "- Signed backend digest: \`${{ steps.meta.outputs.prefix }}/backend@${{ steps.backend_build.outputs.digest }}\`"
+            echo "- Signed frontend digest: \`${{ steps.meta.outputs.prefix }}/frontend@${{ steps.frontend_build.outputs.digest }}\`"
+            echo "- Signed code-exec digest: \`${{ steps.meta.outputs.prefix }}/code-exec@${{ steps.code_exec_build.outputs.digest }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

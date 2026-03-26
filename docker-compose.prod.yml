@@ -4,6 +4,11 @@ services:
   backend:
     image: ${BACKEND_IMAGE:-ghcr.io/elwinliu/umple-next/backend:latest}
     restart: unless-stopped
+    cpus: 2
+    mem_limit: 2g
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
     volumes:
       - ./data/models:/data/models
       - /usr/local/bin/txl:/usr/local/bin/txl:ro
@@ -14,7 +19,7 @@ services:
       - EXAMPLE_PATH=/examples
       - EXECUTION_URL=http://code-exec:4400
       - PORT=3001
-      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-http://localhost:3100}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     depends_on:
       code-exec:
         condition: service_healthy
@@ -28,6 +33,11 @@ services:
   frontend:
     image: ${FRONTEND_IMAGE:-ghcr.io/elwinliu/umple-next/frontend:latest}
     restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "3100:80"
     depends_on:
@@ -42,6 +52,13 @@ services:
   code-exec:
     image: ${CODE_EXEC_IMAGE:-ghcr.io/elwinliu/umple-next/code-exec:latest}
     restart: unless-stopped
+    cpus: 1
+    mem_limit: 768m
+    pids_limit: 256
+    security_opt:
+      - no-new-privileges:true
+    group_add:
+      - "${DOCKER_GID}"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/models:/data/models

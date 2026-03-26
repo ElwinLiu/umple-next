@@ -1,0 +1,12 @@
+.git
+.github
+.claude
+frontend/node_modules
+frontend/dist
+frontend/playwright-report
+frontend/test-results
+code-exec/node_modules
+data/models
+backend/server
+backend/tmp
+**/*.tsbuildinfo

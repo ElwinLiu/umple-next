@@ -19,6 +19,12 @@ make test-e2e          # Mocked frontend smoke tests
 make test-e2e-live     # Against the live backend stack (requires `make dev`)
 ```
 
+### Full local CI check
+
+```bash
+make check             # Frontend typecheck/build/e2e + backend download/vet/build
+```
+
 ### AI agent live tests
 
 The AI agent test suite (`frontend/src/ai/__tests__/agent-loop.test.ts`) calls a real LLM API. These tests are **skipped by default** and require a personal API key to run.

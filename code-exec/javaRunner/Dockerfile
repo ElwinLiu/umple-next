@@ -1,11 +1,9 @@
-FROM --platform=linux/amd64 alpine
+FROM alpine:3.22
 
-RUN addgroup nodeuser
-RUN adduser  -D -H -S nodeuser -G nodeuser
+RUN addgroup -S nodeuser
+RUN adduser -D -H -S nodeuser -G nodeuser
 
-RUN apk add sudo
-RUN sudo apk add --no-cache python3
-RUN sudo apk add --no-cache openjdk17
+RUN apk add --no-cache python3 openjdk17
 
 RUN mkdir output 
 RUN mkdir input

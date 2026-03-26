@@ -29,7 +29,10 @@ services:
       context: ./code-exec
     ports:
       - "4400:4400"
+    group_add:
+      - "${DOCKER_GID:-0}"
     volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
       - ./data/models:/data/models
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:4400/health"]
