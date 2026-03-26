@@ -17,14 +17,6 @@ const MAX_REQUESTS = 20;
 let mainFileName;
 let numberOfRequests = 0;
 
-app.all('*', (req, res, next) =>
-{
-    res.header('Access-Control-Allow-Origin', '*'); // TODO CHANGE ORIGIN
-    res.header('Access-Control-Allow-Methods', 'PUT, GET, POST, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Content-Type');
-    next();
-});
-
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', requestsInFlight: numberOfRequests });
 });

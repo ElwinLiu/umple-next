@@ -6,7 +6,7 @@ Rewrite of UmpleOnline from legacy stack (PHP, jQuery) to modern stack. Old repo
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Vite, CodeMirror 6, ReactFlow, Zustand
 - **Runtime**: Bun — use `bun install`, `bun run dev`, `bun run build`
-- **Backend**: Go 1.22 (Chi router), communicates with umple.jar (Java) via TCP and Graphviz
+- **Backend**: Go 1.24 (Chi router), communicates with umple.jar (Java) via TCP and Graphviz
 - **Code Exec**: Node.js service for running compiled code (`code-exec/`)
 
 ## Domain & Port Mapping
@@ -28,7 +28,7 @@ make dev          # Starts backend (Docker) then frontend (bun dev)
 Or separately:
 ```
 make dev-backend   # Docker: backend (Go + Air)
-make dev-frontend  # bun run dev (Vite HMR on port 3100)
+make dev-frontend  # bun run dev (Vite HMR on port 3200)
 ```
 
 ### Frontend changes
@@ -84,7 +84,7 @@ When writing tests:
 ## Philosophy
 
 - No backward compatibility. This repo has no existing users — always move forward. Use the latest tools, break things freely, never add shims or deprecation paths.
-- When developing new features that are related to compiler, please see.
+- When developing new features that are related to the compiler, refer to the old codebase at `~/code/umple/` for reference.
 
 ## Brand & Colors
 

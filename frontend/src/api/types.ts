@@ -57,7 +57,6 @@ export interface UmpleAssociation {
   isSymmetricReflexive?: string
   offsetOnePosition?: Position
   offsetTwoPosition?: Position
-  // Legacy nested format (kept for backward compat with any transforming middleware)
   end1?: AssociationEnd
   end2?: AssociationEnd
 }
