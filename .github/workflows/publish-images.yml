@@ -134,27 +134,30 @@ jobs:
           provenance: true
 
       - name: Scan backend image
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ steps.meta.outputs.prefix }}/backend@${{ steps.backend_build.outputs.digest }}
+          version: v0.69.3
           format: table
           ignore-unfixed: true
           severity: CRITICAL
           exit-code: '1'
 
       - name: Scan frontend image
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ steps.meta.outputs.prefix }}/frontend@${{ steps.frontend_build.outputs.digest }}
+          version: v0.69.3
           format: table
           ignore-unfixed: true
           severity: CRITICAL
           exit-code: '1'
 
       - name: Scan code-exec image
-        uses: aquasecurity/trivy-action@v0.33.1
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ steps.meta.outputs.prefix }}/code-exec@${{ steps.code_exec_build.outputs.digest }}
+          version: v0.69.3
           format: table
           ignore-unfixed: true
           severity: CRITICAL
