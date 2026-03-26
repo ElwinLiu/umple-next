@@ -113,6 +113,10 @@ jobs:
           docker buildx imagetools inspect "${{ steps.meta.outputs.frontend_image }}" > /dev/null
           docker buildx imagetools inspect "${{ steps.meta.outputs.code_exec_image }}" > /dev/null
 
+      - name: Diagnose SSH host key fingerprint
+        run: |
+          ssh-keyscan -p ${{ secrets.DEPLOY_SSH_PORT }} ${{ secrets.DEPLOY_HOST }} 2>/dev/null | ssh-keygen -lf -
+
       - name: Copy release files to server
         uses: appleboy/scp-action@v1
         with:
