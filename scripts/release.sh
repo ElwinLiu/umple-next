@@ -176,6 +176,15 @@ echo "    DOCKER_GID=$DOCKER_GID"
 
 cleanup_docker_storage
 
+# Stop containers from any previous compose project name (e.g. after a rename).
+# This is harmless if no old project exists.
+for old_project in umple-next-prod; do
+  if docker ps -a --filter "label=com.docker.compose.project=${old_project}" --format '{{.ID}}' | head -1 | grep -q .; then
+    echo "==> Stopping old compose project '${old_project}'..."
+    docker compose -p "$old_project" down --remove-orphans || true
+  fi
+done
+
 ROLLBACK_ARMED=1
 
 echo "==> Pulling release images..."
