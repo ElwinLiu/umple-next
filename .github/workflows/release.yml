@@ -118,13 +118,18 @@ jobs:
 
       - name: Release via SSH
         uses: appleboy/ssh-action@v1
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: ${{ secrets.DEPLOY_SSH_PORT }}
           fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
+          envs: GHCR_TOKEN,GHCR_USER
           script: |
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             bash "${{ secrets.DEPLOY_PATH }}/scripts/release.sh" \
               "${{ secrets.DEPLOY_PATH }}" \
               "${{ steps.meta.outputs.backend_image }}" \
