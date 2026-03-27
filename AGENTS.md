@@ -112,7 +112,7 @@ Rollback uses the same Release workflow: run it again and select an older commit
 
 Registry Cleanup (`.github/workflows/registry-cleanup.yml`) runs on a schedule and deletes old GHCR image versions while keeping the recent production history and the newest unpublished candidates.
 
-Images are pushed to `ghcr.io/elwinliu/umple-next/{backend,frontend,code-exec}` using immutable `sha-<commit>` tags.
+Images are pushed to `ghcr.io/umple/umpleonline/{backend,frontend,code-exec}` using immutable `sha-<commit>` tags.
 
 | Secret | Value |
 |--------|-------|
@@ -136,14 +136,14 @@ From the output, copy the `SHA256:<hash>` value for the **ECDSA** key (`ecdsa-sh
 Release automatically copies `docker-compose.prod.yml` from the repo, but the server `.env` must already exist with a production `ALLOWED_ORIGINS` value. The server still needs a few manual prerequisites:
 
 ```bash
-mkdir -p ~/deploy/umple-next
-echo "ALLOWED_ORIGINS=https://your-domain.example.com" > ~/deploy/umple-next/.env
+mkdir -p ~/deploy/umpleonline
+echo "ALLOWED_ORIGINS=https://your-domain.example.com" > ~/deploy/umpleonline/.env
 ```
 
 Required host dependencies:
 - Docker with either `docker compose` or `docker-compose`
 - TXL installed on the host at `/usr/local/bin/txl` and `/usr/local/lib/txl`
-- Persistent storage at `~/deploy/umple-next/data/models` if you want saved/generated model files to survive releases
+- Persistent storage at `~/deploy/umpleonline/data/models` if you want saved/generated model files to survive releases
 
 ### Migrating to prof's server
 

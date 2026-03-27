@@ -6,11 +6,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	"github.com/umple/umple-next/backend/internal/api/handlers"
-	"github.com/umple/umple-next/backend/internal/compiler"
-	"github.com/umple/umple-next/backend/internal/config"
-	"github.com/umple/umple-next/backend/internal/execution"
-	"github.com/umple/umple-next/backend/internal/model"
+	"github.com/umple/umpleonline/backend/internal/api/handlers"
+	"github.com/umple/umpleonline/backend/internal/compiler"
+	"github.com/umple/umpleonline/backend/internal/config"
+	"github.com/umple/umpleonline/backend/internal/execution"
+	"github.com/umple/umpleonline/backend/internal/model"
 )
 
 func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http.Handler {

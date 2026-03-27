@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/umple/umple-next/backend/internal/compiler"
-	"github.com/umple/umple-next/backend/internal/execution"
-	"github.com/umple/umple-next/backend/internal/model"
+	"github.com/umple/umpleonline/backend/internal/compiler"
+	"github.com/umple/umpleonline/backend/internal/execution"
+	"github.com/umple/umpleonline/backend/internal/model"
 )
 
 type ExecuteHandler struct {

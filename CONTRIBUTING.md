@@ -21,14 +21,14 @@ This guide walks you through everything you need to set up the project, make cha
 > [!TIP]
 > ### Quick AI Setup
 > ```bash
-> git clone https://github.com/umple/umple-next.git && \
->   cd umple-next
+> git clone https://github.com/umple/umpleonline.git && \
+>   cd umpleonline
 > ```
 > **Copy this prompt to your AI for quick setup:**
 > ```
 > Help me setup the development env for this project, please follow the guidance
-> in: https://github.com/umple/umple-next/blob/master/CONTRIBUTING.md#environment-setup
-> Help me setup the development env for this project, please follow the guidance in: https://github.com/umple/umple-next/blob/master/CONTRIBUTING.md#environment-setup
+> in: https://github.com/umple/umpleonline/blob/master/CONTRIBUTING.md#environment-setup
+> Help me setup the development env for this project, please follow the guidance in: https://github.com/umple/umpleonline/blob/master/CONTRIBUTING.md#environment-setup
 >
 > After setup, verify it works: run `make dev`, wait for Vite to print a local
 > URL, then curl http://localhost:3200 to confirm the frontend returns HTML, and
@@ -95,8 +95,8 @@ Run these commands in order. Each one is explained below.
 
 ```bash
 # 1. Clone the repository if not done
-git clone https://github.com/umple/umple-next.git && \
-  cd umple-next
+git clone https://github.com/umple/umpleonline.git && \
+  cd umpleonline
 
 # 2. Download the Umple compiler JAR
 make fetch-jar
@@ -124,7 +124,7 @@ Once you see Vite's output with a local URL, open **[http://localhost:3200](http
 ## Project Structure
 
 ```
-umple-next/
+umpleonline/
 ├── frontend/           # React/TypeScript frontend (Vite, CodeMirror, ReactFlow)
 ├── backend/            # Go API server (communicates with umplesync.jar + Graphviz)
 ├── code-exec/          # Node.js sandboxed code runner

@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/umple/umple-next/backend/internal/config"
+	"github.com/umple/umpleonline/backend/internal/config"
 )
 
 const (

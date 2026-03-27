@@ -7,8 +7,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/umple/umple-next/backend/internal/compiler"
-	"github.com/umple/umple-next/backend/internal/model"
+	"github.com/umple/umpleonline/backend/internal/compiler"
+	"github.com/umple/umpleonline/backend/internal/model"
 )
 
 type CompileHandler struct {

@@ -85,7 +85,7 @@ jobs:
             org.opencontainers.image.revision=${{ steps.resolve.outputs.sha }}
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
             org.opencontainers.image.vendor=University of Ottawa
-            org.opencontainers.image.description=Umple Next backend API
+            org.opencontainers.image.description=UmpleOnline backend API
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
           sbom: true
@@ -106,7 +106,7 @@ jobs:
             org.opencontainers.image.revision=${{ steps.resolve.outputs.sha }}
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
             org.opencontainers.image.vendor=University of Ottawa
-            org.opencontainers.image.description=Umple Next frontend
+            org.opencontainers.image.description=UmpleOnline frontend
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
           sbom: true
@@ -127,7 +127,7 @@ jobs:
             org.opencontainers.image.revision=${{ steps.resolve.outputs.sha }}
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
             org.opencontainers.image.vendor=University of Ottawa
-            org.opencontainers.image.description=Umple Next code execution service
+            org.opencontainers.image.description=UmpleOnline code execution service
           cache-from: type=gha,scope=code-exec
           cache-to: type=gha,mode=max,scope=code-exec
           sbom: true

@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for reporting a bug! Please search [existing issues](https://github.com/umple/umple-next/issues) before submitting.
+        Thanks for reporting a bug! Please search [existing issues](https://github.com/umple/umpleonline/issues) before submitting.
 
   - type: textarea
     id: description

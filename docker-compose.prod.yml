@@ -1,8 +1,8 @@
-name: umple-next-prod
+name: umpleonline-prod
 
 services:
   backend:
-    image: ${BACKEND_IMAGE:-ghcr.io/elwinliu/umple-next/backend:latest}
+    image: ${BACKEND_IMAGE:-ghcr.io/umple/umpleonline/backend:latest}
     restart: unless-stopped
     cpus: 2
     mem_limit: 2g
@@ -31,7 +31,7 @@ services:
       start_period: 15s
 
   frontend:
-    image: ${FRONTEND_IMAGE:-ghcr.io/elwinliu/umple-next/frontend:latest}
+    image: ${FRONTEND_IMAGE:-ghcr.io/umple/umpleonline/frontend:latest}
     restart: unless-stopped
     cpus: 0.5
     mem_limit: 256m
@@ -50,7 +50,7 @@ services:
       retries: 3
 
   code-exec:
-    image: ${CODE_EXEC_IMAGE:-ghcr.io/elwinliu/umple-next/code-exec:latest}
+    image: ${CODE_EXEC_IMAGE:-ghcr.io/umple/umpleonline/code-exec:latest}
     restart: unless-stopped
     cpus: 1
     mem_limit: 768m

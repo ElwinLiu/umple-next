@@ -1,4 +1,4 @@
-module github.com/umple/umple-next/backend
+module github.com/umple/umpleonline/backend
 
 go 1.24
 

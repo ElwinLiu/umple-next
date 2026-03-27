@@ -10,10 +10,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/umple/umple-next/backend/internal/api"
-	"github.com/umple/umple-next/backend/internal/compiler"
-	"github.com/umple/umple-next/backend/internal/config"
-	"github.com/umple/umple-next/backend/internal/model"
+	"github.com/umple/umpleonline/backend/internal/api"
+	"github.com/umple/umpleonline/backend/internal/compiler"
+	"github.com/umple/umpleonline/backend/internal/config"
+	"github.com/umple/umpleonline/backend/internal/model"
 )
 
 func main() {

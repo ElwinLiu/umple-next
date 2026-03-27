@@ -16,9 +16,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/umple/umple-next/backend/internal/compiler"
-	"github.com/umple/umple-next/backend/internal/config"
-	"github.com/umple/umple-next/backend/internal/model"
+	"github.com/umple/umpleonline/backend/internal/compiler"
+	"github.com/umple/umpleonline/backend/internal/config"
+	"github.com/umple/umpleonline/backend/internal/model"
 )
 
 //go:embed javadoc_theme.css
@@ -532,7 +532,7 @@ func buildGeneratedAssetURL(modelID, relPath string) string {
 }
 
 func applyJavadocTheme(javadocDir string) {
-	marker := "\n/* --- UmpleNext theme overrides --- */\n"
+	marker := "\n/* --- UmpleOnline theme overrides --- */\n"
 	for _, stylesheet := range []string{
 		filepath.Join(javadocDir, "stylesheet.css"),
 		filepath.Join(javadocDir, "resources", "stylesheet.css"),

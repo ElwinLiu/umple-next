@@ -4,7 +4,7 @@ We welcome reports of security vulnerabilities in UmpleOnline — including the 
 
 ## Supported Versions
 
-Only the latest deployed version is supported. Since UmpleOnline is continuously deployed from `master`, please verify your report against the live instance at [umple-next.elwin.cc](https://umple-next.elwin.cc/) before reporting.
+Only the latest deployed version is supported. Since UmpleOnline is continuously deployed from `master`, please verify your report against the live instance at [umpleonline.org](https://umpleonline.org/) before reporting.
 
 ## Reporting a Vulnerability
 

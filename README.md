@@ -8,7 +8,7 @@ A modern rewrite of [UmpleOnline](https://try.umple.org) — the browser-based t
 
 This project reproduces the legacy PHP/jQuery stack with a contemporary architecture while preserving the same Umple compiler and modeling capabilities.
 
-**Live instance:** [umple-next.elwin.cc](https://umple-next.elwin.cc/)
+**Live instance:** [umpleonline.org](https://umpleonline.org/)
 
 ## Architecture
 
