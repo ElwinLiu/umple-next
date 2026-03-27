@@ -21,17 +21,19 @@ This guide walks you through everything you need to set up the project, make cha
 > [!TIP]
 > ### Quick AI Setup
 > ```bash
-> git clone https://github.com/umple/umple-next.git
-> cd umple-next
+> git clone https://github.com/umple/umple-next.git && \
+>   cd umple-next
 > ```
 > **Copy this prompt to your AI for quick setup:**
 > ```
 > Help me setup the development env for this project, please follow the guidance
 > in: https://github.com/umple/umple-next/blob/master/CONTRIBUTING.md#environment-setup
+> Help me setup the development env for this project, please follow the guidance in: https://github.com/umple/umple-next/blob/master/CONTRIBUTING.md#environment-setup
 >
 > After setup, verify it works: run `make dev`, wait for Vite to print a local
 > URL, then curl http://localhost:3200 to confirm the frontend returns HTML, and
 > curl http://localhost:3200/api/health to confirm the backend is healthy.
+> After setup, verify it works: run `make dev`, wait for Vite to print a local URL, then curl http://localhost:3200 to confirm the frontend returns HTML, and curl http://localhost:3200/api/health to confirm the backend is healthy.
 > ```
 
 ## Environment Setup
@@ -69,6 +71,20 @@ Bun is the JavaScript runtime and package manager we use for the frontend (simil
 The GitHub CLI is used to download build artifacts (the Umple compiler JAR file) from GitHub Releases.
 
 - **Install (Linux/WSL):** `(type -p wget >/dev/null || sudo apt-get install wget -y) && sudo mkdir -p -m 755 /etc/apt/keyrings && out=$(mktemp) && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null && sudo apt update && sudo apt install gh -y`
+- **Install (Linux/WSL):**
+  ```bash
+  (type -p wget >/dev/null || sudo apt-get install wget -y) \
+    && sudo mkdir -p -m 755 /etc/apt/keyrings \
+    && out=$(mktemp) \
+    && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+         | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
+    && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] \
+         https://cli.github.com/packages stable main" \
+         | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+    && sudo apt update \
+    && sudo apt install gh -y
+  ```
 - **Install (macOS):** `brew install gh`
 - **Verify:** `gh --version`
 - **Authenticate:** Run `gh auth login` and follow the prompts (you only need to do this once)
@@ -79,8 +95,8 @@ Run these commands in order. Each one is explained below.
 
 ```bash
 # 1. Clone the repository if not done
-git clone https://github.com/umple/umple-next.git
-cd umple-next
+git clone https://github.com/umple/umple-next.git && \
+  cd umple-next
 
 # 2. Download the Umple compiler JAR
 make fetch-jar
@@ -336,6 +352,8 @@ To enable them:
 3. Run with the live flag:
    ```bash
    cd frontend && AI_LIVE_TESTS=1 bun run vitest run src/ai/__tests__/agent-loop.test.ts
+   cd frontend \
+     && AI_LIVE_TESTS=1 bun run vitest run src/ai/__tests__/agent-loop.test.ts
    ```
 
 > **Do not commit `.env.test`** — it is gitignored. Only `.env.test.example` is tracked.
