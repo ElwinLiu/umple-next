@@ -181,7 +181,7 @@ cleanup_docker_storage
 for old_project in umple-next-prod; do
   if docker ps -a --filter "label=com.docker.compose.project=${old_project}" --format '{{.ID}}' | head -1 | grep -q .; then
     echo "==> Stopping old compose project '${old_project}'..."
-    docker compose -p "$old_project" down --remove-orphans || true
+    compose -p "$old_project" -f docker-compose.prod.yml down --remove-orphans || true
   fi
 done
 
