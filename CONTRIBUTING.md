@@ -17,12 +17,22 @@ This guide walks you through everything you need to set up the project, make cha
 
 ---
 
-Copy this prompt to your AI for quick setup:
-```
-Help me setup the development env for this project, please follow the guidance in: https://github.com/umple/umple-next/blob/master/CONTRIBUTING.md#environment-setup
 
-After setup, verify it works: run `make dev`, wait for Vite to print a local URL, then curl http://localhost:3200 to confirm the frontend returns HTML, and curl http://localhost:3200/api/health to confirm the backend is healthy.
-```
+> [!TIP]
+> ### Quick AI Setup
+> ```bash
+> git clone https://github.com/umple/umple-next.git
+> cd umple-next
+> ```
+> **Copy this prompt to your AI for quick setup:**
+> ```
+> Help me setup the development env for this project, please follow the guidance
+> in: https://github.com/umple/umple-next/blob/master/CONTRIBUTING.md#environment-setup
+>
+> After setup, verify it works: run `make dev`, wait for Vite to print a local
+> URL, then curl http://localhost:3200 to confirm the frontend returns HTML, and
+> curl http://localhost:3200/api/health to confirm the backend is healthy.
+> ```
 
 ## Environment Setup
 
@@ -68,7 +78,7 @@ The GitHub CLI is used to download build artifacts (the Umple compiler JAR file)
 Run these commands in order. Each one is explained below.
 
 ```bash
-# 1. Clone the repository
+# 1. Clone the repository if not done
 git clone https://github.com/umple/umple-next.git
 cd umple-next
 
