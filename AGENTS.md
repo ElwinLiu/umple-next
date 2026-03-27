@@ -6,7 +6,7 @@ Rewrite of UmpleOnline from legacy stack (PHP, jQuery) to modern stack. Old repo
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS v4, Vite, CodeMirror 6, ReactFlow, Zustand
 - **Runtime**: Bun — use `bun install`, `bun run dev`, `bun run build`
-- **Backend**: Go 1.24 (Chi router), communicates with umple.jar (Java) via TCP and Graphviz
+- **Backend**: Go 1.24 (Chi router), communicates with umplesync.jar (Java) via TCP and Graphviz
 - **Code Exec**: Node.js service for running compiled code (`code-exec/`)
 
 ## Domain & Port Mapping
@@ -61,7 +61,7 @@ If you add new Go dependencies: run `docker-compose exec backend go mod tidy`.
 | `make up-prod` | Deploy production (all services in Docker) |
 | `make tidy` | Run `go mod tidy` for backend |
 | `make clean` | Stop services + remove temp model data |
-| `make fetch-jar` | Download latest umple.jar from GitHub releases |
+| `make fetch-jar` | Download umplesync.jar from GitHub releases |
 | `make check` | Run the local equivalent of the CI validation suite |
 
 ## Playwright
@@ -83,7 +83,7 @@ When writing tests:
 
 ## Philosophy
 
-- No backward compatibility. This repo has no existing users — always move forward. Use the latest tools, break things freely, never add shims or deprecation paths.
+- No backward compatibility. This repo has no existing users yet — always move forward. Use the latest tools, break things, never add shims or deprecation paths.
 - When developing new features that are related to the compiler, refer to the old codebase at `~/code/umple/` for reference.
 
 ## Brand & Colors
@@ -100,15 +100,13 @@ All colors are semantic tokens defined in `frontend/src/index.css` `@theme`. Use
 
 Source: [uOttawa brand guidelines](https://www.uottawa.ca/about-us/administration-services/brand)
 
-**Important**: When previewing the app in a browser (including Chrome MCP), always use `https://umple-next.elwin.cc` (no port). Cloudflare Tunnel handles TLS and proxies to localhost:3100.
-
 ## CI/CD
 
 CI (`.github/workflows/ci.yml`) runs on pull requests and validates the repo: TypeScript check, frontend build, Playwright smoke tests, and Go vet/build.
 
 Publish Images (`.github/workflows/publish-images.yml`) runs on every push to `master`: it re-runs CI, builds the three production images, and pushes immutable GHCR tags in the form `sha-<full_commit_sha>`. It also refreshes `latest` for convenience, but production releases must always use the immutable `sha-*` tags.
 
-Release (`.github/workflows/release.yml`) is the production promotion step: Actions → Release → choose a branch/tag/commit, and the workflow deploys the exact published images for that commit to the server. It then creates a GitHub Release entry, which acts as the production changelog and release ledger. The `production` environment should require reviewer approval before the release job runs.
+Release (`.github/workflows/release.yml`) is the production promotion step: Actions → Release → choose a branch/tag/commit, and the workflow deploys the exact published images for that commit to the server. It then creates a GitHub Release entry, which acts as the production changelog and release ledger.
 
 Rollback uses the same Release workflow: run it again and select an older commit that already has published images.
 
@@ -147,12 +145,6 @@ Required host dependencies:
 - TXL installed on the host at `/usr/local/bin/txl` and `/usr/local/lib/txl`
 - Persistent storage at `~/deploy/umple-next/data/models` if you want saved/generated model files to survive releases
 
-### GitHub environment setup
-
-Create a `production` environment in repo Settings → Environments:
-- **Required reviewers**: add maintainers who can approve deploys
-- **Deployment branches**: restrict to `master`
-
 ### Migrating to prof's server
 
 1. Install Docker on the new server
@@ -161,5 +153,4 @@ Create a `production` environment in repo Settings → Environments:
 4. Copy any existing `data/models` contents if you need persisted models on the new server
 5. Configure a reverse proxy (nginx or Cloudflare Tunnel) to forward the domain to `localhost:3100`
 6. Update the 6 GitHub secrets to point to the new server
-7. Configure the `production` environment with required reviewers (see above)
-8. Run the Release workflow for the commit you want in production
+7. Run the Release workflow for the commit you want in production

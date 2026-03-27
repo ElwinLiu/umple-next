@@ -4,7 +4,7 @@
 # For that, see the Dockerfile in the javarunner directory
 FROM alpine:3.22
 
-RUN apk upgrade --no-cache && apk add --no-cache nodejs npm docker python3 nano
+RUN apk upgrade --no-cache && apk add --no-cache nodejs npm docker python3
 
 RUN addgroup -S nodeuser \
  && adduser -D -H -S nodeuser -G nodeuser

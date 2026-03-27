@@ -1,4 +1,0 @@
-# Go stdlib: crypto/tls session resumption bug
-# Fixed in Go 1.24.13+ which is not yet released as a Docker image.
-# Remove this entry once golang:1.24.13-alpine is available.
-CVE-2025-68121

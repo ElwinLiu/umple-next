@@ -1,4 +1,4 @@
-.PHONY: dev dev-backend dev-frontend install build up up-prod down logs logs-backend clean tidy fetch-jar test-e2e test-e2e-live test-e2e-ui check check-frontend check-backend
+.PHONY: dev dev-backend dev-frontend install up-prod down logs logs-backend clean tidy fetch-jar test-e2e test-e2e-live test-e2e-ui check check-frontend check-backend
 
 UMPLESYNC_VERSION := $(shell cat .umplesync-version)
 export DOCKER_GID := $(shell stat -c '%g' /var/run/docker.sock 2>/dev/null || echo 0)
@@ -55,13 +55,9 @@ check: check-frontend check-backend
 
 # ── Production ──
 
-# Build all Docker images (production)
-build:
-	docker-compose -f docker-compose.prod.yml build
-
-# Start production stack
+# Start production stack (pulls pre-built images)
 up-prod:
-	docker-compose -f docker-compose.prod.yml up -d --build
+	docker-compose -f docker-compose.prod.yml up -d
 
 # ── Operations ──
 

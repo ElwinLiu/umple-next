@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
-// VITE_ALLOWED_HOSTS: comma-separated hostnames or patterns (e.g. ".elwin.cc")
+// VITE_ALLOWED_HOSTS: comma-separated hostnames or patterns (e.g. ".umple.org")
 // Defaults to localhost only. Set in frontend/.env for dev behind a reverse proxy.
 const env = loadEnv(mode, __dirname, 'VITE_')
 const allowedHosts = env.VITE_ALLOWED_HOSTS
