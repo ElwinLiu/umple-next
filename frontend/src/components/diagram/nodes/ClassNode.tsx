@@ -110,7 +110,7 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
   return (
     <div
       className={cn(
-        'h-full w-full bg-surface-0 border-2 rounded text-xs font-mono shadow-md transition-shadow overflow-hidden',
+        'w-full bg-surface-0 border-2 text-xs font-mono shadow-md transition-shadow overflow-hidden',
         selected ? 'border-brand ring-2 ring-brand/30' : 'border-border-strong',
       )}
       data-testid={`class-node-${d.name}`}

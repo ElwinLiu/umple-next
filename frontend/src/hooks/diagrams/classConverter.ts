@@ -261,7 +261,7 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
       id: `class-${cls.name}`,
       type: 'classNode',
       position: positions.get(cls.name) ?? { x: 50, y: 50 },
-      style: { width: metrics.width, height: metrics.height },
+      style: { width: metrics.width },
       data: {
         name: cls.name,
         attributes: (cls.attributes || []).map((a) => ({
@@ -283,7 +283,7 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
       id: `class-${iface.name}`,
       type: 'classNode',
       position: positions.get(iface.name) ?? { x: 50, y: 50 },
-      style: { width: metrics.width, height: metrics.height },
+      style: { width: metrics.width },
       data: {
         name: iface.name,
         attributes: [],
