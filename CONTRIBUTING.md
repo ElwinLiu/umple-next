@@ -26,8 +26,6 @@ This guide walks you through everything you need to set up the project, make cha
 > ```
 > **Copy this prompt to your AI for quick setup:**
 > ```
-> Help me setup the development env for this project, please follow the guidance
-> in: https://github.com/umple/umpleonline/blob/master/CONTRIBUTING.md#environment-setup
 > Help me setup the development env for this project, please follow the guidance in: https://github.com/umple/umpleonline/blob/master/CONTRIBUTING.md#environment-setup
 >
 > After setup, verify it works: run `make dev`, wait for Vite to print a local
