@@ -9,6 +9,7 @@ backend/server
 frontend/dist/
 frontend/playwright-report/
 frontend/test-results/
+test-results/
 *.tsbuildinfo
 
 # Runtime state
