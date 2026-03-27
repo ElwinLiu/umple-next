@@ -39,11 +39,11 @@ Frontend uses Vite HMR — **changes are instant, no action needed**. Just ensur
 
 Backend runs in Docker with **Air** (Go hot-reloader). When you edit any `.go` file, Air detects the change and rebuilds automatically (~1-2s). No manual restart needed.
 
-If you add new Go dependencies: run `docker-compose exec backend go mod tidy`.
+If you add new Go dependencies: run `docker compose exec backend go mod tidy`.
 
 ### When you DO need to rebuild
 
-- Changed `Dockerfile.dev` or `docker-compose.yml` → `docker-compose up -d --build`
+- Changed `Dockerfile.dev` or `docker-compose.yml` → `docker compose up -d --build`
 - Changed `package.json` (new frontend deps) → `bun install`
 - First time setup → `make fetch-jar && make install && make dev`
 

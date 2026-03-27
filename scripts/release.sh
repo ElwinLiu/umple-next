@@ -7,7 +7,9 @@ FRONTEND_IMAGE="${3:?Usage: release.sh <deploy-path> <backend-image> <frontend-i
 CODE_EXEC_IMAGE="${4:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image>}"
 
 compose() {
-  if command -v docker-compose >/dev/null 2>&1; then
+  if docker compose version >/dev/null 2>&1; then
+    docker compose "$@"
+  elif command -v docker-compose >/dev/null 2>&1; then
     docker-compose "$@"
   else
     docker compose "$@"

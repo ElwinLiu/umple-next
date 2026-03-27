@@ -3,19 +3,22 @@
 UMPLESYNC_VERSION := $(shell cat .umplesync-version)
 export DOCKER_GID := $(shell stat -c '%g' /var/run/docker.sock 2>/dev/null || echo 0)
 
+# Prefer "docker compose" plugin; fall back to standalone "docker-compose"
+COMPOSE := $(shell if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; else echo "docker compose"; fi)
+
 # ── Development ──
 
 # Start everything: backend in Docker, frontend with bun (hot reload)
 dev:
 	@echo "Starting backend (Docker)..."
-	docker-compose up -d --build
+	$(COMPOSE) up -d --build
 	@echo ""
 	@echo "Starting frontend (bun dev server with HMR)..."
 	cd frontend && bun run dev
 
 # Start only the backend services (Docker with Air hot reload)
 dev-backend:
-	docker-compose up -d --build
+	$(COMPOSE) up -d --build
 
 # Start only the frontend (bun dev server with HMR)
 dev-frontend:
@@ -57,25 +60,25 @@ check: check-frontend check-backend
 
 # Start production stack (pulls pre-built images)
 up-prod:
-	docker-compose -f docker-compose.prod.yml up -d
+	$(COMPOSE) -f docker-compose.prod.yml up -d
 
 # ── Operations ──
 
 # Stop all services
 down:
-	docker-compose down
+	$(COMPOSE) down
 
 # View logs
 logs:
-	docker-compose logs -f
+	$(COMPOSE) logs -f
 
 # Backend logs only
 logs-backend:
-	docker-compose logs -f backend
+	$(COMPOSE) logs -f backend
 
 # Clean up
 clean:
-	docker-compose down -v
+	$(COMPOSE) down -v
 	rm -rf data/models/tmp*
 
 # Tidy Go modules
