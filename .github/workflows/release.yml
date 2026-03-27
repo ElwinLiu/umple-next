@@ -3,14 +3,14 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
+      version:
+        description: "Semantic version to release (e.g. 1.2.0)"
+        required: true
+        type: string
       git_ref:
         description: Branch, tag, or commit SHA to release
         required: true
         default: master
-        type: string
-      release_title:
-        description: Optional production release title
-        required: false
         type: string
       notes:
         description: Optional operator notes to prepend to generated release notes
@@ -46,25 +46,17 @@ jobs:
 
       - name: Resolve release metadata
         id: meta
-        env:
-          INPUT_RELEASE_TITLE: ${{ inputs.release_title }}
         run: |
           SHA="$(git rev-parse HEAD)"
           SHORT_SHA="${SHA::12}"
-          TIMESTAMP="$(date -u +%Y%m%d-%H%M%S)"
+          VERSION="${{ inputs.version }}"
           PREFIX="ghcr.io/${GITHUB_REPOSITORY,,}"
-
-          if [ -n "$INPUT_RELEASE_TITLE" ]; then
-            TITLE="$INPUT_RELEASE_TITLE"
-          else
-            TITLE="Production release ${SHORT_SHA}"
-          fi
 
           {
             echo "sha=$SHA"
             echo "short_sha=$SHORT_SHA"
-            echo "release_tag=release-${TIMESTAMP}-${SHORT_SHA}"
-            echo "release_title=$TITLE"
+            echo "release_tag=v${VERSION}"
+            echo "release_title=v${VERSION}"
             echo "prefix=$PREFIX"
             echo "backend_image=${PREFIX}/backend:sha-${SHA}"
             echo "frontend_image=${PREFIX}/frontend:sha-${SHA}"
