@@ -44,7 +44,7 @@ export function GeneratedOutputView({
         <iframe
           src={iframeUrl}
           title="Generated output"
-          sandbox="" /* all restrictions enabled */
+          sandbox="allow-scripts"
           className="flex-1 w-full border-0 bg-surface-0"
         />
       </div>
