@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -192,6 +193,17 @@ func (h *SyncHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to prepare model")
 		return
 	}
+
+	// umplesync.jar does not cascade-delete associations or
+	// generalizations when removing a class, so we must do it ourselves
+	// before issuing the removeClass command (matching the old frontend).
+	if req.Action == "removeClass" {
+		if err := h.cascadeBeforeRemoveClass(req.Params["className"], umpFile, dir); err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+	}
+
 	command, err := h.buildLegacySyncCommand(req, umpFile, dir)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, err.Error())
@@ -225,10 +237,13 @@ func (h *SyncHandler) Sync(w http.ResponseWriter, r *http.Request) {
 	}
 	code := stripModelDelimiter(fullOutput)
 
+	// Sync succeeded — try to generate model JSON for the frontend.
+	// If the model has validation warnings the compiler may refuse to
+	// produce JSON; return what we have (the code) with an empty result
+	// so the frontend can still update and recompile.
 	jsonModel, err := h.generateModelJSON(umpFile, dir)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
+		jsonModel = []byte("{}")
 	}
 
 	w.Header().Set("Content-Type", "application/json")
@@ -266,6 +281,54 @@ func ensureDelimitedModelFile(umpFile string) error {
 		content += "\n" + modelDelimiter + "\n"
 	}
 	return os.WriteFile(umpFile, []byte(content), 0o644)
+}
+
+// cascadeBeforeRemoveClass strips every reference to className from the
+// model text before umplesync's -removeClass runs.
+//
+// umplesync only removes the class definition itself; it does NOT clean up
+// references in other classes (inline associations, isA, standalone
+// association blocks).  Without this pre-processing the model ends up with
+// dangling references that break subsequent JSON generation.
+func (h *SyncHandler) cascadeBeforeRemoveClass(className string, umpFile string, dir string) error {
+	data, err := os.ReadFile(umpFile)
+	if err != nil {
+		return err
+	}
+	cleaned := removeClassReferences(string(data), className)
+	if cleaned != string(data) {
+		if err := os.WriteFile(umpFile, []byte(cleaned), 0o644); err != nil {
+			return fmt.Errorf("failed to clean up references: %v", err)
+		}
+	}
+	return nil
+}
+
+// removeClassReferences removes every mention of className from an Umple
+// source file: standalone association blocks, inline association lines,
+// and isA generalization lines.
+func removeClassReferences(content string, className string) string {
+	q := regexp.QuoteMeta(className)
+
+	patterns := []string{
+		// 1. Standalone association blocks: association [name] { … className … }
+		`(?m)^\s*association\s*(?:\w+\s*)?\{[^}]*\b` + q + `\b[^}]*\}[ \t]*\n?`,
+
+		// 2. Inline association lines containing an operator (-- -> <@>)
+		//    and the class name, in either order.
+		`(?m)^[^\n]*(?:--|->|<@>)[^\n]*\b` + q + `\b[^\n]*;[ \t]*\n?`,
+		`(?m)^[^\n]*\b` + q + `\b[^\n]*(?:--|->|<@>)[^\n]*;[ \t]*\n?`,
+
+		// 3. isA (generalization) lines referencing the class.
+		`(?m)^\s*isA\b[^\n]*\b` + q + `\b[^\n]*;[ \t]*\n?`,
+	}
+
+	for _, p := range patterns {
+		if re, err := regexp.Compile(p); err == nil {
+			content = re.ReplaceAllString(content, "")
+		}
+	}
+	return content
 }
 
 func (h *SyncHandler) buildLegacySyncCommand(req SyncRequest, umpFile string, dir string) (string, error) {
@@ -567,18 +630,22 @@ func (h *SyncHandler) generateModelJSON(umpFile string, dir string) ([]byte, err
 	if err != nil {
 		return nil, fmt.Errorf("failed to load current model: %v", err)
 	}
+
+	// The compiler may report validation warnings (e.g. undefined class in
+	// association) yet still produce valid JSON.  Try to read the generated
+	// file or stdout before giving up — otherwise models with any warning
+	// become completely uneditable from the diagram.
+	data, readErr := os.ReadFile(filepath.Join(dir, "model.json"))
+	if readErr == nil {
+		return data, nil
+	}
+	if result.Output != "" {
+		return []byte(result.Output), nil
+	}
 	if result.Errors != "" {
 		return nil, fmt.Errorf("failed to load current model: %s", result.Errors)
 	}
-
-	data, err := os.ReadFile(filepath.Join(dir, "model.json"))
-	if err == nil {
-		return data, nil
-	}
-	if result.Output == "" {
-		return nil, fmt.Errorf("failed to load current model JSON")
-	}
-	return []byte(result.Output), nil
+	return nil, fmt.Errorf("failed to load current model JSON")
 }
 
 func rawSyncCommand(action string, payload []byte, umpFile string) string {
