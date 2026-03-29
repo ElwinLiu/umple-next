@@ -227,6 +227,15 @@ func (h *SyncHandler) Sync(w http.ResponseWriter, r *http.Request) {
 	// delimiter and position metadata). Write it to disk so the file
 	// stays in sync, then strip the delimiter for the frontend.
 	fullOutput := result.Output
+
+	// umplesync does not cascade-rename references when a class is
+	// renamed, so we fix them up in the returned source.
+	if req.Action == "editClass" {
+		if newName := req.Params["newName"]; newName != "" && newName != req.Params["className"] {
+			fullOutput = renameClassReferences(fullOutput, req.Params["className"], newName)
+		}
+	}
+
 	if strings.TrimSpace(fullOutput) != "" {
 		if err := os.WriteFile(umpFile, []byte(fullOutput), 0o644); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to persist synced model")
@@ -306,7 +315,7 @@ func (h *SyncHandler) cascadeBeforeRemoveClass(className string, umpFile string,
 
 // removeClassReferences removes every mention of className from an Umple
 // source file: standalone association blocks, inline association lines,
-// and isA generalization lines.
+// isA generalization lines, and associationClass blocks.
 func removeClassReferences(content string, className string) string {
 	q := regexp.QuoteMeta(className)
 
@@ -319,8 +328,13 @@ func removeClassReferences(content string, className string) string {
 		`(?m)^[^\n]*(?:--|->|<@>)[^\n]*\b` + q + `\b[^\n]*;[ \t]*\n?`,
 		`(?m)^[^\n]*\b` + q + `\b[^\n]*(?:--|->|<@>)[^\n]*;[ \t]*\n?`,
 
-		// 3. isA (generalization) lines referencing the class.
+		// 3a. isA lines where isA starts the line (multi-line class format).
 		`(?m)^\s*isA\b[^\n]*\b` + q + `\b[^\n]*;[ \t]*\n?`,
+
+		// 3b. Inline isA clause within a single-line class definition
+		//     (e.g. "class Foo { isA Bar; }").  Removes only the clause,
+		//     not the entire line, so the class and its other members survive.
+		`[ \t]*isA\s+` + q + `\b\s*;`,
 	}
 
 	for _, p := range patterns {
@@ -328,7 +342,45 @@ func removeClassReferences(content string, className string) string {
 			content = re.ReplaceAllString(content, "")
 		}
 	}
+
+	// 4. associationClass blocks that reference className as an endpoint.
+	//    These may contain nested braces (e.g. enum values like
+	//    CRUD_Value { R, RW }), so we match one level of brace nesting and
+	//    use a functional replacement to check the body for the class name.
+	acBlockRe := regexp.MustCompile(`(?ms)^\s*associationClass\s+\w+\s*\{(?:[^{}]*|\{[^{}]*\})*\}[ \t]*\n?`)
+	classRe := regexp.MustCompile(`\b` + q + `\b`)
+	content = acBlockRe.ReplaceAllStringFunc(content, func(match string) string {
+		if classRe.MatchString(match) {
+			return ""
+		}
+		return match
+	})
+
 	return content
+}
+
+// renameClassReferences replaces every occurrence of oldName with newName
+// in the user-code section of an Umple source file.  The position/layout
+// section (after the model delimiter) is left untouched — umplesync handles
+// position identifiers itself.
+//
+// This is the rename counterpart of removeClassReferences: umplesync's
+// -editClass renames the class definition but does NOT update references
+// in other classes (associations, isA, associationClass endpoints, typed
+// attributes, etc.).
+func renameClassReferences(content string, oldName, newName string) string {
+	userCode := content
+	posSection := ""
+	if idx := strings.Index(content, modelDelimiter); idx >= 0 {
+		userCode = content[:idx]
+		posSection = content[idx:]
+	}
+
+	q := regexp.QuoteMeta(oldName)
+	re := regexp.MustCompile(`\b` + q + `\b`)
+	userCode = re.ReplaceAllString(userCode, newName)
+
+	return userCode + posSection
 }
 
 func (h *SyncHandler) buildLegacySyncCommand(req SyncRequest, umpFile string, dir string) (string, error) {
@@ -444,19 +496,9 @@ func (h *SyncHandler) buildLegacySyncCommand(req SyncRequest, umpFile string, di
 		cls.ID = newName
 		cls.Position.Width = defaultClassWidth
 
-		for i := range model.UmpleAssociations {
-			if model.UmpleAssociations[i].ClassOneID == className {
-				model.UmpleAssociations[i].ClassOneID = newName
-			}
-			if model.UmpleAssociations[i].ClassTwoID == className {
-				model.UmpleAssociations[i].ClassTwoID = newName
-			}
-		}
-		for i := range model.UmpleClasses {
-			if model.UmpleClasses[i].ExtendsClass == className {
-				model.UmpleClasses[i].ExtendsClass = newName
-			}
-		}
+		// Note: reference updates (associations, ExtendsClass) are handled
+		// by renameClassReferences in the post-processing step after
+		// umplesync returns.
 
 		payload, err := json.Marshal(cls)
 		if err != nil {
@@ -521,6 +563,9 @@ func (h *SyncHandler) buildLegacySyncCommand(req SyncRequest, umpFile string, di
 		cls := findClass(model.UmpleClasses, req.Params["className"])
 		if cls == nil {
 			return "", fmt.Errorf("class not found: %s", req.Params["className"])
+		}
+		if isAssociationClassDefinition(umpFile, cls.Name) {
+			return "", fmt.Errorf("methods cannot be added to association classes from the diagram")
 		}
 
 		methodType := req.Params["methodType"]
@@ -667,19 +712,164 @@ func stripModelDelimiter(code string) string {
 	return strings.TrimRight(code, "\n") + "\n"
 }
 
-func parseMethodParameters(raw string) []string {
-	if strings.TrimSpace(raw) == "" {
-		return []string{}
+func parseMethodParameters(raw string) []map[string]string {
+	parts := splitMethodParameters(raw)
+	if len(parts) == 0 {
+		return []map[string]string{{}}
 	}
-	parts := strings.Split(raw, ",")
-	params := make([]string, 0, len(parts))
+
+	params := make([]map[string]string, 0, len(parts))
 	for _, part := range parts {
-		trimmed := strings.TrimSpace(part)
-		if trimmed != "" {
-			params = append(params, trimmed)
+		paramType := extractMethodParameterType(part)
+		if paramType != "" {
+			params = append(params, encodeLegacyMethodParameter(paramType))
 		}
 	}
+
+	if len(params) == 0 {
+		return []map[string]string{{}}
+	}
+
 	return params
+}
+
+func splitMethodParameters(raw string) []string {
+	var (
+		parts []string
+		start int
+		angle int
+		paren int
+		brack int
+		brace int
+	)
+
+	for i, r := range raw {
+		switch r {
+		case '<':
+			angle++
+		case '>':
+			if angle > 0 {
+				angle--
+			}
+		case '(':
+			paren++
+		case ')':
+			if paren > 0 {
+				paren--
+			}
+		case '[':
+			brack++
+		case ']':
+			if brack > 0 {
+				brack--
+			}
+		case '{':
+			brace++
+		case '}':
+			if brace > 0 {
+				brace--
+			}
+		case ',':
+			if angle == 0 && paren == 0 && brack == 0 && brace == 0 {
+				part := strings.TrimSpace(raw[start:i])
+				if part != "" {
+					parts = append(parts, part)
+				}
+				start = i + 1
+			}
+		}
+	}
+
+	last := strings.TrimSpace(raw[start:])
+	if last != "" {
+		parts = append(parts, last)
+	}
+
+	return parts
+}
+
+func extractMethodParameterType(raw string) string {
+	param := strings.Join(strings.Fields(strings.TrimSpace(raw)), " ")
+	if param == "" {
+		return ""
+	}
+
+	lastSpace := -1
+	angle := 0
+	paren := 0
+	brack := 0
+	brace := 0
+	for i, r := range param {
+		switch r {
+		case '<':
+			angle++
+		case '>':
+			if angle > 0 {
+				angle--
+			}
+		case '(':
+			paren++
+		case ')':
+			if paren > 0 {
+				paren--
+			}
+		case '[':
+			brack++
+		case ']':
+			if brack > 0 {
+				brack--
+			}
+		case '{':
+			brace++
+		case '}':
+			if brace > 0 {
+				brace--
+			}
+		default:
+			if (r == ' ' || r == '\t') && angle == 0 && paren == 0 && brack == 0 && brace == 0 {
+				lastSpace = i
+			}
+		}
+	}
+
+	if lastSpace == -1 {
+		return param
+	}
+
+	paramType := strings.TrimSpace(param[:lastSpace])
+	paramName := strings.TrimSpace(param[lastSpace+1:])
+	if paramType == "" || paramName == "" || !methodParameterNamePattern.MatchString(paramName) {
+		return param
+	}
+
+	return paramType
+}
+
+func encodeLegacyMethodParameter(paramType string) map[string]string {
+	chars := make(map[string]string)
+	index := 0
+	for _, r := range paramType {
+		chars[fmt.Sprintf("%03d", index)] = string(r)
+		index++
+	}
+	return chars
+}
+
+var methodParameterNamePattern = regexp.MustCompile(`^[A-Za-z_]\w*$`)
+
+func isAssociationClassDefinition(umpFile string, className string) bool {
+	data, err := os.ReadFile(umpFile)
+	if err != nil {
+		return false
+	}
+
+	userCode := string(data)
+	if idx := strings.Index(userCode, modelDelimiter); idx >= 0 {
+		userCode = userCode[:idx]
+	}
+
+	pattern := `(?m)^\s*associationClass\s+` + regexp.QuoteMeta(className) + `\b`
+	return regexp.MustCompile(pattern).MatchString(userCode)
 }
 
 func findClass(classes []syncClass, name string) *syncClass {

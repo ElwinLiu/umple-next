@@ -76,4 +76,3 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 		ModelID: modelID,
 	})
 }
-

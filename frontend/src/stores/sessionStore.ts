@@ -82,6 +82,8 @@ interface SessionState {
   redoStack: string[]
   selectedExample: string | null
   generateTargetId: string
+  /** Set by setCodeFromSync so useCompiler can skip the debounce */
+  syncPending: boolean
 
   // Diagram content
   viewMode: DiagramView
@@ -98,6 +100,7 @@ interface SessionState {
   // Editor actions
   setCode: (code: string) => void
   setCodeFromSync: (code: string) => void
+  clearSyncPending: () => void
   undo: () => void
   redo: () => void
   setModelId: (id: string) => void
@@ -147,6 +150,7 @@ export const useSessionStore = create<SessionState>()(
       redoStack: [],
       selectedExample: null,
       generateTargetId: 'Java',
+      syncPending: false,
 
       // ── Diagram content ──
       viewMode: 'class',
@@ -175,6 +179,7 @@ export const useSessionStore = create<SessionState>()(
         if (code === s.code) return s
         return {
           code,
+          syncPending: true,
           undoStack: [...s.undoStack.slice(-(MAX_UNDO - 1)), s.code],
           redoStack: [],
           tabs: s.tabs.map((t) =>
@@ -184,6 +189,8 @@ export const useSessionStore = create<SessionState>()(
           ),
         }
       }),
+
+      clearSyncPending: () => set({ syncPending: false }),
 
       undo: () => set((s) => {
         if (s.undoStack.length === 0) return s

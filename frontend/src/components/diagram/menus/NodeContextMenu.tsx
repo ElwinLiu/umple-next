@@ -4,7 +4,7 @@ import { useSessionStore } from '@/stores/sessionStore'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { useDiagramSync } from '@/hooks/useDiagramSync'
 import { useMenuClose } from '@/hooks/useMenuClose'
-import { extractClassName } from '@/lib/diagramHelpers'
+import { extractClassName, isAssociationClass } from '@/lib/diagramHelpers'
 import { MenuItem } from './MenuItem'
 
 interface NodeContextMenuProps {
@@ -20,6 +20,8 @@ export function NodeContextMenu({ position, nodeId, onClose }: NodeContextMenuPr
   useMenuClose(menuRef, position, onClose)
 
   const className = nodeId ? extractClassName(nodeId) : ''
+  const code = useSessionStore((s) => s.code)
+  const isAssociationClassNode = className ? isAssociationClass(code, className) : false
 
   const handleRename = useCallback(() => {
     if (!nodeId) return
@@ -35,9 +37,15 @@ export function NodeContextMenu({ position, nodeId, onClose }: NodeContextMenuPr
 
   const handleAddMethod = useCallback(() => {
     if (!nodeId) return
+    if (isAssociationClassNode) {
+      const message = 'Methods cannot be added to association classes from the diagram.'
+      useEphemeralStore.getState().setLastError(message)
+      onClose()
+      return
+    }
     useEphemeralStore.getState().setEditing(nodeId, 'newMethod')
     onClose()
-  }, [nodeId, onClose])
+  }, [isAssociationClassNode, nodeId, onClose])
 
   const handleDelete = useCallback(async () => {
     if (!nodeId) return
