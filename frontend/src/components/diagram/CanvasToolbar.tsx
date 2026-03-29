@@ -26,7 +26,7 @@ export function CanvasToolbar() {
   if (toggles.length === 0) return null
 
   return (
-    <div className="absolute top-2 left-2 z-10" ref={containerRef}>
+    <div className="pointer-events-auto" ref={containerRef}>
       <div className="bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg shadow-sm overflow-hidden">
         <button
           onClick={() => setExpanded(!expanded)}

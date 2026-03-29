@@ -100,8 +100,9 @@ export function DiagramPanel() {
       )}
       <div className="flex-1 relative" data-testid="diagram-canvas">
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
+          <div className="absolute top-2 left-2 right-2 z-10 flex items-start gap-2 pointer-events-none flex-wrap">
           {!showHtml && <CanvasToolbar />}
-          <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
+          <div className="ml-auto pointer-events-auto flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
               <DropdownMenu>
                 <Tip content="Export diagram" side="bottom">
                   <DropdownMenuTrigger asChild>
@@ -133,6 +134,7 @@ export function DiagramPanel() {
                 </>
               )}
             </div>
+          </div>
           {showEditable ? (
             <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} />
           ) : showHtml ? (

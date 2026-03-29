@@ -79,32 +79,32 @@ export function CanvasBanner() {
   }, [compile])
 
   return (
-    <div className="relative flex items-center justify-between h-[38px] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
-      <div className="flex items-center gap-2">
+    <div className="relative grid grid-cols-[minmax(0,auto)_minmax(0,1fr)_auto] items-center h-[38px] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
+      <div className="flex items-center gap-2 min-w-0 overflow-hidden">
         <Tip content="Compile (Ctrl+Enter)" side="bottom">
           <button
             onClick={compile}
             disabled={compiling}
             aria-label={compiling ? 'Compiling' : 'Compile (Ctrl+Enter)'}
             data-testid="compile-button"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md text-ink-muted hover:text-ink hover:bg-surface-1 disabled:cursor-not-allowed disabled:opacity-70"
+            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md text-ink-muted hover:text-ink hover:bg-surface-1 disabled:cursor-not-allowed disabled:opacity-70 min-w-0"
           >
             {compiling ? (
-              <Loader2 className="size-3.5 animate-spin" />
+              <Loader2 className="size-3.5 shrink-0 animate-spin" />
             ) : justCompiled ? (
-              <Check className="size-3.5 text-status-success animate-fade-in" />
+              <Check className="size-3.5 shrink-0 text-status-success animate-fade-in" />
             ) : (
-              <Hammer className="size-3.5" />
+              <Hammer className="size-3.5 shrink-0" />
             )}
-            {compiling ? 'Compiling...' : justCompiled ? <span className="text-status-success animate-fade-in">Compiled</span> : 'Compile'}
+            <span className="truncate">{compiling ? 'Compiling...' : justCompiled ? <span className="text-status-success animate-fade-in">Compiled</span> : 'Compile'}</span>
           </button>
         </Tip>
 
         <DropdownMenu>
           <Tip content="Diagram view" side="bottom">
-            <DropdownMenuTrigger data-tour="diagram-view" className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer outline-none" aria-label="Diagram view">
-              {ALL_VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}
-              <ChevronDown className="size-3" />
+            <DropdownMenuTrigger data-tour="diagram-view" className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer outline-none min-w-0" aria-label="Diagram view">
+              <span className="truncate">{ALL_VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}</span>
+              <ChevronDown className="size-3 shrink-0" />
             </DropdownMenuTrigger>
           </Tip>
           <DropdownMenuContent align="start" className="w-48">
@@ -134,24 +134,24 @@ export function CanvasBanner() {
         </DropdownMenu>
       </div>
 
-      <div className="absolute left-1/2 -translate-x-1/2 flex items-center gap-0.5">
+      <div className="flex items-center justify-center gap-0.5 min-w-0 overflow-hidden">
         <Tip content="Diagram (Ctrl+1)" side="bottom">
           <button
             onClick={() => setRightPanelView('diagram')}
-            className={cn(lineTabClasses({ active: rightPanelView === 'diagram' }), 'text-xs px-2.5 py-1')}
+            className={cn(lineTabClasses({ active: rightPanelView === 'diagram' }), 'text-xs px-2.5 py-1 shrink-0')}
           >
             Diagram
           </button>
         </Tip>
         {generationRequested && (
-          <div className="flex items-center">
+          <div className="flex items-center min-w-0">
             <Tip content="Generated code (Ctrl+2)" side="bottom">
               <button
                 onClick={() => setRightPanelView('generated')}
-                className={cn(lineTabClasses({ active: rightPanelView === 'generated' }), 'text-xs px-2.5 py-1 flex items-center gap-1.5')}
+                className={cn(lineTabClasses({ active: rightPanelView === 'generated' }), 'text-xs px-2.5 py-1 flex items-center gap-1.5 min-w-0 max-w-48')}
               >
-                {generatingCode && <span className="w-1.5 h-1.5 rounded-full bg-status-warning animate-pulse" />}
-                {getGenerateTarget(generatedTargetId)?.label ?? generatedTargetId}
+                {generatingCode && <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-status-warning animate-pulse" />}
+                <span className="truncate">{getGenerateTarget(generatedTargetId)?.label ?? generatedTargetId}</span>
               </button>
             </Tip>
             <DropdownMenu>
