@@ -1,8 +1,8 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState, useCallback } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
-import { ChevronDown, ChevronUp, Check, AlertTriangle, X, Sparkles, Loader2 } from 'lucide-react'
+import { ChevronDown, ChevronUp, Check, AlertTriangle, X, Sparkles, Loader2, Copy } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 
 function useIsAiConfigured() {
@@ -156,6 +156,18 @@ export function OutputPanel() {
   const warningCount = useEphemeralStore((s) => s.outputWarningCount)
   const isAiConfigured = useIsAiConfigured()
   const hasIssues = errorCount > 0 || warningCount > 0
+  const [copied, setCopied] = useState(false)
+
+  const hasContent = !!(executionOutput || executionErrors)
+
+  const handleCopy = useCallback(() => {
+    const text = [executionOutput, executionErrors].filter(Boolean).join('\n')
+    if (!text) return
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }, [executionOutput, executionErrors])
 
   useEffect(() => {
     if (outputRef.current) {
@@ -183,15 +195,29 @@ export function OutputPanel() {
             </button>
           )}
         </div>
-        <Tip content="Collapse" side="bottom">
-          <button
-            onClick={() => setOutputView('hidden')}
-            className="flex items-center justify-center size-6 rounded-md text-ink-faint hover:text-ink-muted hover:bg-surface-1 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
-            aria-label="Collapse output"
-          >
-            <ChevronDown className="size-3.5" />
-          </button>
-        </Tip>
+        <div className="flex items-center gap-0.5">
+          <Tip content={copied ? 'Copied!' : 'Copy'} side="bottom">
+            <button
+              onClick={handleCopy}
+              disabled={!hasContent}
+              className="flex items-center justify-center size-6 rounded-md transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 disabled:opacity-30 disabled:cursor-default"
+              aria-label="Copy output"
+            >
+              {copied
+                ? <Check className="size-3.5 text-status-success" />
+                : <Copy className="size-3.5 text-ink-faint hover:text-ink-muted" />}
+            </button>
+          </Tip>
+          <Tip content="Collapse" side="bottom">
+            <button
+              onClick={() => setOutputView('hidden')}
+              className="flex items-center justify-center size-6 rounded-md text-ink-faint hover:text-ink-muted hover:bg-surface-1 transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
+              aria-label="Collapse output"
+            >
+              <ChevronDown className="size-3.5" />
+            </button>
+          </Tip>
+        </div>
       </div>
 
       {/* Output area */}
