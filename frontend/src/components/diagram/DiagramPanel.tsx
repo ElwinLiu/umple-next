@@ -145,7 +145,7 @@ export function DiagramPanel() {
                 <span>Generating {generatedLanguage}...</span>
               </div>
             ) : (generatedCode || generatedHtml || generatedIframeUrl) ? (
-              <div className="flex-1 flex flex-col animate-fade-in">
+              <div className="flex-1 min-h-0 flex flex-col animate-fade-in">
               <GeneratedOutputView
                 kind={generatedKind}
                 code={generatedCode}
