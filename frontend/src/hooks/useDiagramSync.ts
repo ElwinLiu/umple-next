@@ -1,6 +1,7 @@
 import { useCallback, useRef } from 'react'
 import { api } from '../api/client'
 import { useSessionStore } from '../stores/sessionStore'
+import { useEphemeralStore } from '../stores/ephemeralStore'
 
 interface SyncResult {
   success: boolean
@@ -66,12 +67,14 @@ export function useDiagramSync() {
       }
 
       if (response.errors) {
+        useEphemeralStore.getState().setLastError(response.errors)
         console.warn(`Diagram sync warning (${action}):`, response.errors)
         return { success: true, code: response.code, error: response.errors }
       }
 
       return { success: true, code: response.code }
     } catch (err: any) {
+      useEphemeralStore.getState().setLastError(err.message)
       console.warn(`Diagram sync failed (${action}):`, err.message)
       return { success: false, error: err.message }
     } finally {

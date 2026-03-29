@@ -54,15 +54,15 @@ type GvNodeLayout struct {
 }
 
 type GvEdgeLayout struct {
-	Source       string   `json:"source"`
-	Target       string   `json:"target"`
-	Label        string   `json:"label,omitempty"`
-	HeadLabel    string   `json:"headLabel,omitempty"`
-	TailLabel    string   `json:"tailLabel,omitempty"`
+	Source       string    `json:"source"`
+	Target       string    `json:"target"`
+	Label        string    `json:"label,omitempty"`
+	HeadLabel    string    `json:"headLabel,omitempty"`
+	TailLabel    string    `json:"tailLabel,omitempty"`
 	Points       []GvPoint `json:"points,omitempty"`
-	LabelPos     *GvPoint `json:"labelPos,omitempty"`
-	HeadLabelPos *GvPoint `json:"headLabelPos,omitempty"`
-	TailLabelPos *GvPoint `json:"tailLabelPos,omitempty"`
+	LabelPos     *GvPoint  `json:"labelPos,omitempty"`
+	HeadLabelPos *GvPoint  `json:"headLabelPos,omitempty"`
+	TailLabelPos *GvPoint  `json:"tailLabelPos,omitempty"`
 }
 
 type GvLayout struct {
@@ -73,11 +73,11 @@ type GvLayout struct {
 }
 
 type DiagramResponse struct {
-	SVG     string      `json:"svg"`
-	HTML    string      `json:"html,omitempty"`
-	Layout  *GvLayout   `json:"layout,omitempty"`
-	Errors  string      `json:"errors,omitempty"`
-	ModelID string      `json:"modelId"`
+	SVG     string    `json:"svg"`
+	HTML    string    `json:"html,omitempty"`
+	Layout  *GvLayout `json:"layout,omitempty"`
+	Errors  string    `json:"errors,omitempty"`
+	ModelID string    `json:"modelId"`
 }
 
 //go:embed assets/structureDiagram.js
@@ -91,15 +91,15 @@ type gvJSON struct {
 }
 
 type gvObject struct {
-	GvID    int            `json:"_gvid"`
-	Name    string         `json:"name"`
-	Pos     string         `json:"pos"`
-	Width   string         `json:"width"`
-	Height  string         `json:"height"`
-	Shape   string         `json:"shape"`
-	Label   string         `json:"label"`
-	LDraw   []gvDrawOp     `json:"_ldraw_"`
-	Objects []gvObject     `json:"objects"` // nested subgraph nodes
+	GvID    int        `json:"_gvid"`
+	Name    string     `json:"name"`
+	Pos     string     `json:"pos"`
+	Width   string     `json:"width"`
+	Height  string     `json:"height"`
+	Shape   string     `json:"shape"`
+	Label   string     `json:"label"`
+	LDraw   []gvDrawOp `json:"_ldraw_"`
+	Objects []gvObject `json:"objects"` // nested subgraph nodes
 }
 
 type gvEdge struct {
@@ -164,7 +164,7 @@ func parseGvLayout(jsonData []byte) *GvLayout {
 						Name:      obj.Name,
 						X:         gvX * ptToPx,
 						Y:         (bbHeight - gvY) * ptToPx, // flip Y axis
-						Width:     w * 72 * ptToPx,            // inches → points → pixels
+						Width:     w * 72 * ptToPx,           // inches → points → pixels
 						Height:    h * 72 * ptToPx,
 						Shape:     obj.Shape,
 						TextLines: extractTextLines(obj.LDraw),
@@ -263,27 +263,27 @@ func extractTextLines(ops []gvDrawOp) []GvTextLine {
 
 // validSuboptions lists the allowed -s flags for umplesync.jar diagram generation.
 var validSuboptions = map[string]bool{
-	"hideattributes":       true,
-	"showmethods":          true,
-	"hideactions":          true,
-	"showtransitionlabels": true,
-	"hideguards":           true,
-	"showguardlabels":      true,
-	"hidenaturallanguage":  true,
+	"hideattributes":        true,
+	"showmethods":           true,
+	"hideactions":           true,
+	"showtransitionlabels":  true,
+	"hideguards":            true,
+	"showguardlabels":       true,
+	"hidenaturallanguage":   true,
 	"showFeatureDependency": true,
-	"gvdot":                true,
-	"gvsfdp":               true,
-	"gvcirco":              true,
-	"gvneato":              true,
-	"gvfdp":                true,
-	"gvtwopi":              true,
-	"gvdark":               true,
+	"gvdot":                 true,
+	"gvsfdp":                true,
+	"gvcirco":               true,
+	"gvneato":               true,
+	"gvfdp":                 true,
+	"gvtwopi":               true,
+	"gvdark":                true,
 }
 
 type diagramOutputKind int
 
 const (
-	outputGV   diagramOutputKind = iota
+	outputGV diagramOutputKind = iota
 	outputHTML
 )
 
@@ -401,10 +401,10 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 
 	// Run dot -Tsvg and dot -Tjson concurrently (independent operations on the same .gv input)
 	var (
-		svgData    []byte
-		layout     *GvLayout
-		svgErr     error
-		svgErrMsg  string
+		svgData   []byte
+		layout    *GvLayout
+		svgErr    error
+		svgErrMsg string
 	)
 
 	var wg sync.WaitGroup

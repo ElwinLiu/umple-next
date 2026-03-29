@@ -32,7 +32,7 @@ var forwardHeaders = []string{
 	"Content-Type",
 	"Accept",
 	"X-Goog-Api-Key",    // Google Gemini auth
-	"Anthropic-Version",  // Anthropic API versioning
+	"Anthropic-Version", // Anthropic API versioning
 }
 
 // AIProxyHandler proxies requests to allowlisted AI provider APIs.

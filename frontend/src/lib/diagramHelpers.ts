@@ -1,6 +1,8 @@
 import type { Edge } from '@xyflow/react'
 import type { AssociationEdgeData } from '@/components/diagram/edges/AssociationEdge'
 
+const MODEL_DELIMITER = '//$?[End_of_model]$?'
+
 /** Extract the Umple class name from a ReactFlow node ID (e.g. "class-Foo" → "Foo"). */
 export function extractClassName(nodeId: string): string {
   return nodeId.replace(/^class-/, '')
@@ -12,6 +14,13 @@ export function generateClassName(nodes: { id: string }[]): string {
   let i = 1
   while (existing.has(`NewClass${i}`)) i++
   return `NewClass${i}`
+}
+
+/** Check whether a node name comes from an associationClass definition in the editable code. */
+export function isAssociationClass(code: string, className: string): boolean {
+  const userCode = code.split(MODEL_DELIMITER, 1)[0]
+  const escapedName = className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|\\n)\\s*associationClass\\s+${escapedName}\\b`).test(userCode)
 }
 
 /** Determine the correct sync action and params for deleting an edge. */

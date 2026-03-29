@@ -26,7 +26,7 @@ export function useGenerate() {
     if (!code.trim()) return
 
     const requestLanguage = resolveGenerateRequestLanguage(target, viewMode)
-    setGeneratingCode(true)
+    setGeneratingCode(true, target.id)
     setGeneratedError(null)
     try {
       const res = await api.generate({ code, language: requestLanguage, modelId: modelId ?? undefined })

@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from 'react'
-import { Download } from 'lucide-react'
+import { Download, X } from 'lucide-react'
 import { toSvg, toPng } from 'html-to-image'
 import { UmpleDiagram } from './UmpleDiagram'
 import { SmartSvgView } from './SmartSvgView'
@@ -43,6 +43,8 @@ export function DiagramPanel() {
   const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const generatedError = useEphemeralStore((s) => s.generatedError)
   const generationRequested = useEphemeralStore((s) => s.generationRequested)
+  const lastError = useEphemeralStore((s) => s.lastError)
+  const setLastError = useEphemeralStore((s) => s.setLastError)
 
   const currentSvg = svgCache[viewMode] ?? ''
   const currentHtml = htmlCache[viewMode] ?? ''
@@ -83,6 +85,19 @@ export function DiagramPanel() {
   return (
     <div className="h-full flex flex-col" data-testid="diagram-panel">
       <CanvasBanner />
+      {rightPanelView === 'diagram' && lastError && (
+        <ErrorBanner className="mx-3 mt-3 mb-0 flex items-start justify-between gap-3">
+          <span>{lastError}</span>
+          <button
+            type="button"
+            onClick={() => setLastError(null)}
+            className="mt-0.5 shrink-0 text-status-error/80 transition-colors hover:text-status-error"
+            aria-label="Dismiss diagram reminder"
+          >
+            <X className="size-3.5" />
+          </button>
+        </ErrorBanner>
+      )}
       <div className="flex-1 relative" data-testid="diagram-canvas">
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
           {!showHtml && <CanvasToolbar />}

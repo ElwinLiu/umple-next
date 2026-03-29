@@ -129,9 +129,16 @@ export function useCompiler() {
   const mountedRef = useRef(false)
   useEffect(() => { mountedRef.current = true }, [])
 
-  // Main compile effect — debounced on code/modelId changes
+  // Main compile effect — debounced on code/modelId changes.
+  // Diagram-sync edits set syncPending, which skips the debounce so the
+  // diagram refreshes immediately after a user interaction.
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current)
+
+    const { syncPending, clearSyncPending } = useSessionStore.getState()
+    if (syncPending) clearSyncPending()
+
+    const delay = syncPending ? 0 : DEBOUNCE_MS
 
     timerRef.current = setTimeout(async () => {
       if (abortRef.current) abortRef.current.abort()
@@ -146,7 +153,7 @@ export function useCompiler() {
       } catch (err: any) {
         if (err.name !== 'AbortError') throw err
       }
-    }, DEBOUNCE_MS)
+    }, delay)
 
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)

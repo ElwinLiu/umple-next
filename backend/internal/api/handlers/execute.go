@@ -81,4 +81,3 @@ func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 		ModelID: modelID,
 	})
 }
-
