@@ -92,7 +92,7 @@ interface EphemeralState {
 
   // Code generation actions
   setGeneratedOutput: (result: GenerateResponse, targetId: string) => void
-  setGeneratingCode: (generating: boolean) => void
+  setGeneratingCode: (generating: boolean, targetId?: string) => void
   setGeneratedError: (error: string | null) => void
   clearGenerated: () => void
 
@@ -204,8 +204,8 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
       rightPanelView: 'generated',
       generatedError: result.errors ?? null,
     }),
-  setGeneratingCode: (generatingCode) => set(generatingCode
-    ? { generatingCode, generationRequested: true, rightPanelView: 'generated' }
+  setGeneratingCode: (generatingCode, targetId) => set(generatingCode
+    ? { generatingCode, generationRequested: true, rightPanelView: 'generated', ...(targetId ? { generatedTargetId: targetId } : {}) }
     : { generatingCode }
   ),
   setGeneratedError: (generatedError) => set({ generatedError }),
