@@ -252,7 +252,7 @@ export function OnboardingTour() {
       <>
         <div className="fixed inset-0 z-50 bg-black/40 animate-fade-in" />
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface-0 rounded-xl shadow-2xl border border-border w-full max-w-md animate-fade-in overflow-hidden">
+          <div className="bg-surface-0 rounded-xl shadow-2xl w-full max-w-md animate-fade-in overflow-hidden">
             <div className="bg-brand px-5 py-4">
               <div className="flex items-center gap-2.5">
                 <Sparkles className="size-5 text-ink-inverse" />

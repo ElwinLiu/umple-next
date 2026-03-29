@@ -20,7 +20,7 @@ export function WelcomeDialog() {
   return (
     <Dialog open onOpenChange={(open) => { if (!open) dismissWelcome() }}>
       <DialogContent
-        className="sm:max-w-[440px] gap-0 p-0 overflow-hidden"
+        className="sm:max-w-[440px] gap-0 border-0 p-0 overflow-hidden"
         showCloseButton={false}
       >
         {/* Header band */}
