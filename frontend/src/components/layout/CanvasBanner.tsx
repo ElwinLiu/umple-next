@@ -3,7 +3,7 @@ import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
 import { useCompile } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
-import { GENERATE_TARGETS } from '../../generation/targets'
+import { GENERATE_TARGET_GROUPS } from '../../generation/targets'
 import { Hammer, Loader2, Check, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -163,15 +163,21 @@ export function CanvasBanner() {
                   <ChevronDown className="size-3" />
                 </DropdownMenuTrigger>
               </Tip>
-              <DropdownMenuContent align="start" className="w-40 max-h-52">
-                {GENERATE_TARGETS.map((target) => (
-                  <DropdownMenuItem
-                    key={target.id}
-                    onSelect={() => handleGenerate(target.id)}
-                    className={`text-xs ${target.id === generatedTargetId ? 'bg-brand-light text-brand font-semibold' : ''}`}
-                  >
-                    {target.label}
-                  </DropdownMenuItem>
+              <DropdownMenuContent align="start" className="w-52 max-h-64">
+                {GENERATE_TARGET_GROUPS.map((group, gi) => (
+                  <DropdownMenuGroup key={group.label}>
+                    {gi > 0 && <DropdownMenuSeparator />}
+                    <DropdownMenuLabel className="text-[10px]">{group.label}</DropdownMenuLabel>
+                    {group.targets.map((target) => (
+                      <DropdownMenuItem
+                        key={target.id}
+                        onSelect={() => handleGenerate(target.id)}
+                        className={`text-xs ${target.id === generatedTargetId ? 'bg-brand-light text-brand font-semibold' : ''}`}
+                      >
+                        {target.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuGroup>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>

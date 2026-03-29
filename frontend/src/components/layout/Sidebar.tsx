@@ -6,7 +6,7 @@ import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
 import type { ExampleCategory } from '../../api/types'
-import { GENERATE_TARGETS, getGenerateTarget } from '../../generation/targets'
+import { GENERATE_TARGETS, GENERATE_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
 import { LAYOUT_OPTIONS, ALL_VIEW_MODES, PINNED_VIEW_MODES, getViewForExampleCategory } from '../../constants/diagram'
 import { Combobox } from '@/components/ui/combobox'
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -268,8 +268,11 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
     [targetId],
   )
 
-  const languageOptions = useMemo(
-    () => GENERATE_TARGETS.map((target) => ({ value: target.id, label: target.label })),
+  const generateGroups = useMemo(
+    () => GENERATE_TARGET_GROUPS.map((g) => ({
+      label: g.label,
+      options: g.targets.map((t) => ({ value: t.id, label: t.label })),
+    })),
     []
   )
 
@@ -341,22 +344,17 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
           </div>
         </div>
 
-        {/* Generate Code */}
+        {/* Generate */}
         <div data-tour="generate">
-          <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Generate Code</div>
+          <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Generate</div>
           <div className="space-y-2">
-            <Select value={targetId} onValueChange={setTargetId}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {languageOptions.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              groups={generateGroups}
+              value={targetId}
+              onSelect={setTargetId}
+              placeholder="Select target..."
+              searchPlaceholder="Search targets..."
+            />
             <div className="flex gap-1.5">
               <Button
                 onClick={handleGenerate}

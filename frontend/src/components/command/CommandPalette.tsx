@@ -4,7 +4,7 @@ import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
 import { useGenerate } from '../../hooks/useGenerate'
 import { api } from '../../api/client'
 import type { ExampleCategory } from '../../api/types'
-import { GENERATE_TARGETS } from '../../generation/targets'
+import { GENERATE_TARGET_GROUPS } from '../../generation/targets'
 import { getViewForExampleCategory } from '../../constants/diagram'
 import {
   LayoutGrid, Workflow, GitBranch, Network,
@@ -187,19 +187,20 @@ export function CommandPalette() {
               ))}
             </CommandGroup>
 
-            <CommandSeparator />
-            <CommandGroup heading="Generate">
-              {GENERATE_TARGETS.map((target) => (
-                <CommandItem
-                  key={target.id}
-                  onSelect={() => handleGenerate(target.id)}
-                  data-testid={`command-item-gen-${target.id}`}
-                >
-                  <Code />
-                  {target.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {GENERATE_TARGET_GROUPS.map((group) => (
+              <CommandGroup key={group.label} heading={group.label}>
+                {group.targets.map((target) => (
+                  <CommandItem
+                    key={target.id}
+                    onSelect={() => handleGenerate(target.id)}
+                    data-testid={`command-item-gen-${target.id}`}
+                  >
+                    <Code />
+                    {target.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
 
             <CommandSeparator />
             <CommandGroup heading="View">
