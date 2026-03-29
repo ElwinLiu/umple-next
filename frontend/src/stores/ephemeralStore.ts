@@ -55,7 +55,7 @@ interface EphemeralState {
   generationRequested: boolean
 
   // Diagram ephemeral
-  renderMode: 'reactflow' | 'graphviz'
+  renderMode: 'editable' | 'graphviz'
   selectedNodeId: string | null
   selectedEdgeId: string | null
   editingNodeId: string | null
@@ -97,7 +97,7 @@ interface EphemeralState {
   clearGenerated: () => void
 
   // Diagram ephemeral actions
-  setRenderMode: (mode: 'reactflow' | 'graphviz') => void
+  setRenderMode: (mode: 'editable' | 'graphviz') => void
   setSelectedNode: (id: string | null) => void
   setSelectedEdge: (id: string | null) => void
   setEditing: (nodeId: string | null, field: 'name' | 'newAttribute' | 'newMethod' | null) => void
@@ -143,7 +143,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   generationRequested: false,
 
   // Diagram ephemeral
-  renderMode: 'reactflow',
+  renderMode: 'editable',
   selectedNodeId: null,
   selectedEdgeId: null,
   editingNodeId: null,

@@ -1,13 +1,13 @@
-import { useCallback, type ComponentType } from 'react'
+import { useCallback } from 'react'
 import { Download } from 'lucide-react'
 import { toSvg, toPng } from 'html-to-image'
-import { ClassDiagram } from './ClassDiagram'
+import { UmpleDiagram } from './UmpleDiagram'
 import { SmartSvgView } from './SmartSvgView'
 import { HtmlDiagramView } from './HtmlDiagramView'
 import { CanvasToolbar } from './CanvasToolbar'
 import { GeneratedOutputView } from '../generation/GeneratedOutputView'
 import { CanvasBanner } from '../layout/CanvasBanner'
-import { EMPTY_DIAGRAM_ELEMENTS, type DiagramView, useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
+import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
@@ -23,15 +23,12 @@ function triggerDownload(href: string, filename: string) {
   link.click()
 }
 
-const RF_RENDERERS: Partial<Record<DiagramView, ComponentType>> = {
-  class: ClassDiagram,
-}
-
 export function DiagramPanel() {
   const viewMode = useSessionStore((s) => s.viewMode)
   const svgCache = useSessionStore((s) => s.svgCache)
   const htmlCache = useSessionStore((s) => s.htmlCache)
-  const diagramData = useSessionStore((s) => s.diagramData)
+  const umpleModel = useSessionStore((s) => s.umpleModel)
+  const classLayout = useSessionStore((s) => s.classLayout)
   const code = useSessionStore((s) => s.code)
   const modelId = useSessionStore((s) => s.modelId)
   const renderMode = useEphemeralStore((s) => s.renderMode)
@@ -49,12 +46,10 @@ export function DiagramPanel() {
 
   const currentSvg = svgCache[viewMode] ?? ''
   const currentHtml = htmlCache[viewMode] ?? ''
-  const currentDiagramData = diagramData[viewMode] ?? EMPTY_DIAGRAM_ELEMENTS
-  const Renderer = RF_RENDERERS[viewMode]
   const outputKind = VIEW_OUTPUT_KIND[viewMode]
   const showHtml = outputKind === 'html' && !!currentHtml
-  const hasReactFlowData = !!Renderer && currentDiagramData.nodes.length > 0
-  const showGv = !showHtml && currentSvg && (renderMode === 'graphviz' || !hasReactFlowData)
+  const hasEditableModel = viewMode === 'class' && !!umpleModel?.umpleClasses?.length
+  const showGv = !showHtml && currentSvg && (renderMode === 'graphviz' || !hasEditableModel)
 
   const handleExport = useCallback(async (format: string) => {
     const filename = `umple-${viewMode}-diagram.${format}`
@@ -101,16 +96,16 @@ export function DiagramPanel() {
                   <DropdownMenuItem onClick={() => handleExport('png')}>PNG</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {hasReactFlowData && (
+              {hasEditableModel && (
                 <>
                   <div className="w-px h-3.5 bg-border mx-0.5" />
-                  <Tip content={`Renderer: ${renderMode === 'reactflow' ? 'React Flow' : 'Graphviz'}`} side="bottom">
+                  <Tip content={`Renderer: ${renderMode === 'editable' ? 'Editable' : 'Graphviz'}`} side="bottom">
                     <label className="flex items-center gap-1.5 cursor-pointer">
-                      <span className={`text-xs ${renderMode === 'reactflow' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>RF</span>
+                      <span className={`text-xs ${renderMode === 'editable' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>Edit</span>
                       <Switch
                         size="sm"
                         checked={renderMode === 'graphviz'}
-                        onCheckedChange={(checked) => setRenderMode(checked ? 'graphviz' : 'reactflow')}
+                        onCheckedChange={(checked) => setRenderMode(checked ? 'graphviz' : 'editable')}
                       />
                       <span className={`text-xs ${renderMode === 'graphviz' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>GV</span>
                     </label>
@@ -123,9 +118,9 @@ export function DiagramPanel() {
             <HtmlDiagramView html={currentHtml} viewMode={viewMode} />
           ) : showGv ? (
             <SmartSvgView svg={currentSvg} />
-          ) : (
-            Renderer ? <Renderer /> : null
-          )}
+          ) : hasEditableModel ? (
+            <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} />
+          ) : null}
         </div>
 
         {generationRequested && (

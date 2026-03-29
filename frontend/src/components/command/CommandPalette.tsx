@@ -205,12 +205,12 @@ export function CommandPalette() {
             <CommandGroup heading="View">
               <CommandItem
                 onSelect={() => {
-                  setRenderMode(renderMode === 'reactflow' ? 'graphviz' : 'reactflow')
+                  setRenderMode(renderMode === 'editable' ? 'graphviz' : 'editable')
                   closeCommandPalette()
                 }}
               >
                 <Layers />
-                Switch to {renderMode === 'reactflow' ? 'GraphViz' : 'ReactFlow'} Rendering
+                Switch to {renderMode === 'editable' ? 'Graphviz' : 'Editable'} Rendering
               </CommandItem>
               <CommandItem
                 onSelect={() => {

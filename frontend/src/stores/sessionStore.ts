@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Node, Edge } from '@xyflow/react'
+import type { UmpleModel, GvLayout } from '../api/types'
 import { useEphemeralStore } from './ephemeralStore'
 
 // ── Editor types ──
@@ -25,12 +26,12 @@ export const VIEW_OUTPUT_KIND: Record<DiagramView, 'gv' | 'html'> = {
   eventSequence: 'html', stateTables: 'html',
 }
 
-export interface DiagramElements {
+interface DiagramElements {
   nodes: Node[]
   edges: Edge[]
 }
 
-export const EMPTY_DIAGRAM_ELEMENTS: DiagramElements = { nodes: [], edges: [] }
+const EMPTY_DIAGRAM_ELEMENTS: DiagramElements = { nodes: [], edges: [] }
 
 // ── Chat types ──
 
@@ -84,6 +85,8 @@ interface SessionState {
 
   // Diagram content
   viewMode: DiagramView
+  umpleModel: UmpleModel | null
+  classLayout: GvLayout | null
   diagramData: Partial<Record<DiagramView, DiagramElements>>
   svgCache: Partial<Record<DiagramView, string>>
   htmlCache: Partial<Record<DiagramView, string>>
@@ -112,10 +115,10 @@ interface SessionState {
 
   // Diagram actions
   setViewMode: (mode: DiagramView) => void
+  setUmpleModel: (model: UmpleModel | null, layout?: GvLayout | null) => void
   setDiagramData: (view: DiagramView, nodes: Node[], edges: Edge[]) => void
   getDiagramData: (view: DiagramView) => DiagramElements
-  clearDiagramData: (view?: DiagramView) => void
-  setSvgForView: (view: DiagramView, svg: string) => void
+setSvgForView: (view: DiagramView, svg: string) => void
   clearSvgCache: () => void
   setHtmlForView: (view: DiagramView, html: string) => void
   clearHtmlCache: () => void
@@ -147,6 +150,8 @@ export const useSessionStore = create<SessionState>()(
 
       // ── Diagram content ──
       viewMode: 'class',
+      umpleModel: null,
+      classLayout: null,
       diagramData: {},
       svgCache: {},
       htmlCache: {},
@@ -304,18 +309,22 @@ export const useSessionStore = create<SessionState>()(
 
       setViewMode: (viewMode) => set({ viewMode }),
 
+      setUmpleModel: (umpleModel, layout) => set((s) => {
+        if (s.umpleModel === umpleModel && (layout === undefined || s.classLayout === layout)) return s
+        return {
+          umpleModel,
+          ...(layout !== undefined ? { classLayout: layout } : {}),
+        }
+      }),
+
       setDiagramData: (view, nodes, edges) =>
-        set((s) => ({ diagramData: { ...s.diagramData, [view]: { nodes, edges } } })),
+        set((s) => {
+          const current = s.diagramData[view]
+          if (current && current.nodes === nodes && current.edges === edges) return s
+          return { diagramData: { ...s.diagramData, [view]: { nodes, edges } } }
+        }),
 
       getDiagramData: (view): DiagramElements => get().diagramData[view] ?? EMPTY_DIAGRAM_ELEMENTS,
-
-      clearDiagramData: (view) =>
-        set((s) => {
-          if (!view) return { diagramData: {} }
-          const next = { ...s.diagramData }
-          delete next[view]
-          return { diagramData: next }
-        }),
 
       setSvgForView: (view, svg) =>
         set((s) => ({ svgCache: { ...s.svgCache, [view]: svg } })),
@@ -428,6 +437,8 @@ export const useSessionStore = create<SessionState>()(
         selectedExample: state.selectedExample,
         generateTargetId: state.generateTargetId,
         viewMode: state.viewMode,
+        umpleModel: state.umpleModel,
+        classLayout: state.classLayout,
         diagramData: state.diagramData,
         svgCache: state.svgCache,
         htmlCache: state.htmlCache,

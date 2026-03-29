@@ -8,16 +8,11 @@ import {
   selectSuboptionsKey,
 } from '../stores/preferencesStore'
 import { useIsDark } from './useIsDark'
-import { useDiagram } from './useDiagram'
 import { api } from '../api/client'
 import type { UmpleModel, GvLayout } from '../api/types'
 
 
 const DEBOUNCE_MS = 1500
-
-interface CompileCallbacks {
-  updateClassDiagram: (model: UmpleModel, gvLayout?: GvLayout) => void
-}
 
 /** Build the diagram request params from current store state + isDark flag. */
 function getDiagramRequestParams(code: string, view: DiagramView, modelId: string, isDark: boolean) {
@@ -33,11 +28,10 @@ function getDiagramRequestParams(code: string, view: DiagramView, modelId: strin
 /** Core compile + diagram refresh. Shared by auto-compile and manual compile.
  *  Returns { success, model } so callers can cache the parsed model. */
 export async function compileAndRefresh(
-  callbacks: CompileCallbacks,
   isDark: boolean,
   signal?: AbortSignal,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
-  const { code, modelId, setModelId } = useSessionStore.getState()
+  const { code, modelId, setModelId, setUmpleModel } = useSessionStore.getState()
   const { viewMode, clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
   const { setCompiling, setLastError } = useEphemeralStore.getState()
   const { setExecutionOutput } = useEphemeralStore.getState()
@@ -91,8 +85,9 @@ export async function compileAndRefresh(
       }
     }
 
-    if (model && viewMode === 'class') {
-      callbacks.updateClassDiagram(model, gvLayout)
+    // Store the parsed model and layout for UmpleDiagram
+    if (model) {
+      setUmpleModel(model, viewMode === 'class' ? gvLayout ?? null : undefined)
     }
   } catch (err: any) {
     if (err.name === 'AbortError') throw err
@@ -115,7 +110,6 @@ export function useCompiler() {
   const setLastError = useEphemeralStore((s) => s.setLastError)
   const suboptionsKey = usePreferencesStore(selectSuboptionsKey)
   const isDark = useIsDark()
-  const { updateClassDiagram } = useDiagram()
 
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   const abortRef = useRef<AbortController>(undefined)
@@ -145,7 +139,6 @@ export function useCompiler() {
 
       try {
         const result = await compileAndRefresh(
-          { updateClassDiagram },
           isDarkRef.current,
           abortRef.current.signal,
         )
@@ -184,7 +177,7 @@ export function useCompiler() {
         setHtmlForView(view, res.html)
       }
       if (view === 'class' && lastModelRef.current) {
-        updateClassDiagram(lastModelRef.current, res.layout)
+        useSessionStore.getState().setUmpleModel(lastModelRef.current, res.layout ?? null)
       }
       if (res.errors) {
         setLastError(res.errors)

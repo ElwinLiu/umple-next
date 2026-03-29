@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
-import { useDiagram } from './useDiagram'
 import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
 import { compileAndRefresh } from './useCompiler'
@@ -39,7 +38,6 @@ export function useExecute() {
 export function useCompile() {
   const [compiling, setCompiling] = useState(false)
   const compilingRef = useRef(false)
-  const { updateClassDiagram } = useDiagram()
   const isDark = useIsDark()
 
   const compile = useCallback(async () => {
@@ -48,7 +46,7 @@ export function useCompile() {
     setCompiling(true)
 
     try {
-      const { success } = await compileAndRefresh({ updateClassDiagram }, isDark)
+      const { success } = await compileAndRefresh(isDark)
       if (success) {
         useEphemeralStore.getState().setExecutionOutput('Compiled successfully.')
         useEphemeralStore.getState().setOutputView('strip')
@@ -65,7 +63,7 @@ export function useCompile() {
       compilingRef.current = false
       setCompiling(false)
     }
-  }, [updateClassDiagram, isDark])
+  }, [isDark])
 
   return { compile, compiling }
 }

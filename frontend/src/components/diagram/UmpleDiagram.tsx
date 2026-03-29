@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { usePreferencesStore } from '../../stores/preferencesStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import {
@@ -16,7 +16,7 @@ import {
   applyNodeChanges,
   applyEdgeChanges,
 } from '@xyflow/react'
-import { EMPTY_DIAGRAM_ELEMENTS, useSessionStore } from '../../stores/sessionStore'
+import { useSessionStore } from '../../stores/sessionStore'
 import { ClassNode } from './nodes/ClassNode'
 import { AssociationEdge } from './edges/AssociationEdge'
 import { DiagramControls } from './DiagramControls'
@@ -26,30 +26,46 @@ import { EdgeContextMenu } from './menus/EdgeContextMenu'
 import { ConnectionTypeMenu, type ConnectionChoice } from './menus/ConnectionTypeMenu'
 import { useDiagramSync } from '../../hooks/useDiagramSync'
 import { extractClassName, edgeDeletionParams } from '../../lib/diagramHelpers'
+import { convertClassDiagram } from '../../hooks/diagrams/classConverter'
+import type { UmpleModel, GvLayout } from '../../api/types'
 
 const nodeTypes = { classNode: ClassNode }
 const edgeTypes = { association: AssociationEdge }
 
-function handleDeleteKey(e: KeyboardEvent, sync: (action: string, params: Record<string, string>) => Promise<unknown>): boolean {
+// ── Types ──
+
+interface RfState { nodes: Node[]; edges: Edge[] }
+
+// ── Keyboard helpers ──
+
+function handleDeleteKey(
+  e: KeyboardEvent,
+  rfRef: React.RefObject<RfState>,
+  setRf: React.Dispatch<React.SetStateAction<RfState>>,
+  sync: (action: string, params: Record<string, string>) => Promise<unknown>,
+): boolean {
   if (e.key !== 'Delete' && e.key !== 'Backspace') return false
 
   const { selectedNodeId, selectedEdgeId } = useEphemeralStore.getState()
-  const { diagramData, removeNode, removeEdge } = useSessionStore.getState()
-  const currentEdges = diagramData.class?.edges ?? []
 
   if (selectedNodeId) {
     e.preventDefault()
     const className = extractClassName(selectedNodeId)
-    removeNode(selectedNodeId)
+    setRf((prev) => ({
+      nodes: prev.nodes.filter((n) => n.id !== selectedNodeId),
+      edges: prev.edges.filter((ed) => ed.source !== selectedNodeId && ed.target !== selectedNodeId),
+    }))
+    useEphemeralStore.getState().setSelectedNode(null)
     sync('removeClass', { className })
     return true
   }
   if (selectedEdgeId) {
     e.preventDefault()
-    const edge = currentEdges.find((ed) => ed.id === selectedEdgeId)
+    const edge = rfRef.current.edges.find((ed) => ed.id === selectedEdgeId)
     if (edge) {
       const { action, params } = edgeDeletionParams(edge)
-      removeEdge(selectedEdgeId)
+      setRf((prev) => ({ ...prev, edges: prev.edges.filter((ed) => ed.id !== selectedEdgeId) }))
+      useEphemeralStore.getState().setSelectedEdge(null)
       sync(action, params)
     }
     return true
@@ -90,12 +106,11 @@ function handleUndoRedo(e: KeyboardEvent): boolean {
   return true
 }
 
-/** Fits the viewport to all nodes whenever the node set changes */
-function AutoFitView({ view }: { view: 'class' | 'structure' }) {
+// ── Auto-fit viewport ──
+
+function AutoFitView({ nodeKey }: { nodeKey: string }) {
   const { fitView } = useReactFlow()
   const nodesInitialized = useNodesInitialized()
-  const nodes = useSessionStore((s) => s.diagramData[view]?.nodes ?? EMPTY_DIAGRAM_ELEMENTS.nodes)
-  const nodeKey = nodes.map((n) => n.id).join(',')
   const prevKeyRef = useRef('')
 
   useEffect(() => {
@@ -110,28 +125,63 @@ function AutoFitView({ view }: { view: 'class' | 'structure' }) {
   return null
 }
 
-// Context menu state types
+// ── Context menu state ──
+
 interface MenuState<T = undefined> {
   position: { x: number; y: number } | null
   data: T
 }
 
-export function ClassDiagram({ view = 'class' }: { view?: 'class' | 'structure' }) {
+// ── Public API ──
+
+export interface UmpleDiagramProps {
+  /** The parsed Umple model (classes, associations, interfaces). */
+  model: UmpleModel
+  /** Graphviz layout metadata for positioning nodes and edges. */
+  layout?: GvLayout
+  /** Whether the diagram supports editing (drag, context menus, keyboard shortcuts). */
+  editable?: boolean
+}
+
+export function UmpleDiagram({ model, layout, editable = true }: UmpleDiagramProps) {
   return (
     <ReactFlowProvider>
-      <ClassDiagramInner view={view} />
+      <UmpleDiagramInner model={model} layout={layout} editable={editable} />
     </ReactFlowProvider>
   )
 }
 
-function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
-  const isEditable = view === 'class'
-  const { nodes, edges } = useSessionStore((s) => s.diagramData[view] ?? EMPTY_DIAGRAM_ELEMENTS)
+// ── Inner component (inside ReactFlowProvider) ──
+
+function UmpleDiagramInner({ model, layout, editable = true }: UmpleDiagramProps) {
+  // Convert UmpleModel → ReactFlow nodes/edges
+  const converted = useMemo(() => convertClassDiagram(model, layout), [model, layout])
+
+  // Single state slot for nodes+edges — atomic updates, one render per change
+  const [rf, setRf] = useState<RfState>({ nodes: converted.nodes, edges: converted.edges })
+  const { nodes, edges } = rf
+
+  // Ref for stable keyboard handler access (avoids listener churn)
+  const rfRef = useRef(rf)
+  rfRef.current = rf
+
+  // Reset when model/layout changes
+  const prevConvertedRef = useRef(converted)
+  useEffect(() => {
+    if (prevConvertedRef.current === converted) return
+    prevConvertedRef.current = converted
+    setRf({ nodes: converted.nodes, edges: converted.edges })
+  }, [converted])
+
+  // Keep session store in sync so child components (ClassNode, DiagramControls) can read from it
   const setDiagramData = useSessionStore((s) => s.setDiagramData)
+  useEffect(() => {
+    setDiagramData('class', nodes, edges)
+  }, [nodes, edges, setDiagramData])
+
   const setSelectedNode = useEphemeralStore((s) => s.setSelectedNode)
   const setSelectedEdge = useEphemeralStore((s) => s.setSelectedEdge)
   const updateNodePosition = useSessionStore((s) => s.updateNodePosition)
-  const modelId = useSessionStore((s) => s.modelId)
   const theme = usePreferencesStore((s) => s.theme)
   const rfColorMode = theme === 'system' ? 'system' : theme
   const { sync } = useDiagramSync()
@@ -154,7 +204,7 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
 
   const onNodesChange: OnNodesChange = useCallback(
     (changes) => {
-      setDiagramData(view, applyNodeChanges(changes, nodes), edges)
+      setRf((prev) => ({ ...prev, nodes: applyNodeChanges(changes, prev.nodes) }))
       for (const c of changes) {
         if (c.type === 'select' && c.selected) {
           setSelectedNode(c.id)
@@ -162,12 +212,12 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
         }
       }
     },
-    [view, nodes, edges, setDiagramData, setSelectedNode, setSelectedEdge]
+    [setSelectedNode, setSelectedEdge]
   )
 
   const onEdgesChange: OnEdgesChange = useCallback(
     (changes) => {
-      setDiagramData(view, nodes, applyEdgeChanges(changes, edges))
+      setRf((prev) => ({ ...prev, edges: applyEdgeChanges(changes, prev.edges) }))
       for (const c of changes) {
         if (c.type === 'select' && c.selected) {
           setSelectedEdge(c.id)
@@ -175,12 +225,12 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
         }
       }
     },
-    [view, nodes, edges, setDiagramData, setSelectedEdge, setSelectedNode]
+    [setSelectedEdge, setSelectedNode]
   )
 
   const onNodeDragStop = useCallback(
     async (_: React.MouseEvent, node: Node) => {
-      if (!isEditable) return
+      if (!editable) return
       updateNodePosition(node.id, node.position.x, node.position.y)
       const className = extractClassName(node.id)
 
@@ -190,13 +240,13 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
         y: String(Math.round(node.position.y)),
       })
     },
-    [isEditable, updateNodePosition, sync]
+    [editable, updateNodePosition, sync]
   )
 
   // Context menu handlers
   const onPaneContextMenu = useCallback(
     (event: MouseEvent | React.MouseEvent) => {
-      if (!isEditable) return
+      if (!editable) return
       event.preventDefault()
       closeAllMenus()
       const flowPos = screenToFlowPosition({ x: event.clientX, y: event.clientY })
@@ -206,40 +256,40 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
         flowPosition: flowPos,
       })
     },
-    [isEditable, closeAllMenus, screenToFlowPosition]
+    [editable, closeAllMenus, screenToFlowPosition]
   )
 
   const onNodeContextMenu = useCallback(
     (event: React.MouseEvent, node: Node) => {
-      if (!isEditable) return
+      if (!editable) return
       event.preventDefault()
       closeAllMenus()
       setNodeMenu({ position: { x: event.clientX, y: event.clientY }, data: node.id })
     },
-    [isEditable, closeAllMenus]
+    [editable, closeAllMenus]
   )
 
   const onEdgeContextMenu = useCallback(
     (event: React.MouseEvent, edge: Edge) => {
-      if (!isEditable) return
+      if (!editable) return
       event.preventDefault()
       closeAllMenus()
       setEdgeMenu({ position: { x: event.clientX, y: event.clientY }, data: edge.id })
     },
-    [isEditable, closeAllMenus]
+    [editable, closeAllMenus]
   )
 
   // Connection drawing
   const onConnect: OnConnect = useCallback(
     (connection: Connection) => {
-      if (!isEditable) return
+      if (!editable) return
       if (!connection.source || !connection.target) return
       setConnectionMenu({
         position: lastMouseRef.current,
         data: connection,
       })
     },
-    [isEditable]
+    [editable]
   )
 
   const lastMouseRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -271,15 +321,15 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
     [connectionMenu.data, sync]
   )
 
-  // Keyboard handlers
+  // Keyboard handlers (stable — reads nodes/edges via ref)
   useEffect(() => {
-    if (!isEditable) return
+    if (!editable) return
 
     function handleKeyDown(e: KeyboardEvent) {
       const target = e.target as HTMLElement
       if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
 
-      if (handleDeleteKey(e, sync)) return
+      if (handleDeleteKey(e, rfRef, setRf, sync)) return
       if (handleRenameKey(e)) return
       if (handleEscapeKey(e, closeAllMenus)) return
       if (handleUndoRedo(e)) return
@@ -287,7 +337,10 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
 
     document.addEventListener('keydown', handleKeyDown)
     return () => document.removeEventListener('keydown', handleKeyDown)
-  }, [isEditable, sync, closeAllMenus])
+  }, [editable, sync, closeAllMenus])
+
+  // Stable key for auto-fit (triggers when the set of node IDs changes)
+  const nodeKey = useMemo(() => nodes.map((n) => n.id).join(','), [nodes])
 
   return (
     <>
@@ -302,22 +355,22 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
         onNodeClick={(_, node) => { setSelectedNode(node.id); setSelectedEdge(null) }}
         onEdgeClick={(_, edge) => { setSelectedEdge(edge.id); setSelectedNode(null) }}
         onPaneClick={() => { setSelectedNode(null); setSelectedEdge(null); closeAllMenus() }}
-        onPaneContextMenu={isEditable ? onPaneContextMenu : undefined}
-        onNodeContextMenu={isEditable ? onNodeContextMenu : undefined}
-        onEdgeContextMenu={isEditable ? onEdgeContextMenu : undefined}
-        onConnect={isEditable ? onConnect : undefined}
+        onPaneContextMenu={editable ? onPaneContextMenu : undefined}
+        onNodeContextMenu={editable ? onNodeContextMenu : undefined}
+        onEdgeContextMenu={editable ? onEdgeContextMenu : undefined}
+        onConnect={editable ? onConnect : undefined}
         onMouseMove={handleMouseMove}
         colorMode={rfColorMode}
         minZoom={0.2}
         maxZoom={2}
         defaultEdgeOptions={{ type: 'association' }}
         deleteKeyCode={null}
-        nodesDraggable={isEditable}
-        nodesConnectable={isEditable}
+        nodesDraggable={editable}
+        nodesConnectable={editable}
       >
         <Background />
-        <DiagramControls allowClassEditing={isEditable} />
-        <AutoFitView view={view} />
+        <DiagramControls allowClassEditing={editable} />
+        <AutoFitView nodeKey={nodeKey} />
 
         {/* SVG marker definitions for edge types */}
         <svg className="absolute w-0 h-0">
@@ -339,7 +392,7 @@ function ClassDiagramInner({ view }: { view: 'class' | 'structure' }) {
       </ReactFlow>
 
       {/* Context menus rendered as portals outside ReactFlow */}
-      {isEditable && (
+      {editable && (
         <>
           <DiagramContextMenu
             position={paneMenu.position}
