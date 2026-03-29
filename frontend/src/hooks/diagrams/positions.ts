@@ -15,7 +15,7 @@ export function clamp(value: number, min: number, max: number) {
 }
 
 export function estimateTextWidth(text: string) {
-  return text.length * 7
+  return text.length * 7.5
 }
 
 export function buildGvPositions(layout: GvLayout, entries: LayoutEntry[]) {

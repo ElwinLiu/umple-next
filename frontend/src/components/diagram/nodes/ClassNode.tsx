@@ -110,9 +110,10 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
   return (
     <div
       className={cn(
-        'w-full bg-surface-0 border-2 text-xs font-mono shadow-md transition-shadow overflow-hidden',
+        'w-full bg-surface-0 border-2 shadow-md transition-shadow overflow-hidden',
         selected ? 'border-brand ring-2 ring-brand/30' : 'border-border-strong',
       )}
+      style={{ fontFamily: "Times, 'Times New Roman', serif", fontSize: 14 }}
       data-testid={`class-node-${d.name}`}
     >
       {/* BT layout: edges go upward, so source exits from top, target enters from bottom */}
@@ -120,7 +121,7 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
 
       {/* Class name header */}
       <div
-        className={cn('px-2.5 py-1.5 font-bold text-center', headerClasses, d.isAbstract && 'italic', hasBody && 'border-b border-border-strong')}
+        className={cn('px-2.5 py-1.5 font-bold text-center', headerClasses, hasBody && 'border-b border-border-strong')}
         onDoubleClick={handleNameDoubleClick}
       >
         {isEditingName ? (

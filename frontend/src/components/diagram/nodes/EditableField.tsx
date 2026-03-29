@@ -77,7 +77,8 @@ export function EditableField({
         placeholder={placeholder}
         aria-label={placeholder ?? 'Edit value'}
         aria-invalid={!!error}
-        className={`w-full bg-surface-0 border rounded px-1.5 py-0.5 text-xs font-mono outline-none ${error ? 'border-status-error' : 'border-brand'} focus:ring-1 focus:ring-brand`}
+        className={`w-full bg-surface-0 border rounded px-1.5 py-0.5 outline-none ${error ? 'border-status-error' : 'border-brand'} focus:ring-1 focus:ring-brand`}
+        style={{ fontFamily: "inherit", fontSize: 'inherit' }}
       />
       {error && (
         <div className="text-[10px] text-status-error mt-0.5 px-0.5">{error}</div>

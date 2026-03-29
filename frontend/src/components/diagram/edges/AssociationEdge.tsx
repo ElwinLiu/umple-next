@@ -203,7 +203,7 @@ function rectsOverlap(a: LabelRect, b: LabelRect): boolean {
 
 export const LabelRegistryContext = createContext<LabelRegistry | null>(null)
 
-const CHAR_W = 7 // approximate pixels per character at font-size 12
+const CHAR_W = 6 // approximate pixels per character at font-size 12 (Times Roman)
 const LABEL_H = 16
 
 /** Push a label position out of any non-source/target node it overlaps. */
@@ -272,7 +272,7 @@ function EdgeLabel({ testId, x, y, fontSize, color, children, translateX = '0%' 
         position: 'absolute',
         transform: `translate(${x}px, ${y}px) translateX(${translateX}) translateY(-50%)`,
         fontSize,
-        fontFamily: 'var(--font-sans)',
+        fontFamily: "Times, 'Times New Roman', serif",
         color,
         textShadow: haloShadow,
         pointerEvents: 'none',
