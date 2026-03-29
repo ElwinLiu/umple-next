@@ -97,6 +97,19 @@ function getVisibleBodyLines(layoutNode: GvNodeLayout | undefined): string[] {
     .filter((line) => line && line !== layoutNode.name)
 }
 
+function buildDisplayAttributes(attributes: UmpleAttribute[], layoutNode: GvNodeLayout | undefined): ClassNodeData['attributes'] {
+  const all = attributes.map((a) => ({ name: a.name, type: a.type || '' }))
+
+  const bodyLines = getVisibleBodyLines(layoutNode)
+  if (bodyLines.length === 0) return all
+
+  // Attribute lines are body lines without parentheses (those are methods)
+  const attrLines = bodyLines.filter((line) => !line.includes('('))
+  const visibleNames = new Set(attrLines.map((line) => line.split(':')[0].trim()))
+
+  return all.filter((a) => visibleNames.has(a.name))
+}
+
 function buildDisplayMethods(methods: UmpleMethod[], layoutNode: GvNodeLayout | undefined): ClassNodeData['methods'] {
   const explicit = methods.map((method) => ({
     name: method.name,
@@ -224,6 +237,34 @@ function buildInheritanceEdge(
   ))
 }
 
+function annotateParallelEdges(edges: Edge[]): Edge[] {
+  const groups = new Map<string, number[]>()
+  edges.forEach((edge, i) => {
+    if (edge.source === edge.target) return
+    const key = [edge.source, edge.target].sort().join('|')
+    const group = groups.get(key)
+    if (group) group.push(i)
+    else groups.set(key, [i])
+  })
+
+  const result = [...edges]
+  for (const indices of groups.values()) {
+    if (indices.length <= 1) continue
+    for (let j = 0; j < indices.length; j++) {
+      const edge = result[indices[j]]
+      result[indices[j]] = {
+        ...edge,
+        data: {
+          ...edge.data,
+          parallelIndex: j,
+          parallelCount: indices.length,
+        },
+      }
+    }
+  }
+  return result
+}
+
 export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): DiagramResult {
   const classes = model.umpleClasses || []
   const associations = model.umpleAssociations || []
@@ -264,10 +305,7 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
       style: { width: metrics.width },
       data: {
         name: cls.name,
-        attributes: (cls.attributes || []).map((a) => ({
-          name: a.name,
-          type: a.type || '',
-        })),
+        attributes: buildDisplayAttributes(cls.attributes || [], layoutNode),
         methods: buildDisplayMethods(cls.methods || [], layoutNode),
         isAbstract: cls.isAbstract || false,
         isInterface: false,
@@ -312,6 +350,6 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
 
   return {
     nodes: [...classNodes, ...ifaceNodes],
-    edges: [...assocEdges, ...genEdges, ...implEdges],
+    edges: annotateParallelEdges([...assocEdges, ...genEdges, ...implEdges]),
   }
 }

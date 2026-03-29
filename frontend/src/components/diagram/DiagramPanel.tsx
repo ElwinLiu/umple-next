@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Download } from 'lucide-react'
 import { toSvg, toPng } from 'html-to-image'
 import { UmpleDiagram } from './UmpleDiagram'
@@ -47,9 +47,15 @@ export function DiagramPanel() {
   const currentSvg = svgCache[viewMode] ?? ''
   const currentHtml = htmlCache[viewMode] ?? ''
   const outputKind = VIEW_OUTPUT_KIND[viewMode]
-  const showHtml = outputKind === 'html' && !!currentHtml
-  const hasEditableModel = viewMode === 'class' && !!umpleModel?.umpleClasses?.length
-  const showGv = !showHtml && currentSvg && (renderMode === 'graphviz' || !hasEditableModel)
+  const hasEditableModel = !!umpleModel?.umpleClasses?.length
+  const showEditable = hasEditableModel && renderMode === 'editable'
+
+  // Default: class view starts in editable (RF) mode, other views start in graphviz
+  useEffect(() => {
+    setRenderMode(viewMode === 'class' ? 'editable' : 'graphviz')
+  }, [viewMode, setRenderMode])
+  const showHtml = !showEditable && outputKind === 'html' && !!currentHtml
+  const showGv = !showEditable && !showHtml && !!currentSvg
 
   const handleExport = useCallback(async (format: string) => {
     const filename = `umple-${viewMode}-diagram.${format}`
@@ -80,8 +86,7 @@ export function DiagramPanel() {
       <div className="flex-1 relative" data-testid="diagram-canvas">
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
           {!showHtml && <CanvasToolbar />}
-          {!showHtml && (
-            <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
+          <div className="absolute top-2 right-2 z-10 flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
               <DropdownMenu>
                 <Tip content="Export diagram" side="bottom">
                   <DropdownMenuTrigger asChild>
@@ -113,13 +118,12 @@ export function DiagramPanel() {
                 </>
               )}
             </div>
-          )}
-          {showHtml ? (
+          {showEditable ? (
+            <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} />
+          ) : showHtml ? (
             <HtmlDiagramView html={currentHtml} viewMode={viewMode} />
           ) : showGv ? (
             <SmartSvgView svg={currentSvg} />
-          ) : hasEditableModel ? (
-            <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} />
           ) : null}
         </div>
 

@@ -18,7 +18,7 @@ import {
 } from '@xyflow/react'
 import { useSessionStore } from '../../stores/sessionStore'
 import { ClassNode } from './nodes/ClassNode'
-import { AssociationEdge } from './edges/AssociationEdge'
+import { AssociationEdge, LabelRegistry, LabelRegistryContext } from './edges/AssociationEdge'
 import { DiagramControls } from './DiagramControls'
 import { DiagramContextMenu } from './menus/DiagramContextMenu'
 import { NodeContextMenu } from './menus/NodeContextMenu'
@@ -160,6 +160,11 @@ function UmpleDiagramInner({ model, layout, editable = true }: UmpleDiagramProps
   // Single state slot for nodes+edges — atomic updates, one render per change
   const [rf, setRf] = useState<RfState>({ nodes: converted.nodes, edges: converted.edges })
   const { nodes, edges } = rf
+
+  // Label collision registry — reset each render cycle
+  const labelRegistry = useRef(new LabelRegistry()).current
+  const renderGen = useRef(0)
+  labelRegistry.reset(++renderGen.current)
 
   // Ref for stable keyboard handler access (avoids listener churn)
   const rfRef = useRef(rf)
@@ -343,7 +348,7 @@ function UmpleDiagramInner({ model, layout, editable = true }: UmpleDiagramProps
   const nodeKey = useMemo(() => nodes.map((n) => n.id).join(','), [nodes])
 
   return (
-    <>
+    <LabelRegistryContext.Provider value={labelRegistry}>
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -416,6 +421,6 @@ function UmpleDiagramInner({ model, layout, editable = true }: UmpleDiagramProps
           />
         </>
       )}
-    </>
+    </LabelRegistryContext.Provider>
   )
 }
