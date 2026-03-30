@@ -15,13 +15,12 @@ import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../api/types'
 const DEBOUNCE_MS = 1500
 
 /** Build the diagram request params from current store state + isDark flag. */
-function getDiagramRequestParams(code: string, view: DiagramView, modelId: string, isDark: boolean) {
+function getDiagramRequestParams(view: DiagramView, isDark: boolean) {
   const s = usePreferencesStore.getState()
   return {
-    code,
     diagramType: getEffectiveDiagramType(view, s.showTraits),
-    modelId,
     suboptions: buildSuboptions(s, view, isDark),
+    needsLayout: view === 'class',
   }
 }
 
@@ -46,10 +45,16 @@ export async function compileAndRefresh(
 
   let success = false
   let model: UmpleModel | null = null
-  let storedLayout: StoredLayoutMetadata | null = null
 
   try {
-    const res = await api.compile({ code, modelId: modelId ?? undefined }, signal)
+    const diagramParams = getDiagramRequestParams(viewMode, isDark)
+
+    // Single request: compile + diagram generation
+    const res = await api.compile({
+      code,
+      modelId: modelId ?? undefined,
+      ...diagramParams,
+    }, signal)
 
     if (res.modelId && !modelId) setModelId(res.modelId)
     if (res.result) {
@@ -58,33 +63,18 @@ export async function compileAndRefresh(
       } catch {}
     }
 
+    // Handle diagram output from the merged response
+    if (res.svg) setSvgForView(viewMode, res.svg)
+    if (res.html) setHtmlForView(viewMode, res.html)
+
+    const gvLayout: GvLayout | undefined = res.layout
+    const storedLayout: StoredLayoutMetadata | null = res.storedLayout ?? null
+
     if (res.errors) {
       setLastError(res.errors)
       setExecutionOutput('', res.errors)
     } else {
       success = true
-    }
-
-    // Fetch diagram SVG + layout
-    let gvLayout: GvLayout | undefined
-    const currentModelId = res.modelId || modelId
-    if (currentModelId) {
-      try {
-        const svgRes = await api.diagram(getDiagramRequestParams(code, viewMode, currentModelId, isDark))
-        if (svgRes.svg) setSvgForView(viewMode, svgRes.svg)
-        if (svgRes.html) setHtmlForView(viewMode, svgRes.html)
-        gvLayout = svgRes.layout
-        storedLayout = svgRes.storedLayout ?? null
-        if (svgRes.errors) {
-          setLastError(svgRes.errors)
-          setExecutionOutput('', svgRes.errors)
-          success = false
-        }
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.warn('Diagram SVG fetch failed:', err.message)
-        }
-      }
     }
 
     // Store the parsed model and layout for UmpleDiagram
@@ -175,7 +165,7 @@ export function useCompiler() {
     }
   }, [code, modelId])
 
-  // When viewMode, display preferences, or dark theme change, re-fetch diagram SVG
+  // When viewMode, display preferences, or dark theme change, re-fetch diagram only
   useEffect(() => {
     if (!mountedRef.current) return
     const currentCode = codeRef.current
@@ -191,7 +181,11 @@ export function useCompiler() {
     diagramAbortRef.current = new AbortController()
 
     try {
-      const res = await api.diagram(getDiagramRequestParams(umpleCode, view, mid, isDarkRef.current))
+      const res = await api.diagram({
+        code: umpleCode,
+        modelId: mid,
+        ...getDiagramRequestParams(view, isDarkRef.current),
+      })
       if (res.svg) {
         setSvgForView(view, res.svg)
       }

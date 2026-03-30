@@ -79,7 +79,7 @@ export const api = {
     })
   },
 
-  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[] }): Promise<DiagramResponse> {
+  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[]; needsLayout?: boolean }): Promise<DiagramResponse> {
     return request('/diagram', {
       method: 'POST',
       body: JSON.stringify(req),
