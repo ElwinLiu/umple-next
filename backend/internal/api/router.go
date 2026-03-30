@@ -41,6 +41,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 	execProxy := execution.NewProxy(cfg.ExecutionURL)
 	executeH := handlers.NewExecuteHandler(pool, store, execProxy)
 	taskH := handlers.NewTaskHandler(store)
+	modelH := handlers.NewModelHandler(store)
 	aiProxyH := handlers.NewAIProxyHandler()
 
 	r.Route("/api", func(r chi.Router) {
@@ -54,6 +55,9 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 		r.Post("/export", exportH.Export)
 		r.Post("/execute", executeH.Execute)
 		r.Get("/generated/{modelId}/*", generatedAssetH.Serve)
+
+		// Models
+		r.Get("/models/{id}", modelH.Get)
 
 		// Examples
 		r.Get("/examples", exampleH.List)

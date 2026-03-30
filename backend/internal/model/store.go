@@ -44,6 +44,17 @@ func (s *Store) ModelDir(id string) string {
 	return filepath.Join(s.root, sanitizeID(id))
 }
 
+// Get loads a model by ID from the store root.
+func (s *Store) Get(id string) (*Model, error) {
+	id = sanitizeID(id)
+	dir := filepath.Join(s.root, id)
+	data, err := os.ReadFile(filepath.Join(dir, "model.ump"))
+	if err != nil {
+		return nil, fmt.Errorf("model not found: %s", id)
+	}
+	return &Model{ID: id, Code: string(data)}, nil
+}
+
 // CleanupLoop periodically removes tmp model directories older than maxAge.
 func (s *Store) CleanupLoop(interval time.Duration) {
 	maxAge := 24 * time.Hour
