@@ -73,11 +73,12 @@ type GvLayout struct {
 }
 
 type DiagramResponse struct {
-	SVG     string    `json:"svg"`
-	HTML    string    `json:"html,omitempty"`
-	Layout  *GvLayout `json:"layout,omitempty"`
-	Errors  string    `json:"errors,omitempty"`
-	ModelID string    `json:"modelId"`
+	SVG          string                `json:"svg"`
+	HTML         string                `json:"html,omitempty"`
+	Layout       *GvLayout             `json:"layout,omitempty"`
+	StoredLayout *StoredLayoutMetadata `json:"storedLayout,omitempty"`
+	Errors       string                `json:"errors,omitempty"`
+	ModelID      string                `json:"modelId"`
 }
 
 //go:embed assets/structureDiagram.js
@@ -328,6 +329,9 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
 		return
 	}
+	modelPath := filepath.Join(dir, "model.ump")
+	modelData, _ := os.ReadFile(modelPath)
+	storedLayout := extractStoredLayoutMetadata(string(modelData))
 
 	// Remove stale .gv files so the directory scan after generation
 	// always picks the newly generated file, not a leftover from a
@@ -373,9 +377,10 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(DiagramResponse{
-			HTML:    html,
-			Errors:  result.Errors,
-			ModelID: modelID,
+			HTML:         html,
+			StoredLayout: storedLayout,
+			Errors:       result.Errors,
+			ModelID:      modelID,
 		})
 		return
 	}
@@ -447,10 +452,11 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(DiagramResponse{
-		SVG:     string(svgData),
-		Layout:  layout,
-		Errors:  result.Errors,
-		ModelID: modelID,
+		SVG:          string(svgData),
+		Layout:       layout,
+		StoredLayout: storedLayout,
+		Errors:       result.Errors,
+		ModelID:      modelID,
 	})
 }
 

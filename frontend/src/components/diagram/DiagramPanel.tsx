@@ -29,6 +29,7 @@ export function DiagramPanel() {
   const htmlCache = useSessionStore((s) => s.htmlCache)
   const umpleModel = useSessionStore((s) => s.umpleModel)
   const classLayout = useSessionStore((s) => s.classLayout)
+  const storedLayout = useSessionStore((s) => s.storedLayout)
   const code = useSessionStore((s) => s.code)
   const modelId = useSessionStore((s) => s.modelId)
   const renderMode = useEphemeralStore((s) => s.renderMode)
@@ -141,7 +142,7 @@ export function DiagramPanel() {
           </div>
           {mountEditable && (
             <DiagramLayer active={showEditable}>
-              <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} editable={showEditable} />
+              <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} storedLayout={storedLayout ?? undefined} editable={showEditable} />
             </DiagramLayer>
           )}
           {mountHtml && (

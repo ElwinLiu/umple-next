@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Node, Edge } from '@xyflow/react'
-import type { UmpleModel, GvLayout } from '../api/types'
+import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../api/types'
 import { useEphemeralStore } from './ephemeralStore'
 
 // ── Editor types ──
@@ -89,6 +89,7 @@ interface SessionState {
   viewMode: DiagramView
   umpleModel: UmpleModel | null
   classLayout: GvLayout | null
+  storedLayout: StoredLayoutMetadata | null
   diagramData: Partial<Record<DiagramView, DiagramElements>>
   svgCache: Partial<Record<DiagramView, string>>
   htmlCache: Partial<Record<DiagramView, string>>
@@ -118,7 +119,7 @@ interface SessionState {
 
   // Diagram actions
   setViewMode: (mode: DiagramView) => void
-  setUmpleModel: (model: UmpleModel | null, layout?: GvLayout | null) => void
+  setUmpleModel: (model: UmpleModel | null, layout?: GvLayout | null, storedLayout?: StoredLayoutMetadata | null) => void
   setDiagramData: (view: DiagramView, nodes: Node[], edges: Edge[]) => void
   getDiagramData: (view: DiagramView) => DiagramElements
 setSvgForView: (view: DiagramView, svg: string) => void
@@ -156,6 +157,7 @@ export const useSessionStore = create<SessionState>()(
       viewMode: 'class',
       umpleModel: null,
       classLayout: null,
+      storedLayout: null,
       diagramData: {},
       svgCache: {},
       htmlCache: {},
@@ -316,11 +318,16 @@ export const useSessionStore = create<SessionState>()(
 
       setViewMode: (viewMode) => set({ viewMode }),
 
-      setUmpleModel: (umpleModel, layout) => set((s) => {
-        if (s.umpleModel === umpleModel && (layout === undefined || s.classLayout === layout)) return s
+      setUmpleModel: (umpleModel, layout, storedLayout) => set((s) => {
+        if (
+          s.umpleModel === umpleModel &&
+          (layout === undefined || s.classLayout === layout) &&
+          (storedLayout === undefined || s.storedLayout === storedLayout)
+        ) return s
         return {
           umpleModel,
           ...(layout !== undefined ? { classLayout: layout } : {}),
+          ...(storedLayout !== undefined ? { storedLayout } : {}),
         }
       }),
 
@@ -444,11 +451,6 @@ export const useSessionStore = create<SessionState>()(
         selectedExample: state.selectedExample,
         generateTargetId: state.generateTargetId,
         viewMode: state.viewMode,
-        umpleModel: state.umpleModel,
-        classLayout: state.classLayout,
-        diagramData: state.diagramData,
-        svgCache: state.svgCache,
-        htmlCache: state.htmlCache,
         showAgentPanel: state.showAgentPanel,
         chatMessages: state.chatMessages,
       }),

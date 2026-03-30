@@ -13,8 +13,17 @@ import (
 // model.ump. If modelID is empty a new model is created; otherwise the
 // existing directory is reused. Returns the resolved model ID and directory.
 func resolveModel(store *model.Store, modelID, code string) (string, string, error) {
+	var existing string
+	if modelID != "" {
+		if data, err := os.ReadFile(filepath.Join(store.ModelDir(modelID), "model.ump")); err == nil {
+			existing = string(data)
+		}
+	}
+
+	mergedCode := mergeModelCodeWithStoredLayout(code, existing)
+
 	if modelID == "" {
-		m, err := store.Create(code)
+		m, err := store.Create(mergedCode)
 		if err != nil {
 			return "", "", err
 		}
@@ -25,7 +34,7 @@ func resolveModel(store *model.Store, modelID, code string) (string, string, err
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return "", "", err
 	}
-	if err := os.WriteFile(filepath.Join(dir, "model.ump"), []byte(code), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "model.ump"), []byte(mergedCode), 0644); err != nil {
 		return "", "", err
 	}
 	return modelID, dir, nil

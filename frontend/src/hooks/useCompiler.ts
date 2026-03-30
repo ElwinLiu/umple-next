@@ -9,7 +9,7 @@ import {
 } from '../stores/preferencesStore'
 import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
-import type { UmpleModel, GvLayout } from '../api/types'
+import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../api/types'
 
 
 const DEBOUNCE_MS = 1500
@@ -46,6 +46,7 @@ export async function compileAndRefresh(
 
   let success = false
   let model: UmpleModel | null = null
+  let storedLayout: StoredLayoutMetadata | null = null
 
   try {
     const res = await api.compile({ code, modelId: modelId ?? undefined }, signal)
@@ -73,6 +74,7 @@ export async function compileAndRefresh(
         if (svgRes.svg) setSvgForView(viewMode, svgRes.svg)
         if (svgRes.html) setHtmlForView(viewMode, svgRes.html)
         gvLayout = svgRes.layout
+        storedLayout = svgRes.storedLayout ?? null
         if (svgRes.errors) {
           setLastError(svgRes.errors)
           setExecutionOutput('', svgRes.errors)
@@ -87,7 +89,11 @@ export async function compileAndRefresh(
 
     // Store the parsed model and layout for UmpleDiagram
     if (model) {
-      setUmpleModel(model, viewMode === 'class' ? gvLayout ?? null : undefined)
+      setUmpleModel(
+        model,
+        viewMode === 'class' ? gvLayout ?? null : undefined,
+        viewMode === 'class' ? storedLayout : undefined,
+      )
     }
   } catch (err: any) {
     if (err.name === 'AbortError') throw err
@@ -184,7 +190,7 @@ export function useCompiler() {
         setHtmlForView(view, res.html)
       }
       if (view === 'class' && lastModelRef.current) {
-        useSessionStore.getState().setUmpleModel(lastModelRef.current, res.layout ?? null)
+        useSessionStore.getState().setUmpleModel(lastModelRef.current, res.layout ?? null, res.storedLayout ?? null)
       }
       if (res.errors) {
         setLastError(res.errors)

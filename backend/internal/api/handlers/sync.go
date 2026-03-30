@@ -39,8 +39,6 @@ type SyncResponse struct {
 	ModelID string `json:"modelId"`
 }
 
-const modelDelimiter = "//$?[End_of_model]$?"
-
 // Default dimensions for newly created classes (in pixels).
 const (
 	defaultClassWidth  = "109"

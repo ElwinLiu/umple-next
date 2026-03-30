@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { GvLayout, UmpleModel } from '@/api/types'
+import type { GvLayout, StoredLayoutMetadata, UmpleModel } from '@/api/types'
 import { convertClassDiagram } from '../classConverter'
 
 describe('convertClassDiagram', () => {
@@ -85,5 +85,46 @@ describe('convertClassDiagram', () => {
         removable: true,
       }),
     ])
+  })
+
+  it('prefers stored node positions over Graphviz positions for explicitly persisted layout', () => {
+    const model: UmpleModel = {
+      umpleClasses: [
+        {
+          name: 'Unit',
+          position: { x: 320, y: 180, width: 180, height: 90 },
+          attributes: [],
+          methods: [],
+        },
+        {
+          name: 'Guest',
+          position: { x: 20, y: 20, width: 180, height: 90 },
+          attributes: [],
+          methods: [],
+        },
+      ],
+    }
+
+    const layout: GvLayout = {
+      bboxWidth: 800,
+      bboxHeight: 600,
+      nodes: [
+        { name: 'Unit', x: 110, y: 120, width: 180, height: 90 },
+        { name: 'Guest', x: 420, y: 120, width: 180, height: 90 },
+      ],
+      edges: [],
+    }
+
+    const storedLayout: StoredLayoutMetadata = {
+      hasStoredLayout: true,
+      nodeNames: ['Unit'],
+    }
+
+    const result = convertClassDiagram(model, layout, storedLayout)
+    const unitNode = result.nodes.find((node) => node.id === 'class-Unit')
+    const guestNode = result.nodes.find((node) => node.id === 'class-Guest')
+
+    expect(unitNode?.position).toEqual({ x: 320, y: 180 })
+    expect(guestNode?.position).toEqual({ x: 330, y: 75 })
   })
 })

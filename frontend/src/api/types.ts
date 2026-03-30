@@ -121,10 +121,17 @@ export interface GvLayout {
   edges?: GvEdgeLayout[]
 }
 
+export interface StoredLayoutMetadata {
+  hasStoredLayout: boolean
+  nodeNames?: string[]
+  associationNames?: string[]
+}
+
 export interface DiagramResponse {
   svg: string
   html?: string
   layout?: GvLayout
+  storedLayout?: StoredLayoutMetadata
   errors?: string
   modelId: string
 }

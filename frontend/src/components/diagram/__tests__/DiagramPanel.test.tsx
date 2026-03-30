@@ -49,6 +49,7 @@ afterEach(() => {
     htmlCache: {},
     umpleModel: null,
     classLayout: null,
+    storedLayout: null,
   })
   useEphemeralStore.setState({
     rightPanelView: 'diagram',
@@ -94,6 +95,7 @@ describe('DiagramPanel', () => {
       umpleModel: {
         umpleClasses: [{ name: 'Account' }],
       } as any,
+      storedLayout: null,
     })
 
     render(
