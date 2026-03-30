@@ -1,5 +1,5 @@
 import type { Edge, Node } from '@xyflow/react'
-import type { GvEdgeLayout, GvLayout, GvNodeLayout, Position, UmpleAssociation, UmpleAttribute, UmpleMethod, UmpleModel } from '../../api/types'
+import type { GvEdgeLayout, GvLayout, GvNodeLayout, Position, StoredLayoutMetadata, UmpleAssociation, UmpleAttribute, UmpleMethod, UmpleModel } from '../../api/types'
 import type { ClassNodeData } from '../../components/diagram/nodes/ClassNode'
 import type { AssociationEdgeData } from '../../components/diagram/edges/AssociationEdge'
 import { buildGridPositions, buildGvPositions, clamp, createLayoutEdgeMatcher, estimateTextWidth, type DiagramNodeMetrics, type LayoutEntry } from './positions'
@@ -265,11 +265,12 @@ function annotateParallelEdges(edges: Edge[]): Edge[] {
   return result
 }
 
-export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): DiagramResult {
+export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout, storedLayout?: StoredLayoutMetadata): DiagramResult {
   const classes = model.umpleClasses || []
   const associations = model.umpleAssociations || []
   const interfaces = model.umpleInterfaces || []
   const layoutNodeMap = new Map((gvLayout?.nodes ?? []).map((node) => [node.name, node]))
+  const storedNodeNames = new Set(storedLayout?.nodeNames ?? [])
 
   const layoutEntries: LayoutEntry[] = [
     ...classes.map((cls) => ({
@@ -301,7 +302,9 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
     return {
       id: `class-${cls.name}`,
       type: 'classNode',
-      position: positions.get(cls.name) ?? { x: 50, y: 50 },
+      position: storedNodeNames.has(cls.name) && cls.position
+        ? { x: cls.position.x, y: cls.position.y }
+        : (positions.get(cls.name) ?? { x: 50, y: 50 }),
       style: { width: metrics.width },
       data: {
         name: cls.name,
@@ -320,7 +323,9 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout): Dia
     return {
       id: `class-${iface.name}`,
       type: 'classNode',
-      position: positions.get(iface.name) ?? { x: 50, y: 50 },
+      position: storedNodeNames.has(iface.name) && iface.position
+        ? { x: iface.position.x, y: iface.position.y }
+        : (positions.get(iface.name) ?? { x: 50, y: 50 }),
       style: { width: metrics.width },
       data: {
         name: iface.name,

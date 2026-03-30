@@ -27,7 +27,7 @@ import { ConnectionTypeMenu, type ConnectionChoice } from './menus/ConnectionTyp
 import { useDiagramSync } from '../../hooks/useDiagramSync'
 import { extractClassName, edgeDeletionParams } from '../../lib/diagramHelpers'
 import { convertClassDiagram } from '../../hooks/diagrams/classConverter'
-import type { UmpleModel, GvLayout } from '../../api/types'
+import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../../api/types'
 
 const nodeTypes = { classNode: ClassNode }
 const edgeTypes = { association: AssociationEdge }
@@ -137,14 +137,16 @@ export interface UmpleDiagramProps {
   model: UmpleModel
   /** Graphviz layout metadata for positioning nodes and edges. */
   layout?: GvLayout
+  /** Names of elements with explicitly persisted positions in the hidden layout section. */
+  storedLayout?: StoredLayoutMetadata
   /** Whether the diagram supports editing (drag, context menus, keyboard shortcuts). */
   editable?: boolean
 }
 
-const UmpleDiagramComponent = ({ model, layout, editable = true }: UmpleDiagramProps) => {
+const UmpleDiagramComponent = ({ model, layout, storedLayout, editable = true }: UmpleDiagramProps) => {
   return (
     <ReactFlowProvider>
-      <UmpleDiagramInner model={model} layout={layout} editable={editable} />
+      <UmpleDiagramInner model={model} layout={layout} storedLayout={storedLayout} editable={editable} />
     </ReactFlowProvider>
   )
 }
@@ -154,9 +156,9 @@ UmpleDiagram.displayName = 'UmpleDiagram'
 
 // ── Inner component (inside ReactFlowProvider) ──
 
-function UmpleDiagramInner({ model, layout, editable = true }: UmpleDiagramProps) {
+function UmpleDiagramInner({ model, layout, storedLayout, editable = true }: UmpleDiagramProps) {
   // Convert UmpleModel → ReactFlow nodes/edges
-  const converted = useMemo(() => convertClassDiagram(model, layout), [model, layout])
+  const converted = useMemo(() => convertClassDiagram(model, layout, storedLayout), [model, layout, storedLayout])
 
   // Single state slot for nodes+edges — atomic updates, one render per change
   const [rf, setRf] = useState<RfState>({ nodes: converted.nodes, edges: converted.edges })
