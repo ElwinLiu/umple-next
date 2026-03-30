@@ -80,18 +80,20 @@ function Section({
 
 function SidebarContent() {
   const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette)
+  const sidebarWidth = usePreferencesStore((s) => s.sidebarWidth)
   const [toolsOpen, setToolsOpen] = useState(true)
   const [aiOpen, setAiOpen] = useState(false)
+  const isNarrow = sidebarWidth < 260
 
   return (
     <>
       {/* Header: logo + title left, search + layout right */}
       <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 border-b border-border/60">
-        <a href="/" className="flex items-center gap-2.5 no-underline text-ink" aria-label="UmpleOnline home">
-          <img src="/umple-logo.svg" alt="" className="h-6 w-auto" />
-          <span className="text-lg font-semibold tracking-tight">UmpleOnline</span>
+        <a href="/" className="flex items-center gap-2.5 no-underline text-ink min-w-0" aria-label="UmpleOnline home">
+          <img src="/umple-logo.svg" alt="" className="h-6 w-auto shrink-0" />
+          {!isNarrow && <span className="text-lg font-semibold tracking-tight truncate">UmpleOnline</span>}
         </a>
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-0.5 shrink-0">
           <Tip content="Search (Ctrl K)" side="bottom">
             <button
               onClick={openCommandPalette}
@@ -160,7 +162,7 @@ export function Sidebar() {
   if (showSidebar) {
     return (
       <div
-        className="relative flex flex-col h-full shrink-0"
+        className="relative flex flex-col h-full shrink-0 overflow-hidden"
         style={{ width: sidebarWidth }}
         data-testid="sidebar"
       >
@@ -204,7 +206,8 @@ export function Sidebar() {
 
 // ── Resize handle (right edge of sidebar) ──
 
-const SIDEBAR_COLLAPSE_THRESHOLD = 200
+// Below this, the sidebar collapses (must drag well past the min width)
+const SIDEBAR_COLLAPSE_THRESHOLD = 120
 
 function ResizeHandle() {
   const setSidebarWidth = usePreferencesStore((s) => s.setSidebarWidth)
@@ -216,9 +219,8 @@ function ResizeHandle() {
     const startWidth = usePreferencesStore.getState().sidebarWidth
 
     const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = startWidth + (e.clientX - startX)
-      if (newWidth < SIDEBAR_COLLAPSE_THRESHOLD) return
-      setSidebarWidth(newWidth)
+      // Store clamps to [200, 480]; passing smaller values just freezes at 200
+      setSidebarWidth(startWidth + (e.clientX - startX))
     }
 
     const handleMouseUp = (e: MouseEvent) => {

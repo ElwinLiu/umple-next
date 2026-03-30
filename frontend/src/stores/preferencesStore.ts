@@ -94,7 +94,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       showSidebar: true,
       sidebarWidth: 300,
       toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
-      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.min(480, Math.max(300, sidebarWidth)) }),
+      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.min(480, Math.max(200, sidebarWidth)) }),
 
       // Diagram display preferences (match Umple compiler defaults)
       showAttributes: true,
