@@ -30,9 +30,4 @@ class RealNumber
    Because the trait TEquality has the Numerical mixset, and there is no 
    implementaion for its methods (isGreaterThan and isLessThan).
  */             
-//use Numerical; 
-
-
-//$?[End_of_model]$?
-// @@@skipphpcompile
-// @@@skippythoncompile - Contains Java Code
+//use Numerical;

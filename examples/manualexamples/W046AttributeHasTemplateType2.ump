@@ -4,5 +4,3 @@ class B {
   OtherClassB[] otherClassGroup;
 }
 class OtherClassB {}
-//$?[End_of_model]$?
-// @@@skipphpcompile - Skipped due to issue 700

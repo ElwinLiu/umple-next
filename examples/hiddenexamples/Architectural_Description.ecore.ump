@@ -49,37 +49,3 @@ class MainView
 class ModelElement
 {
 }
-//$?[End_of_model]$?
-
-namespace -;
-
-
-class Architecture
-{
-position 384 103 109 45;
-}
-
-class ArchitectureDescription
-{
-position 5 99 109 45;
-}
-
-class ArchitectureView
-{
-position 113 213 109 45;
-}
-
-class ArchitectureViewPoint
-{
-position 403 278 109 45;
-}
-
-class MainView
-{
-position 174 387 109 45;
-}
-
-class ModelElement
-{
-position 5 305 109 45;
-}

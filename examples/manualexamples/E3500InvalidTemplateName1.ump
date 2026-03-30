@@ -4,5 +4,3 @@
 class A {
   !template <<!output!>>
 }
-//$?[End_of_model]$?
-// @@@skipcompile

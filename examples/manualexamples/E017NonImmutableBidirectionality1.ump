@@ -9,14 +9,4 @@ class Y {
 class Z {
   immutable;
   y;
-}//$?[End_of_model]$?
-
-class Y
-{
-  position 50 132 109 60;
-}
-
-class X
-{
-  position 50 26 109 60;
 }

@@ -74,45 +74,4 @@ class Airline {
     Booking b = new Booking(f,p);
     System.out.println(b);
   }
-}//$?[End_of_model]$?
-
-class RegularFlight
-{
-  position 203 52 142 94;
-  position.association Airport:destination__RegularFlight:incoming 104,94 0,30;
-  position.association Airport:origin__RegularFlight:outgoing 142,53 84,0;
 }
-
-class Airport
-{
-  position 426 186 109 77;
-}
-
-class Booking
-{
-  position 43 464 175 128;
-  position.association Booking__Passenger 183,79 0,15;
-  position.association Booking__SpecificFlight 30,0 27,131;
-}
-
-class Airline
-{
-  position 26 30 109 77;
-  position.association Airline__RegularFlight 113,42 0,23;
-}
-
-class SpecificFlight
-{
-  position.association RegularFlight__SpecificFlight 30,0 0,83;
-  position 50 229 172 128;
-}
-
-class Passenger
-{
-  position 311 485 189 77;
-}
-
-// @@@skipcppcompile - Contains Java Code
-// @@@skipphpcompile - Contains Java Code
-// @@@skiprubycompile - Contains Java Code
-// @@@skippythoncompile - Contains Java Code

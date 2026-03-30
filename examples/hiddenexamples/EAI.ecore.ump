@@ -45,38 +45,3 @@ class EAIQueue
 	Integer maxLength;
 	String name;
 }
-
-//$?[End_of_model]$?
-
-namespace -;
-
-
-class FCMSource
-{
-  position 50 30 109 45;
-}
-
-class EAISource
-{
-  position 50 130 109 45;
-}
-
-class FCMSink
-{
-position 5 231 109 45;
-}
-
-class EAISink
-{
-  position 50 330 109 45;
-}
-
-class EAIResource
-{
-position 190 410 109 45;
-}
-
-class EAIQueue
-{
-position 389 487 109 45;
-}

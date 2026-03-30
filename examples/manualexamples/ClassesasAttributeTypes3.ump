@@ -17,15 +17,4 @@ class Address {
   city;
   postalCode;
   country;
-}//$?[End_of_model]$?
-
-class Person
-{
-  position 49 29 113 63;
-  position.association Address__Person 30,63 30,0;
-}
-
-class Address
-{
-  position 49 131 149 114;
 }

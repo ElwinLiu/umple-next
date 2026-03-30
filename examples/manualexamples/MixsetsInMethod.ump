@@ -46,5 +46,3 @@ use Hello;
 use Beautiful;
 //use Wonderful;
 use World;
-//$?[End_of_model]$?
-// @@@skippythoncompile - Contains Java Code

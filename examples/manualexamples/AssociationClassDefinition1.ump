@@ -29,18 +29,4 @@ class Seminar
 {
   Date when;
   address;
-}//$?[End_of_model]$?
-
-class Person
-{
-  position 333 125 109 60;
 }
-
-class Ticket
-{
-  position.association Person:attendee__Ticket 166,48 0,23;
-  position.association Seminar__Ticket 30,77 30,0;
-  position 50 10 166 77;
-}
-
-// @@@skipphpcompile - remove when issue 697 is fixed

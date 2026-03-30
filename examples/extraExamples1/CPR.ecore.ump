@@ -51,41 +51,4 @@ class Resource
 
 class TimeSpec
 {
-}//$?[End_of_model]$?
-
-namespace -;
-
-class Plan
-{
-  position 50 430 109 45;
-}
-
-class Objective
-{
-position 5 223 109 45;
-}
-
-class EvaluationCriteria
-{
-position 44 87 109 45;
-}
-
-class Action
-{
-position 502 250 109 45;
-}
-
-class Actor
-{
-position 357 162 109 45;
-}
-
-class Resource
-{
-position 431 432 109 45;
-}
-
-class TimeSpec
-{
-position 728 157 109 45;
 }

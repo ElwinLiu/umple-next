@@ -71,28 +71,4 @@ class Company {
       b.getBoardMembers());
     
   }
-}//$?[End_of_model]$?
-class Company
-{
-  position 50 30 109 45;
 }
-
-class BoardOfDirectors
-{
-  position 50 149 123 41;
-  position.association BoardMember__BoardOfDirectors 124,23 0,6;
-}
-
-class BoardMember
-{
-  position 275 150 144 92;
-  position.association BoardMember:boardMembership__Person 30,0 29,75;
-}
-
-class Person
-{
-  position 276 17 140 75;
-}
-// @@@skipphpcompile Contains Java code
-// @@@skippythoncompile - Contains Java Code
-// @@@skipcppcompile

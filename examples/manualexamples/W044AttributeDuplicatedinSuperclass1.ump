@@ -7,5 +7,3 @@ class B {
   isA A;
   attr;
 }
-//$?[End_of_model]$?
-// @@@skipcompile - the result won't compile because there are two attr

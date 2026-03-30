@@ -29,7 +29,3 @@ class Client {
       print("  Success" if c.setAge(i) else "  FAILURE")
   }  
 }
-//$?[End_of_model]$?
-// @@@skipphpcompile - Has java code
-// @@@skipcppcompile - Has java code
-// @@@skiprubycompile - Has java code

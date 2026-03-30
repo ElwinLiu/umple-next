@@ -56,33 +56,3 @@ class Date
 	Integer minutes;
 	Integer seconds;
 }
-
-//$?[End_of_model]$?
-
-namespace -;
-
-
-class Element
-{
-  position 50 30 109 45;
-}
-
-class Newspaper
-{
-position 206 472 109 45;
-}
-
-class News
-{
-position 343 90 109 45;
-}
-
-class Category
-{
-position 442 291 109 45;
-}
-
-class Date
-{
-position 217 226 109 45;
-}

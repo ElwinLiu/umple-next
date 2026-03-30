@@ -7,6 +7,3 @@
 class X {
   public String x;
 }
-
-//$?[End_of_model]$?
-// @@@skipjavacompile @@@skipphpcompile @@@skippythoncompile because msg says likely error

@@ -90,27 +90,4 @@ class B {
      return (anotherAttribute*10);
   }
   
-}//$?[End_of_model]$?
-
-class D
-{
-  position 53 302 223 97;
 }
-
-class B
-{
-  position.association B__D 42,63 148,0;
-  position 173 167 193 63;
-}
-
-class C
-{
-  position.association B__C 25,63 144,0;
-  position 287 29 109 63;
-}
-
-class A
-{
-  position 41 17 158 80;
-}
-// @@@skipcppcompile

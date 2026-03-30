@@ -9,5 +9,3 @@ class Student
     if ( DEBUG) { System.out.println("accessing the name"); }
   }
 }
-//$?[End_of_model]$?
-// @@@skipcppcompile

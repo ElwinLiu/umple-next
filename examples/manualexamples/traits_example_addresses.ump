@@ -23,29 +23,4 @@ trait LocatableEntity {
 }
 
 class Person {  isA LocatableEntity;}
-class Business {  isA LocatableEntity;}//$?[End_of_model]$?
-
-class Address
-{
-  position 243 18 146 106;
-}
-
-class DatedAddress
-{
-  position 342 163 127 90;
-}
-
-class DatedPhoneNumber
-{
-  position 53 131 141 106;
-}
-
-class Person
-{
-  position 417 337 109 40;
-}
-
-class Business
-{
-  position 158 315 109 40;
-}
+class Business {  isA LocatableEntity;}

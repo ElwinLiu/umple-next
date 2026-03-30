@@ -301,38 +301,3 @@ class AuctionSimulation {
     
   }
 }
-//$?[End_of_model]$?
-// @@@skipcppcompile - Contains Java Code
-// @@@skipphpcompile - Contains Java Code
-// @@@skiprubycompile - Contains Java Code
-// @@@skippythoncompile - Contains Java code
-
-class ItemAtAuction
-{
-  position.association ItemAtAuction:itemForSale__Person:seller 22,157 0,14;
-  position.association ItemAtAuction__Person:highestBidder 59,157 16,0;
-  position 237 27 183.043488 157.391312;
-}
-
-class Person
-{
-  position.association ItemAtAuction:itemsBought__Person:buyer 112,20 177,157;
-  position 285 350 111.779892 57.527176;
-}
-
-class Auction
-{
-  position.association Auction__ItemAtAuction 109,23 0,17;
-}
-
-class Bid
-{
-  position.association Bid__Person:bidder 32,74 0,40;
-  position.association Bid__ItemAtAuction 30,0 0,90;
-  position 50 246 146.983704 74.171196;
-}
-
-class AuctionSimulation
-{
-  position 32 100 143.709244 40.883152;
-}

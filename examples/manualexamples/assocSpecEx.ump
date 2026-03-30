@@ -31,25 +31,3 @@ association
   { 0..1 Bicycle vehicle -- 0..2 Wheel vehicleWheel; }
 association
   { 0..1 Unicycle vehicle -- 0..1 Wheel vehicleWheel; }
-
-//$?[End_of_model]$?
-// Positioning
-class Bicycle
-{
-position 65 315 109 45;
-}
-class Unicycle
-{
-position 352 324 109 45;
-}
-class Vehicle
-{
-position 193 224 109 45;
-}
-class Wheel
-{
-position 188 35 109 45;
-}
-
-// @@@skipphpcompile - Skipped due to issue 701
-// @@@skipcppcompile

@@ -58,6 +58,3 @@ class Ball_Game {
     }        
   }
 }
-//$?[End_of_model]$?
-// @@@skipcompile - example has missing methods
-// @@@skipcppcompile

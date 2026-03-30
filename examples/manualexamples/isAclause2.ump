@@ -9,9 +9,3 @@ class Person
     Integer number;
   }
 }
-//$?[End_of_model]$?
-
-class Person
-{
-  position 59 24 109 60;
-}

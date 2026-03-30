@@ -90,10 +90,3 @@ class Timer {
   }
 
 }
-
-//$?[End_of_model]$?
-// @@@skipjavacompile - issue 589 prevents compilation in Java == should be used instead of equals
-// @@@skipcppcompile - Contains Java Code
-// @@@skipphpcompile - Contains Java Code
-// @@@skiprubycompile - Contains Java Code
-// @@@skippythoncompile - Contains Java Code

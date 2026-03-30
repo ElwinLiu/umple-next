@@ -7,5 +7,3 @@ class X {
 }
 
 class Y {}
-//$?[End_of_model]$?
-// @@@skipcompile
