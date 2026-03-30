@@ -112,7 +112,7 @@ interface SessionState {
   setActiveTab: (id: string) => void
   renameTab: (id: string, name: string) => void
   reorderTabs: (fromIndex: number, toIndex: number) => void
-  loadExample: (name: string, code: string) => void
+  loadExample: (name: string, code: string, modelId?: string) => void
   closeOtherTabs: (id: string) => void
   setSelectedExample: (name: string | null) => void
   setGenerateTargetId: (id: string) => void
@@ -294,9 +294,10 @@ export const useSessionStore = create<SessionState>()(
       setSelectedExample: (selectedExample) => set({ selectedExample }),
       setGenerateTargetId: (generateTargetId) => set({ generateTargetId }),
 
-      loadExample: (name, code) => set((s) => ({
+      loadExample: (name, code, modelId) => set((s) => ({
         code,
         selectedExample: name,
+        ...(modelId ? { modelId } : {}),
         tabs: s.tabs.map((t) =>
           t.id === s.activeTabId
             ? { ...t, name, code, dirty: false, savedCode: code }

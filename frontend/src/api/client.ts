@@ -42,7 +42,7 @@ export const api = {
     return request('/examples')
   },
 
-  getExample(name: string): Promise<{ name: string; code: string }> {
+  getExample(name: string): Promise<{ name: string; code: string; modelId?: string }> {
     return request(`/examples/${encodeURIComponent(name)}`)
   },
 

@@ -115,7 +115,7 @@ export function CommandPalette() {
     closeCommandPalette()
     try {
       const res = await api.getExample(name)
-      loadExample(res.name, res.code)
+      loadExample(res.name, res.code, res.modelId)
       const view = getViewForExampleCategory(category)
       if (view) {
         setViewMode(view)
