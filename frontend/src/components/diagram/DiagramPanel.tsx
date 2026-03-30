@@ -53,13 +53,14 @@ export function DiagramPanel() {
   const hasEditableModel = !!umpleModel?.umpleClasses?.length
   const canToggleRenderer = viewMode === 'class' && hasEditableModel
   const showEditable = canToggleRenderer && renderMode === 'editable'
+  const editableLoading = viewMode === 'class' && renderMode === 'editable' && !hasEditableModel
 
   // Default: class view starts in editable (RF) mode, other views start in graphviz
   useEffect(() => {
     setRenderMode(viewMode === 'class' ? 'editable' : 'graphviz')
   }, [viewMode, setRenderMode])
-  const showHtml = !showEditable && outputKind === 'html' && !!currentHtml
-  const showGv = !showEditable && !showHtml && !!currentSvg
+  const showHtml = !showEditable && !editableLoading && outputKind === 'html' && !!currentHtml
+  const showGv = !showEditable && !editableLoading && !showHtml && !!currentSvg
   const mountEditable = canToggleRenderer
   const mountHtml = outputKind === 'html' && !!currentHtml
   const mountGv = outputKind === 'gv' && !!currentSvg
@@ -154,6 +155,17 @@ export function DiagramPanel() {
             <DiagramLayer active={showGv}>
               <SmartSvgView svg={currentSvg} />
             </DiagramLayer>
+          )}
+          {editableLoading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-ink-faint text-sm">
+              <div className="flex flex-col gap-2.5 w-3/4 max-w-sm">
+                <div className="h-3 rounded animate-shimmer" style={{ width: '90%' }} />
+                <div className="h-3 rounded animate-shimmer" style={{ width: '70%', animationDelay: '0.15s' }} />
+                <div className="h-3 rounded animate-shimmer" style={{ width: '80%', animationDelay: '0.3s' }} />
+                <div className="h-3 rounded animate-shimmer" style={{ width: '55%', animationDelay: '0.45s' }} />
+              </div>
+              <span>Loading diagram...</span>
+            </div>
           )}
         </div>
 

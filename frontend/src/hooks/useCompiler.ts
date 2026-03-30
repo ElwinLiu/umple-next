@@ -133,6 +133,7 @@ export function useCompiler() {
 
   // Track whether mount has completed to skip initial effect fires
   const mountedRef = useRef(false)
+  const initialCompileRef = useRef(true)
   useEffect(() => { mountedRef.current = true }, [])
 
   // Main compile effect — debounced on code/modelId changes.
@@ -144,7 +145,9 @@ export function useCompiler() {
     const { syncPending, clearSyncPending } = useSessionStore.getState()
     if (syncPending) clearSyncPending()
 
-    const delay = syncPending ? 0 : DEBOUNCE_MS
+    const isInitial = initialCompileRef.current
+    initialCompileRef.current = false
+    const delay = syncPending || isInitial ? 0 : DEBOUNCE_MS
 
     timerRef.current = setTimeout(async () => {
       if (abortRef.current) abortRef.current.abort()
