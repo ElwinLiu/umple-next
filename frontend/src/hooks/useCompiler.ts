@@ -146,10 +146,16 @@ export function useCompiler() {
     if (syncPending) clearSyncPending()
 
     const isInitial = initialCompileRef.current
-    initialCompileRef.current = false
     const delay = syncPending || isInitial ? 0 : DEBOUNCE_MS
 
     timerRef.current = setTimeout(async () => {
+      // Preserve the initial immediate compile across React StrictMode's
+      // mount-time effect replay in development. If we flip this flag before
+      // the timer runs, the replayed effect falls back to the debounce delay.
+      if (initialCompileRef.current && codeRef.current.trim()) {
+        initialCompileRef.current = false
+      }
+
       if (abortRef.current) abortRef.current.abort()
       abortRef.current = new AbortController()
 
