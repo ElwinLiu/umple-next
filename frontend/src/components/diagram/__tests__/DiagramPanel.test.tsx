@@ -54,6 +54,7 @@ afterEach(() => {
   useEphemeralStore.setState({
     rightPanelView: 'diagram',
     renderMode: 'editable',
+    compiling: false,
     generatedCode: '',
     generatedHtml: '',
     generatedKind: 'text',
@@ -121,5 +122,27 @@ describe('DiagramPanel', () => {
     expect(screen.getByTestId('umple-diagram').getAttribute('data-editable')).toBe('true')
     expect(screen.getByTestId('smart-svg-view')).toBeDefined()
     expect(rendererProps.umpleEditable).toEqual([true, false, true])
+  })
+
+  it('does not show the class loading state unless a compile is active', () => {
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.queryByText('Loading diagram...')).toBeNull()
+  })
+
+  it('shows the class loading state while compiling without an editable model', () => {
+    useEphemeralStore.setState({ compiling: true })
+
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.getByText('Loading diagram...')).toBeDefined()
   })
 })

@@ -33,6 +33,7 @@ export function DiagramPanel() {
   const code = useSessionStore((s) => s.code)
   const modelId = useSessionStore((s) => s.modelId)
   const renderMode = useEphemeralStore((s) => s.renderMode)
+  const compiling = useEphemeralStore((s) => s.compiling)
   const setRenderMode = useEphemeralStore((s) => s.setRenderMode)
   const rightPanelView = useEphemeralStore((s) => s.rightPanelView)
   const generatedCode = useEphemeralStore((s) => s.generatedCode)
@@ -53,7 +54,7 @@ export function DiagramPanel() {
   const hasEditableModel = !!umpleModel?.umpleClasses?.length
   const canToggleRenderer = viewMode === 'class' && hasEditableModel
   const showEditable = canToggleRenderer && renderMode === 'editable'
-  const editableLoading = viewMode === 'class' && renderMode === 'editable' && !hasEditableModel
+  const editableLoading = viewMode === 'class' && renderMode === 'editable' && compiling && !hasEditableModel
 
   // Default: class view starts in editable (RF) mode, other views start in graphviz
   useEffect(() => {
