@@ -458,6 +458,7 @@ function SidebarFooter() {
           data-testid="sidebar-footer-menu"
         >
           <img src="/uottawa-logo.svg" alt="University of Ottawa" className="h-8 w-auto shrink-0 dark:invert" />
+          <span className="text-xs font-medium text-ink-muted">About</span>
           <ChevronsUpDown className="size-3.5 text-ink-faint shrink-0" />
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" className="w-56">

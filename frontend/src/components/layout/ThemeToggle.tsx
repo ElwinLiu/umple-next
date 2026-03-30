@@ -1,9 +1,15 @@
 import { Moon, Sun, Monitor } from 'lucide-react'
 import { usePreferencesStore } from '../../stores/preferencesStore'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu'
 
 const options = [
-  { value: 'dark' as const, icon: Moon, label: 'Dark' },
   { value: 'light' as const, icon: Sun, label: 'Light' },
+  { value: 'dark' as const, icon: Moon, label: 'Dark' },
   { value: 'system' as const, icon: Monitor, label: 'System' },
 ]
 
@@ -20,34 +26,25 @@ export function ThemeToggle() {
   }
 
   return (
-    <div
-      className="flex rounded-lg border border-border bg-surface-0 p-1 min-w-max"
-      role="radiogroup"
-      aria-label="Theme"
-    >
-      {options.map(({ value, icon: Icon, label }) => {
-        const active = theme === value
-        return (
-          <button
-            key={value}
-            role="radio"
-            aria-checked={active}
-            aria-label={`Switch to ${label} theme`}
-            title={label}
-            onClick={() => handleSwitch(value)}
-            className={`flex items-center justify-center gap-1 rounded-md h-6 px-2 cursor-pointer transition-colors ${
-              active ? 'bg-ink text-ink-inverse' : 'text-ink-muted hover:text-ink'
-            }`}
-          >
-            <Icon className="size-[15px] shrink-0" />
-            {active && (
-              <span className="font-mono text-[12px] leading-none tracking-[-0.015rem] uppercase whitespace-nowrap">
-                {label}
-              </span>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        className="relative p-1.5 transition-colors cursor-pointer rounded-lg text-ink-muted hover:text-ink hover:bg-surface-2 data-[state=open]:bg-surface-2"
+        aria-label="Toggle theme"
+      >
+        <Sun className="size-4 rotate-0 scale-100 transition-transform dark:-rotate-90 dark:scale-0" />
+        <Moon className="absolute inset-0 m-auto size-4 rotate-90 scale-0 transition-transform dark:rotate-0 dark:scale-100" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="end">
+        {options.map(({ value, icon: Icon, label }) => (
+          <DropdownMenuItem key={value} onSelect={() => handleSwitch(value)}>
+            <Icon className="size-3.5" />
+            {label}
+            {theme === value && (
+              <span className="ml-auto text-xs text-ink-muted">✓</span>
             )}
-          </button>
-        )
-      })}
-    </div>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
