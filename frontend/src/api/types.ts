@@ -3,12 +3,19 @@
 export interface CompileRequest {
   code: string
   modelId?: string
+  diagramType?: string
+  suboptions?: string[]
+  needsLayout?: boolean
 }
 
 export interface CompileResponse {
   result: string
   errors?: string
   modelId: string
+  svg?: string
+  html?: string
+  layout?: GvLayout
+  storedLayout?: StoredLayoutMetadata
 }
 
 export interface UmpleModel {

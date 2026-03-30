@@ -31,6 +31,7 @@ type DiagramRequest struct {
 	DiagramType string   `json:"diagramType"`
 	ModelID     string   `json:"modelId,omitempty"`
 	Suboptions  []string `json:"suboptions,omitempty"`
+	NeedsLayout *bool    `json:"needsLayout,omitempty"`
 }
 
 type GvTextLine struct {
@@ -302,6 +303,153 @@ var diagramTypeInfo = map[string]diagramOutputKind{
 	"StateTables":                 outputHTML,
 }
 
+// processDiagramParams bundles everything needed to run diagram generation
+// against an already-resolved model directory.
+type processDiagramParams struct {
+	pool        *compiler.Pool
+	dir         string
+	modelID     string
+	diagramType string
+	suboptions  []string
+	needsLayout bool
+}
+
+// processDiagram generates a diagram from a model directory that already
+// contains model.ump. It returns a DiagramResponse or an error string.
+// This is shared by both the /api/diagram endpoint and the merged /api/compile
+// endpoint when diagramType is provided.
+func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
+	outputKind, ok := diagramTypeInfo[p.diagramType]
+	if !ok {
+		return nil, fmt.Sprintf("unsupported diagram type: %s", p.diagramType)
+	}
+
+	modelPath := filepath.Join(p.dir, "model.ump")
+	modelData, _ := os.ReadFile(modelPath)
+	storedLayout := extractStoredLayoutMetadata(string(modelData))
+
+	// Remove stale .gv files so the directory scan after generation
+	// always picks the newly generated file, not a leftover from a
+	// previous diagram type.
+	if cleanEntries, err := os.ReadDir(p.dir); err == nil {
+		for _, e := range cleanEntries {
+			if strings.HasSuffix(e.Name(), ".gv") {
+				if removeErr := os.Remove(filepath.Join(p.dir, e.Name())); removeErr != nil {
+					log.Printf("warning: failed to remove stale .gv file %s: %v", e.Name(), removeErr)
+				}
+			}
+		}
+	}
+
+	// Generate .gv file using umple, appending validated suboptions as -s flags
+	command := fmt.Sprintf("-generate %s %s/model.ump", p.diagramType, p.dir)
+	for _, opt := range p.suboptions {
+		if validSuboptions[opt] {
+			command += " -s " + opt
+		}
+	}
+	result, err := p.pool.Execute(compiler.CompileRequest{
+		Command: command,
+		WorkDir: p.dir,
+	})
+	if err != nil {
+		return nil, fmt.Sprintf("diagram generation failed: %v", err)
+	}
+
+	// HTML output types (EventSequence, StateTables): prefer socket output,
+	// but fall back to reading model.html from disk (Umple may write there instead).
+	if outputKind == outputHTML {
+		html := result.Output
+		if strings.TrimSpace(html) == "" {
+			htmlPath := filepath.Join(p.dir, "model.html")
+			if data, readErr := os.ReadFile(htmlPath); readErr == nil {
+				html = string(data)
+			}
+		}
+		if p.diagramType == "StructureDiagram" {
+			html = buildStructureDiagramHTML(html)
+		}
+		return &DiagramResponse{
+			HTML:         html,
+			StoredLayout: storedLayout,
+			Errors:       result.Errors,
+			ModelID:      p.modelID,
+		}, ""
+	}
+
+	// GV output types: find the generated .gv file and run dot
+	gvFile := ""
+	entries, err := os.ReadDir(p.dir)
+	if err != nil {
+		return nil, "failed to read model directory: " + err.Error()
+	}
+	for _, e := range entries {
+		if strings.HasSuffix(e.Name(), ".gv") {
+			gvFile = filepath.Join(p.dir, e.Name())
+			break
+		}
+	}
+
+	if gvFile == "" {
+		return nil, "no diagram output generated"
+	}
+
+	// Run dot -Tsvg (always) and optionally dot -Tjson for layout data
+	var (
+		svgData   []byte
+		layout    *GvLayout
+		svgErr    error
+		svgErrMsg string
+	)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+
+	// SVG generation
+	go func() {
+		defer wg.Done()
+		svgFile := filepath.Join(p.dir, "diagram.svg")
+		cmd := exec.Command("dot", "-Tsvg", "-o", svgFile, gvFile)
+		cmd.Dir = p.dir
+		if out, err := cmd.CombinedOutput(); err != nil {
+			svgErr = err
+			svgErrMsg = string(out)
+			return
+		}
+		svgData, svgErr = os.ReadFile(svgFile)
+	}()
+
+	// JSON layout extraction — only when the caller needs layout data
+	if p.needsLayout {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			cmd := exec.Command("dot", "-Tjson", gvFile)
+			cmd.Dir = p.dir
+			if jsonData, err := cmd.Output(); err == nil {
+				layout = parseGvLayout(jsonData)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	if svgErr != nil {
+		if svgErrMsg != "" {
+			return nil, fmt.Sprintf("dot conversion failed: %v: %s", svgErr, svgErrMsg)
+		}
+		return nil, "failed to read SVG output"
+	}
+
+	return &DiagramResponse{
+		SVG:          string(svgData),
+		Layout:       layout,
+		StoredLayout: storedLayout,
+		Errors:       result.Errors,
+		ModelID:      p.modelID,
+	}, ""
+}
+
 func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	var req DiagramRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -317,8 +465,7 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "diagramType is required")
 		return
 	}
-	outputKind, ok := diagramTypeInfo[req.DiagramType]
-	if !ok {
+	if _, ok := diagramTypeInfo[req.DiagramType]; !ok {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("unsupported diagram type: %s", req.DiagramType))
 		return
 	}
@@ -329,135 +476,25 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
 		return
 	}
-	modelPath := filepath.Join(dir, "model.ump")
-	modelData, _ := os.ReadFile(modelPath)
-	storedLayout := extractStoredLayoutMetadata(string(modelData))
 
-	// Remove stale .gv files so the directory scan after generation
-	// always picks the newly generated file, not a leftover from a
-	// previous diagram type.
-	if cleanEntries, err := os.ReadDir(dir); err == nil {
-		for _, e := range cleanEntries {
-			if strings.HasSuffix(e.Name(), ".gv") {
-				if removeErr := os.Remove(filepath.Join(dir, e.Name())); removeErr != nil {
-					log.Printf("warning: failed to remove stale .gv file %s: %v", e.Name(), removeErr)
-				}
-			}
-		}
-	}
+	// Default needsLayout to true for backward compatibility
+	needsLayout := req.NeedsLayout == nil || *req.NeedsLayout
 
-	// Generate .gv file using umple, appending validated suboptions as -s flags
-	command := fmt.Sprintf("-generate %s %s/model.ump", req.DiagramType, dir)
-	for _, opt := range req.Suboptions {
-		if validSuboptions[opt] {
-			command += " -s " + opt
-		}
-	}
-	result, err := h.pool.Execute(compiler.CompileRequest{
-		Command: command,
-		WorkDir: dir,
+	resp, errMsg := processDiagram(processDiagramParams{
+		pool:        h.pool,
+		dir:         dir,
+		modelID:     modelID,
+		diagramType: req.DiagramType,
+		suboptions:  req.Suboptions,
+		needsLayout: needsLayout,
 	})
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Sprintf("diagram generation failed: %v", err))
-		return
-	}
-
-	// HTML output types (EventSequence, StateTables): prefer socket output,
-	// but fall back to reading model.html from disk (Umple may write there instead).
-	if outputKind == outputHTML {
-		html := result.Output
-		if strings.TrimSpace(html) == "" {
-			htmlPath := filepath.Join(dir, "model.html")
-			if data, readErr := os.ReadFile(htmlPath); readErr == nil {
-				html = string(data)
-			}
-		}
-		if req.DiagramType == "StructureDiagram" {
-			html = buildStructureDiagramHTML(html)
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(DiagramResponse{
-			HTML:         html,
-			StoredLayout: storedLayout,
-			Errors:       result.Errors,
-			ModelID:      modelID,
-		})
-		return
-	}
-
-	// GV output types: find the generated .gv file and run dot
-	gvFile := ""
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to read model directory: "+err.Error())
-		return
-	}
-	for _, e := range entries {
-		if strings.HasSuffix(e.Name(), ".gv") {
-			gvFile = filepath.Join(dir, e.Name())
-			break
-		}
-	}
-
-	if gvFile == "" {
-		writeError(w, http.StatusInternalServerError, "no diagram output generated")
-		return
-	}
-
-	// Run dot -Tsvg and dot -Tjson concurrently (independent operations on the same .gv input)
-	var (
-		svgData   []byte
-		layout    *GvLayout
-		svgErr    error
-		svgErrMsg string
-	)
-
-	var wg sync.WaitGroup
-	wg.Add(2)
-
-	// SVG generation
-	go func() {
-		defer wg.Done()
-		svgFile := filepath.Join(dir, "diagram.svg")
-		cmd := exec.Command("dot", "-Tsvg", "-o", svgFile, gvFile)
-		cmd.Dir = dir
-		if out, err := cmd.CombinedOutput(); err != nil {
-			svgErr = err
-			svgErrMsg = string(out)
-			return
-		}
-		svgData, svgErr = os.ReadFile(svgFile)
-	}()
-
-	// JSON layout extraction (capture stdout directly, no temp file)
-	go func() {
-		defer wg.Done()
-		cmd := exec.Command("dot", "-Tjson", gvFile)
-		cmd.Dir = dir
-		if jsonData, err := cmd.Output(); err == nil {
-			layout = parseGvLayout(jsonData)
-		}
-	}()
-
-	wg.Wait()
-
-	if svgErr != nil {
-		if svgErrMsg != "" {
-			writeError(w, http.StatusInternalServerError, fmt.Sprintf("dot conversion failed: %v: %s", svgErr, svgErrMsg))
-		} else {
-			writeError(w, http.StatusInternalServerError, "failed to read SVG output")
-		}
+	if errMsg != "" {
+		writeError(w, http.StatusInternalServerError, errMsg)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(DiagramResponse{
-		SVG:          string(svgData),
-		Layout:       layout,
-		StoredLayout: storedLayout,
-		Errors:       result.Errors,
-		ModelID:      modelID,
-	})
+	json.NewEncoder(w).Encode(resp)
 }
 
 func buildStructureDiagramHTML(generated string) string {
