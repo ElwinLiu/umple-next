@@ -204,8 +204,11 @@ export function Sidebar() {
 
 // ── Resize handle (right edge of sidebar) ──
 
+const SIDEBAR_COLLAPSE_THRESHOLD = 200
+
 function ResizeHandle() {
   const setSidebarWidth = usePreferencesStore((s) => s.setSidebarWidth)
+  const toggleSidebar = usePreferencesStore((s) => s.toggleSidebar)
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault()
@@ -213,10 +216,16 @@ function ResizeHandle() {
     const startWidth = usePreferencesStore.getState().sidebarWidth
 
     const handleMouseMove = (e: MouseEvent) => {
-      setSidebarWidth(startWidth + (e.clientX - startX))
+      const newWidth = startWidth + (e.clientX - startX)
+      if (newWidth < SIDEBAR_COLLAPSE_THRESHOLD) return
+      setSidebarWidth(newWidth)
     }
 
-    const handleMouseUp = () => {
+    const handleMouseUp = (e: MouseEvent) => {
+      const finalWidth = startWidth + (e.clientX - startX)
+      if (finalWidth < SIDEBAR_COLLAPSE_THRESHOLD) {
+        toggleSidebar()
+      }
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
       document.body.style.cursor = ''
@@ -227,7 +236,7 @@ function ResizeHandle() {
     document.body.style.userSelect = 'none'
     document.addEventListener('mousemove', handleMouseMove)
     document.addEventListener('mouseup', handleMouseUp)
-  }, [setSidebarWidth])
+  }, [setSidebarWidth, toggleSidebar])
 
   return (
     <div
