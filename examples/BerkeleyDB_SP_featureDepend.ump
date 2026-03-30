@@ -30,11 +30,4 @@ mixset MemoryBudget { require [Latches]; }
  
 mixset TruncateOp { require[DeleteOp]; } 
 
-mixset Verifier{  require[INCompressor];  } 
-
-//$?[End_of_model]$?
-// @@@skipjavacompile - Generates no language code
-// @@@skipphpcompile - Contains no language code
-// @@@skiprubycompile - Contains no language code
-// @@@skippythoncompile - Contains no language code
-
+mixset Verifier{  require[INCompressor];  }

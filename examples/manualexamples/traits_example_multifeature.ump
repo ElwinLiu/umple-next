@@ -67,28 +67,4 @@ mixset f4 class C4 {
   //mixset f5 after custom m2() {System.out.println("m2 occurred");}
   mixset f5 { after custom m2() {System.out.println("m2 occurred");} } 
   after e1 {System.out.printlin("event e1 occurred");}
-}//$?[End_of_model]$?
-
-class C3
-{
-  position 50 230 109 45;
 }
-
-class C1
-{
-  position 50 30 109 45;
-}
-
-class C1
-{
-  position 50 30 109 45;
-}
-
-class C3
-{
-  position 50 230 109 45;
-}
-// @@@skipcppcompile - Contains Java Code
-// @@@skipphpcompile - Contains Java Code
-// @@@skiprubycompile - Contains Java Code
-// @@@skippythoncompile - Contains Java Code

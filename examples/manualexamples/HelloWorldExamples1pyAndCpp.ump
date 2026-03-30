@@ -15,9 +15,3 @@ class HelloWorld {
     cout<<"Hello World!";
   }
 }
-
-//$?[End_of_model]$?
-// @@@skipphpcompile - Contains Python Code
-// @@@skiprubycompile - Contains Python Code
-// @@@skipjavacompile - Contains Python Code
-

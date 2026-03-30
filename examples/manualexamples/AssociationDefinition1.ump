@@ -24,18 +24,4 @@ class E {
 }
 
 // Reference to a class defined elsewhere
-external D {}//$?[End_of_model]$?
-
-class B
-{
-  position 242 33 109 45;
-  position.association A:endTwo__B 0,23 110,26;
-}
-
-class C
-{
-  position 50 150 109 45;
-  position.association C__D 75,46 76,0;
-}
-// @@@skipcompile -- can only be compiled with a system that also has D
-// @@@skipcppcompile
+external D {}

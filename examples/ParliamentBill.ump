@@ -54,6 +54,3 @@ class Bill {
     }
   }
 }
-
-//$?[End_of_model]$?
-// @@@skipcppcompile

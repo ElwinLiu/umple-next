@@ -12,5 +12,3 @@ class Student
 
 // The suppressWarnings annotation allows this example
 // to keep working as of Java 19 as per Umple issue £2018
-//$?[End_of_model]$?
-// @@@skipphpcompile - Skipped due to issue 698

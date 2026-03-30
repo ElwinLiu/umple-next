@@ -119,5 +119,3 @@ class IntersectionTimerDriven {
     Walk {}
   }
 }
-//$?[End_of_model]$?
-// @@@skipcppcompile

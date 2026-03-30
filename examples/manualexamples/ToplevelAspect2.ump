@@ -21,8 +21,4 @@ trait X {
   doSomething() {
     System.out.println("Doing something\n");
   }
-}//$?[End_of_model]$?
-
-// @@@skipphpcompile - contains java code
-// @@@skippythoncompile - Contains Java Code
-// @@@skipcppcompile
+}

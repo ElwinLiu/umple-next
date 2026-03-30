@@ -13,8 +13,3 @@ class HelloWorld {
     print("Hello World")
   }
 }
-//$?[End_of_model]$?
-// @@@skipcppcompile - Contains Python Code
-// @@@skipphpcompile - Contains Python Code
-// @@@skiprubycompile - Contains Python Code
-// @@@skipjavacompile - Contains Python Code

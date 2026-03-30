@@ -38,31 +38,4 @@ class Method
 
 class Attribute
 {
-}//$?[End_of_model]$?
-
-namespace -;
-
-class Entity
-{
-  position 50 330 109 45;
-}
-
-class AssociationEnd
-{
-position 474 351 109 45;
-}
-
-class Association
-{
-  position 250 30 109 45;
-}
-
-class Method
-{
-position 41 205 109 45;
-}
-
-class Attribute
-{
-position 225 208 109 45;
 }

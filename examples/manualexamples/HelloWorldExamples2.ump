@@ -55,20 +55,4 @@ class Person {
     print("The students of " + str(m) + " are " + str(m.getStudents()))
   }
   
-}//$?[End_of_model]$?
-
-class Person
-{
-  position 154 29 109 60;
 }
-
-class Mentor
-{
-  position 253 130 109 45;
-}
-
-//$?[End_of_model]$?
-// @@@skipcppcompile - Contains Java code
-// @@@skipphpcompile - Contains Java code
-// @@@skiprubycompile - Contains Java code
-// @@@skippythoncompile - Contains Java Code

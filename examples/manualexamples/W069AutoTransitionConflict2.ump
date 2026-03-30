@@ -14,5 +14,3 @@ class A {
   void doSomething() {}
   void doSomethingElse() {}
 }
-//$?[End_of_model]$?
-// @@@skippythoncompile - Contains Java Code

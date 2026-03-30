@@ -53,25 +53,4 @@ class CourseSection
 
 class Student {
   // Remainder of class defined elsewhere
-}//$?[End_of_model]$?
-
-class Course
-{
-  position 50 30 109 45;
-  position.association Course__CourseSection 106,80 30,0;
 }
-
-class CourseSection
-{
-  position 40 149 201 111;
-}
-
-class Student
-{
-  position 260 65 109 45;
-}
-
-// @@@skipcppcompile - Contains Java Code
-// @@@skipphpcompile - Contains Java Code
-// @@@skiprubycompile - Contains Java Code
-// @@@skippythoncompile - Contains Java Code

@@ -7,5 +7,3 @@ class Student
   Integer id;
   trace id;
 }
-//$?[End_of_model]$?
-// @@@skipcompile - LttngJNI not on build path

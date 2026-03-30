@@ -20,8 +20,3 @@ class Student
     s.setName("Tim");
   }
 }
-//$?[End_of_model]$?
-// @@@skipcppcompile - main is specifically java code.
-// @@@skipphpcompile - main is specifically java code.
-// @@@skiprubycompile - main is specifically java code.
-// @@@skippythoncompile - main is specifically java code.

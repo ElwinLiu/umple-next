@@ -88,31 +88,4 @@ class Course {
     }    
     return result;
   }
-}//$?[End_of_model]$?
-
-class Course
-{
-  position 234 218 202 74;
 }
-
-class Student
-{
-  position 33 42 109 74;
-}
-
-class Academy
-{
-  position.association Academy__Student:registrants 0,42 109,28;
-  position 259 31 192 58;
-}
-
-class Registration
-{
-  position.association Registration__Student 30,0 44,77;
-  position.association Course__Registration 110,16 0,29;
-  position 50 220 109 74;
-}
-// @@@skipcppcompile - Java-specific code in main and toString in class Academy
-// @@@skipphpcompile - Java-specific code in main and toString in class Academy
-// @@@skiprubycompile - Java-specific code in main and toString in class Academy
-// @@@skippythoncompile - Java-specific code in main and toString in class Academy

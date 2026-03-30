@@ -26,5 +26,3 @@ class Professor {
   // with role name cardinality condition
   trace name where [ supervisor cardinality > 10];
 }
-//$?[End_of_model]$?
-// @@@skipphpcompile - Skipped due to issue 698

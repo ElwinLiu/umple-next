@@ -56,19 +56,3 @@ use specialVersion2;
 mixset specialVersion3 {
  class W {}
 }
-//$?[End_of_model]$?
-class Z
-{
-  position 30 21 109 56;
-}
-
-class X
-{
-  position 30 120 109 107;
-}
-
-
-class X
-{
-  position.association X__Z 16,0 18,56;
-}

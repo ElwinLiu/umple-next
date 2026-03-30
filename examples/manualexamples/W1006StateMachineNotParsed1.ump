@@ -40,5 +40,3 @@ class X {
     b -> c
   }
 }
-//$?[End_of_model]$?
-// @@@skipcompile - the resulting code cannot be compiled

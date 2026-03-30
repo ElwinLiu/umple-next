@@ -4,5 +4,3 @@
 class X {
   public x;
 }
-//$?[End_of_model]$?
-// @@@skipcompile - the resulting code will not compile

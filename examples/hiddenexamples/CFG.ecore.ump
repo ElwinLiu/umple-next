@@ -41,28 +41,3 @@ class Expression
 {
 	String expressionName;
 }
-
-//$?[End_of_model]$?
-
-namespace -;
-
-
-class AbstractNode
-{
-  position 50 30 109 45;
-}
-
-class Node
-{
-position 301 216 109 45;
-}
-
-class ConditionalNode
-{
-position 5 201 109 45;
-}
-
-class Expression
-{
-position 393 38 109 45;
-}

@@ -53,25 +53,4 @@ class CourseSection
 
 class Student {
   //Remainder of this class defined elsewhere
-}//$?[End_of_model]$?
-
-class Course
-{
-  position 50 30 109 45;
-  position.association Course__CourseSection 106,80 30,0;
 }
-
-class CourseSection
-{
-  position 40 149 201 111;
-}
-
-class Student
-{
-  position 260 65 109 45;
-}
-
-// @@@skipcppcompile - requestToRegister is specifically java code.
-// @@@skipphpcompile - requestToRegister is specifically java code.
-// @@@skiprubycompile - requestToRegister is specifically java code.
-// @@@skippythoncompile - requestToRegister is specifically java code.

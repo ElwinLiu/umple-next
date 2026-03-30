@@ -7,5 +7,3 @@ class Student
   trace id;
   trace set name;
 }
-//$?[End_of_model]$?
-// @@@skipphpcompile - Skipped due to issue 698
