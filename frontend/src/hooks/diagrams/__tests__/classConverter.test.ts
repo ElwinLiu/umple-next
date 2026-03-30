@@ -126,5 +126,7 @@ describe('convertClassDiagram', () => {
 
     expect(unitNode?.position).toEqual({ x: 320, y: 180 })
     expect(guestNode?.position).toEqual({ x: 330, y: 75 })
+    expect(unitNode?.style).toMatchObject({ width: 180, height: 90 })
+    expect(guestNode?.style).toMatchObject({ width: 180, height: 90 })
   })
 })

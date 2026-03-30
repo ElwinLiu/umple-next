@@ -305,7 +305,7 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout, stor
       position: storedNodeNames.has(cls.name) && cls.position
         ? { x: cls.position.x, y: cls.position.y }
         : (positions.get(cls.name) ?? { x: 50, y: 50 }),
-      style: { width: metrics.width },
+      style: { width: metrics.width, height: metrics.height },
       data: {
         name: cls.name,
         attributes: buildDisplayAttributes(cls.attributes || [], layoutNode),
@@ -326,7 +326,7 @@ export function convertClassDiagram(model: UmpleModel, gvLayout?: GvLayout, stor
       position: storedNodeNames.has(iface.name) && iface.position
         ? { x: iface.position.x, y: iface.position.y }
         : (positions.get(iface.name) ?? { x: 50, y: 50 }),
-      style: { width: metrics.width },
+      style: { width: metrics.width, height: metrics.height },
       data: {
         name: iface.name,
         attributes: [],

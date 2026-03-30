@@ -61,6 +61,34 @@ class B {
 	}
 }
 
+func TestMergeModelCodeWithStoredLayout_StripsPositionsFromIncomingCode(t *testing.T) {
+	// Example files from the old Umple repo include baked-in positions after
+	// the delimiter.  These should be ignored — only positions persisted on
+	// disk (from user drag operations) should be honoured.
+	codeWithPositions := `class A {}
+class B {}
+
+//$?[End_of_model]$?
+class A {
+  position 10 20 109 41;
+}
+
+class B {
+  position 200 20 109 41;
+}
+`
+	existing := "" // no prior model on disk
+
+	merged := mergeModelCodeWithStoredLayout(codeWithPositions, existing)
+
+	if strings.Contains(merged, "position") {
+		t.Fatalf("expected positions from incoming code to be stripped, got:\n%s", merged)
+	}
+	if strings.Contains(merged, modelDelimiter) {
+		t.Fatalf("expected delimiter to be absent when no existing layout, got:\n%s", merged)
+	}
+}
+
 func TestExtractStoredLayoutMetadata(t *testing.T) {
 	code := `class A {}
 class B {}
