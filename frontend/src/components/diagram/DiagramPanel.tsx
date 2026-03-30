@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { type ReactNode, useCallback, useEffect } from 'react'
 import { Download, X } from 'lucide-react'
 import { toSvg, toPng } from 'html-to-image'
 import { UmpleDiagram } from './UmpleDiagram'
@@ -50,7 +50,8 @@ export function DiagramPanel() {
   const currentHtml = htmlCache[viewMode] ?? ''
   const outputKind = VIEW_OUTPUT_KIND[viewMode]
   const hasEditableModel = !!umpleModel?.umpleClasses?.length
-  const showEditable = hasEditableModel && renderMode === 'editable'
+  const canToggleRenderer = viewMode === 'class' && hasEditableModel
+  const showEditable = canToggleRenderer && renderMode === 'editable'
 
   // Default: class view starts in editable (RF) mode, other views start in graphviz
   useEffect(() => {
@@ -58,6 +59,9 @@ export function DiagramPanel() {
   }, [viewMode, setRenderMode])
   const showHtml = !showEditable && outputKind === 'html' && !!currentHtml
   const showGv = !showEditable && !showHtml && !!currentSvg
+  const mountEditable = canToggleRenderer
+  const mountHtml = outputKind === 'html' && !!currentHtml
+  const mountGv = outputKind === 'gv' && !!currentSvg
 
   const handleExport = useCallback(async (format: string) => {
     const filename = `umple-${viewMode}-diagram.${format}`
@@ -117,7 +121,7 @@ export function DiagramPanel() {
                   <DropdownMenuItem onClick={() => handleExport('png')}>PNG</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-              {hasEditableModel && (
+              {canToggleRenderer && (
                 <>
                   <div className="w-px h-3.5 bg-border mx-0.5" />
                   <Tip content={`Renderer: ${renderMode === 'editable' ? 'Editable' : 'Graphviz'}`} side="bottom">
@@ -135,13 +139,21 @@ export function DiagramPanel() {
               )}
             </div>
           </div>
-          {showEditable ? (
-            <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} />
-          ) : showHtml ? (
-            <HtmlDiagramView html={currentHtml} viewMode={viewMode} />
-          ) : showGv ? (
-            <SmartSvgView svg={currentSvg} />
-          ) : null}
+          {mountEditable && (
+            <DiagramLayer active={showEditable}>
+              <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} editable={showEditable} />
+            </DiagramLayer>
+          )}
+          {mountHtml && (
+            <DiagramLayer active={showHtml}>
+              <HtmlDiagramView html={currentHtml} viewMode={viewMode} />
+            </DiagramLayer>
+          )}
+          {mountGv && (
+            <DiagramLayer active={showGv}>
+              <SmartSvgView svg={currentSvg} />
+            </DiagramLayer>
+          )}
         </div>
 
         {generationRequested && (
@@ -185,3 +197,14 @@ export function DiagramPanel() {
 }
 
 const toolbarBtnBase = 'px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1'
+
+function DiagramLayer({ active, children }: { active: boolean; children: ReactNode }) {
+  return (
+    <div
+      aria-hidden={!active}
+      className={cn('absolute inset-0', active ? 'visible' : 'invisible pointer-events-none')}
+    >
+      {children}
+    </div>
+  )
+}
