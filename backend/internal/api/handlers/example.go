@@ -9,14 +9,16 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/umple/umpleonline/backend/internal/model"
 )
 
 type ExampleHandler struct {
 	examplePath string
+	store       *model.Store
 }
 
-func NewExampleHandler(examplePath string) *ExampleHandler {
-	return &ExampleHandler{examplePath: examplePath}
+func NewExampleHandler(examplePath string, store *model.Store) *ExampleHandler {
+	return &ExampleHandler{examplePath: examplePath, store: store}
 }
 
 type ExampleEntry struct {
@@ -154,9 +156,23 @@ func (h *ExampleHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	raw := string(data)
+	userCode, _, hasDelimiter := splitModelSections(raw)
+
+	resp := map[string]string{
 		"name": strings.TrimSuffix(name, ".ump"),
-		"code": string(data),
-	})
+		"code": userCode,
+	}
+
+	// If the example has a layout section, pre-create a model on disk with the
+	// full content so that the first compile preserves the stored positions.
+	if hasDelimiter {
+		m, err := h.store.Create(raw)
+		if err == nil {
+			resp["modelId"] = m.ID
+		}
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }

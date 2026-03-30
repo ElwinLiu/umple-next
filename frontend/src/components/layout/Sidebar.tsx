@@ -305,7 +305,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
   const handleLoadExample = useCallback(async (name: string) => {
     try {
       const res = await api.getExample(name)
-      loadExample(res.name, res.code)
+      loadExample(res.name, res.code, res.modelId)
       useEphemeralStore.getState().setRightPanelView('diagram')
     } catch { /* ignore */ }
   }, [loadExample])
