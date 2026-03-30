@@ -109,14 +109,10 @@ func filterHiddenLayoutSection(userCode string, hiddenLayout string) string {
 }
 
 func mergeModelCodeWithStoredLayout(code string, existing string) string {
-	userCode, hiddenLayout, hasDelimiter := splitModelSections(code)
-	if hiddenLayout == "" {
-		_, existingHiddenLayout, existingHasDelimiter := splitModelSections(existing)
-		hiddenLayout = existingHiddenLayout
-		hasDelimiter = hasDelimiter || existingHasDelimiter
-	}
+	userCode, _, _ := splitModelSections(code)
+	_, existingHiddenLayout, hasDelimiter := splitModelSections(existing)
 
-	filteredHiddenLayout := filterHiddenLayoutSection(userCode, hiddenLayout)
+	filteredHiddenLayout := filterHiddenLayoutSection(userCode, existingHiddenLayout)
 	return joinModelSections(userCode, filteredHiddenLayout, hasDelimiter)
 }
 
