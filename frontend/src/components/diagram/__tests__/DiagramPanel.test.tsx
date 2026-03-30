@@ -6,12 +6,19 @@ import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
+const rendererProps = vi.hoisted(() => ({
+  umpleEditable: [] as boolean[],
+}))
+
 vi.mock('../CanvasToolbar', () => ({
   CanvasToolbar: () => <div data-testid="canvas-toolbar" />,
 }))
 
 vi.mock('../UmpleDiagram', () => ({
-  UmpleDiagram: () => <div data-testid="umple-diagram" />,
+  UmpleDiagram: ({ editable = true }: { editable?: boolean }) => {
+    rendererProps.umpleEditable.push(editable)
+    return <div data-testid="umple-diagram" data-editable={String(editable)} />
+  },
 }))
 
 vi.mock('../SmartSvgView', () => ({
@@ -33,6 +40,7 @@ vi.mock('../../generation/GeneratedOutputView', () => ({
 afterEach(() => {
   cleanup()
   window.localStorage.clear()
+  rendererProps.umpleEditable.length = 0
   useSessionStore.setState({
     code: '',
     modelId: null,
@@ -75,5 +83,41 @@ describe('DiagramPanel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Dismiss diagram reminder' }))
 
     expect(useEphemeralStore.getState().lastError).toBeNull()
+  })
+
+  it('keeps both class renderers mounted while disabling edit interactions in GV mode', () => {
+    useSessionStore.setState({
+      viewMode: 'class',
+      svgCache: {
+        class: '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" /></svg>',
+      },
+      umpleModel: {
+        umpleClasses: [{ name: 'Account' }],
+      } as any,
+    })
+
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    const umpleDiagram = screen.getByTestId('umple-diagram')
+    const smartSvgView = screen.getByTestId('smart-svg-view')
+    const switchControl = screen.getByRole('switch')
+
+    expect(umpleDiagram.getAttribute('data-editable')).toBe('true')
+    expect(smartSvgView).toBeDefined()
+
+    fireEvent.click(switchControl)
+
+    expect(screen.getByTestId('umple-diagram').getAttribute('data-editable')).toBe('false')
+    expect(screen.getByTestId('smart-svg-view')).toBeDefined()
+
+    fireEvent.click(switchControl)
+
+    expect(screen.getByTestId('umple-diagram').getAttribute('data-editable')).toBe('true')
+    expect(screen.getByTestId('smart-svg-view')).toBeDefined()
+    expect(rendererProps.umpleEditable).toEqual([true, false, true])
   })
 })

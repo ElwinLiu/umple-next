@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useMemo, useEffect } from 'react'
+import { memo, useRef, useState, useCallback, useMemo, useEffect, useLayoutEffect } from 'react'
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react'
 import { ControlButton } from './DiagramControls'
 
@@ -164,7 +164,7 @@ function processSvg(raw: string): { html: string; dims: { width: number; height:
 
 const PADDING = 24
 
-export function SmartSvgView({ svg }: SmartSvgViewProps) {
+const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
@@ -195,9 +195,8 @@ export function SmartSvgView({ svg }: SmartSvgViewProps) {
     setTransform({ x: (cw - contentW * scale) / 2, y: (ch - contentH * scale) / 2, scale })
   }, [svgDims])
 
-  useEffect(() => {
-    const id = requestAnimationFrame(fitToView)
-    return () => cancelAnimationFrame(id)
+  useLayoutEffect(() => {
+    fitToView()
   }, [sanitizedSvg, fitToView])
 
   const handleWheel = useCallback((e: React.WheelEvent) => {
@@ -369,3 +368,6 @@ export function SmartSvgView({ svg }: SmartSvgViewProps) {
     </div>
   )
 }
+
+export const SmartSvgView = memo(SmartSvgViewInner)
+SmartSvgView.displayName = 'SmartSvgView'

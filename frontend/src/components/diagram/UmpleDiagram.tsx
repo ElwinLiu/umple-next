@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { usePreferencesStore } from '../../stores/preferencesStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import {
@@ -113,13 +113,11 @@ function AutoFitView({ nodeKey }: { nodeKey: string }) {
   const nodesInitialized = useNodesInitialized()
   const prevKeyRef = useRef('')
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!nodesInitialized) return
     if (prevKeyRef.current === nodeKey) return
     prevKeyRef.current = nodeKey
-    requestAnimationFrame(() => {
-      fitView({ padding: 0.15, duration: 0, maxZoom: 1 })
-    })
+    fitView({ padding: 0.15, duration: 0, maxZoom: 1 })
   }, [nodesInitialized, nodeKey, fitView])
 
   return null
@@ -143,13 +141,16 @@ export interface UmpleDiagramProps {
   editable?: boolean
 }
 
-export function UmpleDiagram({ model, layout, editable = true }: UmpleDiagramProps) {
+const UmpleDiagramComponent = ({ model, layout, editable = true }: UmpleDiagramProps) => {
   return (
     <ReactFlowProvider>
       <UmpleDiagramInner model={model} layout={layout} editable={editable} />
     </ReactFlowProvider>
   )
 }
+
+export const UmpleDiagram = memo(UmpleDiagramComponent)
+UmpleDiagram.displayName = 'UmpleDiagram'
 
 // ── Inner component (inside ReactFlowProvider) ──
 
