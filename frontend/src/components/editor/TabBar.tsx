@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
 import { useSessionStore, type Tab } from '../../stores/sessionStore'
 import { usePreferencesStore } from '../../stores/preferencesStore'
 import { Plus, X, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react'
@@ -204,24 +204,44 @@ function EditorTab({
   const [editValue, setEditValue] = useState('')
   const [hovered, setHovered] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const tabShellRef = useRef<HTMLDivElement>(null)
+  const editingWidthRef = useRef<number | null>(null)
+  const pendingRenameRef = useRef(false)
+  const renameFrameRef = useRef<number | null>(null)
 
   useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus()
-      inputRef.current.select()
+    return () => {
+      if (renameFrameRef.current !== null) {
+        window.cancelAnimationFrame(renameFrameRef.current)
+      }
     }
+  }, [])
+
+  useLayoutEffect(() => {
+    if (!editing) return
+    const input = inputRef.current
+    if (!input) return
+    input.focus()
+    input.select()
   }, [editing])
 
   const commitRename = () => {
-    if (editValue.trim()) {
-      onRename(editValue.trim())
+    const nextName = editValue.trim()
+    if (nextName && nextName !== tab.name) {
+      onRename(nextName)
     }
     setEditing(false)
   }
 
-  const startRename = () => {
+  const beginRename = () => {
+    const width = tabShellRef.current?.getBoundingClientRect().width ?? 0
+    editingWidthRef.current = width > 0 ? Math.ceil(width) : null
     setEditValue(tab.name)
     setEditing(true)
+  }
+
+  const handleRenameSelect = () => {
+    pendingRenameRef.current = true
   }
 
   // Middle-click to close
@@ -246,63 +266,86 @@ function EditorTab({
     <ContextMenu>
       <ContextMenuTrigger
         disabled={editing}
-        className="shrink-0 flex items-stretch"
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
+        className="shrink-0"
       >
-        {editing ? (
-          <div className="relative flex items-center h-full px-3 text-[13px]">
-            <input
-              ref={inputRef}
-              value={editValue}
-              onChange={(e) => setEditValue(e.target.value)}
-              onBlur={commitRename}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') commitRename()
-                if (e.key === 'Escape') setEditing(false)
-              }}
-              className="w-20 bg-transparent text-[13px] text-ink outline-none border-b border-brand"
-            />
-          </div>
-        ) : (
-          <TabsTrigger
-            value={tab.id}
-            className={triggerClassName}
-            onAuxClick={handleAuxClick}
-            onMouseDown={handleMouseDown}
-          >
-            {/* Separator between inactive tabs */}
-            {showSeparator && !hovered && (
-              <span className="absolute right-0 top-[22%] bottom-[22%] w-px bg-border" />
-            )}
-
-            <span className="truncate max-w-[120px]">{tab.name}</span>
-
-            {/* Close / dirty indicator — fixed-width to prevent layout shift */}
-            <div className="w-5 h-5 shrink-0 flex items-center justify-center">
-              {showDirtyDot ? (
-                <span className="w-1.5 h-1.5 rounded-full bg-brand opacity-70" />
-              ) : showClose ? (
-                <button
-                  tabIndex={-1}
-                  onClick={(e) => { e.stopPropagation(); onClose() }}
-                  className={cn(
-                    'flex items-center justify-center w-5 h-5 rounded transition-colors cursor-pointer',
-                    isActive
-                      ? 'text-ink-muted hover:text-ink hover:bg-surface-1'
-                      : 'text-ink-faint hover:text-ink-muted hover:bg-surface-2',
-                  )}
-                  aria-label={`Close ${tab.name}`}
-                >
-                  <X className="size-3" />
-                </button>
-              ) : null}
+        <div
+          ref={tabShellRef}
+          className="flex items-stretch"
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
+          {editing ? (
+            <div
+              className="relative flex items-center h-full px-3 pr-1.5 text-[13px]"
+              style={editingWidthRef.current ? { width: `${editingWidthRef.current}px` } : undefined}
+            >
+              <input
+                ref={inputRef}
+                value={editValue}
+                onChange={(e) => setEditValue(e.target.value)}
+                onBlur={commitRename}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') commitRename()
+                  if (e.key === 'Escape') setEditing(false)
+                }}
+                aria-label={`Rename ${tab.name}`}
+                className="min-w-0 w-full bg-transparent text-[13px] text-ink outline-none border-b border-brand"
+              />
             </div>
-          </TabsTrigger>
-        )}
+          ) : (
+            <TabsTrigger
+              value={tab.id}
+              className={triggerClassName}
+              onAuxClick={handleAuxClick}
+              onMouseDown={handleMouseDown}
+            >
+              {/* Separator between inactive tabs */}
+              {showSeparator && !hovered && (
+                <span className="absolute right-0 top-[22%] bottom-[22%] w-px bg-border" />
+              )}
+
+              <span className="truncate max-w-[120px]">{tab.name}</span>
+
+              {/* Close / dirty indicator — fixed-width to prevent layout shift */}
+              <div className="w-5 h-5 shrink-0 flex items-center justify-center">
+                {showDirtyDot ? (
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand opacity-70" />
+                ) : showClose ? (
+                  <button
+                    tabIndex={-1}
+                    onClick={(e) => { e.stopPropagation(); onClose() }}
+                    className={cn(
+                      'flex items-center justify-center w-5 h-5 rounded transition-colors cursor-pointer',
+                      isActive
+                        ? 'text-ink-muted hover:text-ink hover:bg-surface-1'
+                        : 'text-ink-faint hover:text-ink-muted hover:bg-surface-2',
+                    )}
+                    aria-label={`Close ${tab.name}`}
+                  >
+                    <X className="size-3" />
+                  </button>
+                ) : null}
+              </div>
+            </TabsTrigger>
+          )}
+        </div>
       </ContextMenuTrigger>
-      <ContextMenuContent>
-        <ContextMenuItem onSelect={startRename}>Rename</ContextMenuItem>
+      <ContextMenuContent
+        onCloseAutoFocus={(event) => {
+          if (!pendingRenameRef.current) return
+
+          event.preventDefault()
+          pendingRenameRef.current = false
+          if (renameFrameRef.current !== null) {
+            window.cancelAnimationFrame(renameFrameRef.current)
+          }
+          renameFrameRef.current = window.requestAnimationFrame(() => {
+            renameFrameRef.current = null
+            beginRename()
+          })
+        }}
+      >
+        <ContextMenuItem onSelect={handleRenameSelect}>Rename</ContextMenuItem>
         <ContextMenuItem onSelect={onClose} disabled={isOnly}>Close</ContextMenuItem>
         <ContextMenuItem onSelect={onCloseOthers} disabled={isOnly}>Close Others</ContextMenuItem>
       </ContextMenuContent>

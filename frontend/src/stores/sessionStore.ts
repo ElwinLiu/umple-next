@@ -285,12 +285,22 @@ export const useSessionStore = create<SessionState>()(
         }
       }),
 
-      renameTab: (id, name) => set((s) => ({
-        tabs: s.tabs.map((t) => t.id === id ? { ...t, name } : t),
-        tabsVersion: s.tabsVersion + 1,
-      })),
+      renameTab: (id, name) => set((s) => {
+        let changed = false
+        const tabs = s.tabs.map((t) => {
+          if (t.id !== id || t.name === name) return t
+          changed = true
+          return { ...t, name }
+        })
+        if (!changed) return s
+        return {
+          tabs,
+          tabsVersion: s.tabsVersion + 1,
+        }
+      }),
 
       reorderTabs: (fromIndex, toIndex) => set((s) => {
+        if (fromIndex === toIndex) return s
         const newTabs = [...s.tabs]
         const [moved] = newTabs.splice(fromIndex, 1)
         newTabs.splice(toIndex, 0, moved)
