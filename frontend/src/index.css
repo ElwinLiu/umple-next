@@ -402,6 +402,29 @@ body {
   animation: shimmer 2s ease-in-out infinite;
 }
 
+/* ── AI Spinner (Claude-Code-style glimmer text) ── */
+
+@keyframes ai-spinner-glimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+.ai-spinner-text {
+  color: transparent;
+  background: linear-gradient(
+    90deg,
+    var(--color-ink-muted) 0%,
+    var(--color-ink-muted) 35%,
+    var(--color-brand) 50%,
+    var(--color-ink-muted) 65%,
+    var(--color-ink-muted) 100%
+  );
+  background-size: 300% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: ai-spinner-glimmer 3s linear infinite;
+}
+
 /* ── Agent Panel Delight ── */
 
 @keyframes message-in {
@@ -413,17 +436,6 @@ body {
   animation: message-in 200ms cubic-bezier(0.25, 1, 0.5, 1) both;
 }
 
-@keyframes typing-dot {
-  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
-  30% { opacity: 1; transform: translateY(-2px); }
-}
-
-.typing-dots span {
-  display: inline-block;
-  animation: typing-dot 1.2s ease-in-out infinite;
-}
-.typing-dots span:nth-child(2) { animation-delay: 0.15s; }
-.typing-dots span:nth-child(3) { animation-delay: 0.3s; }
 
 @keyframes action-done-flash {
   0% { background-color: transparent; }
