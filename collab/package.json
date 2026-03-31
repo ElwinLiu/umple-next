@@ -9,9 +9,10 @@
     "build": "tsc"
   },
   "dependencies": {
+    "lib0": "^0.2.99",
     "ws": "^8.18.0",
-    "y-websocket": "^3.0.0",
-    "yjs": "^13.6.0"
+    "y-protocols": "^1.0.7",
+    "yjs": "^13.6.30"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

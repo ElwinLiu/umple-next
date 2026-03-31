@@ -21,6 +21,13 @@ export function useCollabFromURL() {
   useEffect(() => {
     if (initialCollabRoomId && !joinedRef.current) {
       joinedRef.current = true
+      // URL-driven collab should not reuse whatever backend model the
+      // current tab was editing previously.
+      useSessionStore.setState((s) => (
+        s.modelId
+          ? { modelId: null, tabsVersion: s.tabsVersion + 1 }
+          : s
+      ))
       startCollab(initialCollabRoomId)
     }
   }, [startCollab])

@@ -15,10 +15,10 @@ export interface CollabConfig {
  */
 export function useCollabEditor(): CollabConfig | null {
   const isCollaborating = useCollabStore((s) => s.isCollaborating)
-  const connected = useCollabStore((s) => s.connected)
+  const ready = useCollabStore((s) => s.ready)
 
   return useMemo(() => {
-    if (!isCollaborating || !connected) return null
+    if (!isCollaborating || !ready) return null
 
     const doc = getYDoc()
     const awareness = getAwareness()
@@ -28,5 +28,5 @@ export function useCollabEditor(): CollabConfig | null {
       ytext: doc.getText('code'),
       awareness,
     }
-  }, [isCollaborating, connected])
+  }, [isCollaborating, ready])
 }

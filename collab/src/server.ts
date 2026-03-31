@@ -1,7 +1,6 @@
 import http from 'node:http'
 import { WebSocketServer } from 'ws'
-// @ts-expect-error — y-websocket ships CJS utils without type declarations
-import { setupWSConnection } from 'y-websocket/bin/utils'
+import { setupWSConnection } from './sync.js'
 
 const PORT = parseInt(process.env.PORT ?? '3002', 10)
 
@@ -18,10 +17,14 @@ const server = http.createServer((req, res) => {
 const wss = new WebSocketServer({ server })
 
 wss.on('connection', (ws, req) => {
-  // Extract room ID from URL path: /ws/collab/<roomId>
-  const url = new URL(req.url ?? '/', `http://${req.headers.host}`)
+  const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
   const match = url.pathname.match(/^\/ws\/collab\/(.+)$/)
-  const roomId = match?.[1] ?? 'default'
+  let roomId: string
+  try {
+    roomId = decodeURIComponent(match?.[1] ?? 'default')
+  } catch {
+    roomId = match?.[1] ?? 'default'
+  }
 
   console.log(`[collab] client connected to room "${roomId}" (url: ${req.url})`)
 

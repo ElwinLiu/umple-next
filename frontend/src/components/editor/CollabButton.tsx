@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 export function CollabButton() {
   const isCollaborating = useCollabStore((s) => s.isCollaborating)
   const connected = useCollabStore((s) => s.connected)
+  const ready = useCollabStore((s) => s.ready)
   const connectedUsers = useCollabStore((s) => s.connectedUsers)
   const startCollab = useCollabStore((s) => s.startCollab)
   const stopCollab = useCollabStore((s) => s.stopCollab)
@@ -92,7 +93,7 @@ export function CollabButton() {
           <span
             className={cn(
               'size-1.5 rounded-full',
-              connected ? 'bg-status-success' : 'bg-status-warning'
+              connected && ready ? 'bg-status-success' : 'bg-status-warning'
             )}
           />
         </button>

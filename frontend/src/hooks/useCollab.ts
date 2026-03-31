@@ -37,6 +37,7 @@ export function useCollab() {
         ydoc = null
       }
       useCollabStore.getState().setConnected(false)
+      useCollabStore.getState().setReady(false)
       useCollabStore.getState().setConnectedUsers([])
       return
     }
@@ -84,16 +85,13 @@ export function useCollab() {
       color: identity.color,
     })
 
-    // Track WS connection for disconnect detection, but don't set
-    // collabStore.connected yet — that gates the editor binding and must
-    // wait until the YDoc is populated (see sync handler below).
+    // Track raw websocket status separately from editor readiness.
+    // Transient disconnects should not tear down the Yjs editor binding.
     wsProvider.on('status', ({ status }: { status: string }) => {
-      if (status !== 'connected') {
-        useCollabStore.getState().setConnected(false)
-      }
+      useCollabStore.getState().setConnected(status === 'connected')
     })
 
-    // Sync event — populate or hydrate, THEN mark connected.
+    // Sync event — populate or hydrate, THEN mark the editor as ready.
     // The order matters: Y.Text must have content before yCollab binds
     // to the editor, otherwise the editor's existing text and the Y.Text
     // insert merge together and duplicate the code.
@@ -113,9 +111,9 @@ export function useCollab() {
         useSessionStore.getState().setCode(ytext.toString())
       }
 
-      // NOW mark connected — the Y.Text is populated, so yCollab can
+      // NOW mark ready — the Y.Text is populated, so yCollab can
       // safely bind without duplicating content.
-      useCollabStore.getState().setConnected(true)
+      useCollabStore.getState().setReady(true)
       awarenessHandler()
     }
     wsProvider.on('sync', handleSync)
@@ -129,6 +127,7 @@ export function useCollab() {
       doc.destroy()
       ydoc = null
       useCollabStore.getState().setConnected(false)
+      useCollabStore.getState().setReady(false)
       useCollabStore.getState().setConnectedUsers([])
     }
   }, [roomId])
