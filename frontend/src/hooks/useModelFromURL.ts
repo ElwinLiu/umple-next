@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
+import { useCollabStore } from '../stores/collabStore'
 import { api } from '../api/client'
 
 /** The URL model param read once at module load — before any React effect. */
@@ -65,9 +66,12 @@ export function useModelFromURL() {
   useEffect(() => {
     if (!resolvedRef.current) return
 
-    // Don't overwrite task URLs
+    // Don't overwrite task URLs or touch the URL during collab mode.
+    // Check the store directly — URL params may already have been modified
+    // by other effects in the same render cycle.
     const params = new URLSearchParams(window.location.search)
     if (params.has('task')) return
+    if (useCollabStore.getState().isCollaborating) return
 
     const url = new URL(window.location.href)
     if (modelId) {

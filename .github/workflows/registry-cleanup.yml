@@ -21,7 +21,7 @@ jobs:
             const repo = context.repo.repo;
             const keepRecentPerPackage = 50;
             const keepReleaseHistory = 10;
-            const packageNames = [`${repo}/backend`, `${repo}/frontend`, `${repo}/code-exec`];
+            const packageNames = [`${repo}/backend`, `${repo}/frontend`, `${repo}/code-exec`, `${repo}/collab`];
 
             const ownerInfo = await github.rest.users.getByUsername({ username: owner });
             const ownerType = ownerInfo.data.type === "Organization" ? "org" : "user";

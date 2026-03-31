@@ -435,6 +435,34 @@ body {
   animation: action-done-flash 600ms ease-out;
 }
 
+/* ── Yjs Remote Cursors ── */
+
+.yRemoteSelection {
+  opacity: 0.35;
+}
+
+.yRemoteSelectionHead {
+  position: absolute;
+  border-left: 2px solid currentColor;
+  height: 100%;
+}
+
+.yRemoteSelectionHead::after {
+  content: attr(data-name);
+  position: absolute;
+  left: -1px;
+  top: -1.2em;
+  font-size: 0.65rem;
+  line-height: 1;
+  font-family: var(--font-sans);
+  padding: 1px 4px;
+  border-radius: 3px 3px 3px 0;
+  color: white;
+  background-color: currentColor;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 /* ── Reduced Motion ── */
 
 @media (prefers-reduced-motion: reduce) {
