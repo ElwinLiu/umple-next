@@ -13,8 +13,8 @@ export function HtmlDiagramView({ html, viewMode }: HtmlDiagramViewProps) {
 
   const srcDoc = useMemo(() => {
     const bgColor = isDark ? '#1a1a1a' : '#ffffff'
-    const textColor = isDark ? '#e5e5e5' : '#1a1a1a'
-    const borderColor = isDark ? '#333' : '#ddd'
+    const textColor = isDark ? '#e4e2df' : '#2d2d2c'
+    const borderColor = isDark ? '#3a3a3a' : '#d4d0cd'
 
     // Umple's HTML output includes its own <style> blocks with hardcoded light-mode
     // colors (black borders, white/light-gray backgrounds). We inject overrides AFTER
