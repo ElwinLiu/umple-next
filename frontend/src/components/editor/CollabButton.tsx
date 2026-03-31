@@ -19,25 +19,11 @@ export function CollabButton() {
   const stopCollab = useCollabStore((s) => s.stopCollab)
 
   const [copied, setCopied] = useState(false)
+  const [popoverOpen, setPopoverOpen] = useState(false)
   const copyTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
   useEffect(() => () => clearTimeout(copyTimerRef.current), [])
 
-  const getCollabUrl = useCallback(() => {
-    const modelId = useSessionStore.getState().modelId
-    const roomId = modelId ?? crypto.randomUUID()
-    const url = new URL(window.location.href)
-    url.searchParams.delete('model')
-    url.searchParams.set('collab', roomId)
-    return { roomId, url: url.toString() }
-  }, [])
-
-  const handleStartCollab = useCallback(() => {
-    const { roomId, url } = getCollabUrl()
-    window.history.replaceState({}, '', url)
-    startCollab(roomId)
-  }, [getCollabUrl, startCollab])
-
-  const handleCopyUrl = useCallback(async () => {
+  const copyUrl = useCallback(async () => {
     const roomId = useCollabStore.getState().roomId
     if (!roomId) return
     const url = new URL(window.location.href)
@@ -47,6 +33,18 @@ export function CollabButton() {
     clearTimeout(copyTimerRef.current)
     copyTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }, [])
+
+  const handleStartCollab = useCallback(async () => {
+    const modelId = useSessionStore.getState().modelId
+    const roomId = modelId ?? crypto.randomUUID()
+    const url = new URL(window.location.href)
+    url.searchParams.delete('model')
+    url.searchParams.set('collab', roomId)
+    window.history.replaceState({}, '', url.toString())
+    startCollab(roomId)
+    setPopoverOpen(true)
+    try { await copyUrl() } catch { /* clipboard may be unavailable */ }
+  }, [startCollab, copyUrl])
 
   const handleStopCollab = useCallback(() => {
     stopCollab()
@@ -70,13 +68,14 @@ export function CollabButton() {
   }
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          className="flex items-center gap-1.5 px-2.5 h-full text-ink-muted hover:text-ink transition-colors cursor-pointer shrink-0"
-          aria-label="Collaboration settings"
-          data-testid="collab-status-btn"
-        >
+    <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+      <Tip content="Collaboration settings" side="bottom">
+        <PopoverTrigger asChild>
+          <button
+            className="flex items-center gap-1.5 px-2.5 h-full text-ink-muted hover:text-ink transition-colors cursor-pointer shrink-0"
+            aria-label="Collaboration settings"
+            data-testid="collab-status-btn"
+          >
           {/* User dots */}
           <div className="flex -space-x-1">
             {connectedUsers.slice(0, 4).map((user) => (
@@ -96,8 +95,9 @@ export function CollabButton() {
               connected && ready ? 'bg-status-success' : 'bg-status-warning'
             )}
           />
-        </button>
-      </PopoverTrigger>
+          </button>
+        </PopoverTrigger>
+      </Tip>
       <PopoverContent align="end" className="w-64 p-3">
         <div className="space-y-3">
           <div className="text-xs font-medium text-ink">
@@ -120,7 +120,7 @@ export function CollabButton() {
           {/* Actions */}
           <div className="flex flex-col gap-1.5 pt-1.5 border-t border-border">
             <button
-              onClick={handleCopyUrl}
+              onClick={copyUrl}
               className="flex items-center gap-2 w-full px-2 py-1.5 text-xs text-ink-muted hover:text-ink hover:bg-surface-1 rounded transition-colors cursor-pointer"
             >
               {copied ? <Check className="size-3 text-status-success" /> : <Copy className="size-3" />}
