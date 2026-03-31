@@ -19,6 +19,7 @@ import { useDiffPreviewSync } from '@/ai/useDiffPreviewSync'
 import { useResizablePanel } from './useResizablePanel'
 import { InputBar } from './InputBar'
 import { MessageBubble } from './MessageBubble'
+import { AiSpinner } from './AiSpinner'
 
 /* ── Constants ── */
 
@@ -297,12 +298,8 @@ function AgentPanel() {
           ))}
 
           {isStreaming && (
-            <div className="flex items-center gap-1.5 px-2 py-1">
-              <span className="typing-dots flex gap-0.5 text-ink-faint">
-                <span className="size-1.5 rounded-full bg-current" />
-                <span className="size-1.5 rounded-full bg-current" />
-                <span className="size-1.5 rounded-full bg-current" />
-              </span>
+            <div className="px-2 py-1">
+              <AiSpinner className="text-sm" />
             </div>
           )}
 
