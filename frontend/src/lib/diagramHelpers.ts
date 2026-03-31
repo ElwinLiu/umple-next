@@ -35,3 +35,19 @@ export function edgeDeletionParams(edge: Edge): { action: string; params: Record
   const assocId = (data as any)?.assocId ?? ''
   return { action: 'removeAssociation', params: { classOneId: sourceClass, classTwoId: targetClass, assocId } }
 }
+
+/** Map a handle ID to an offset (px) relative to the node's top-left corner. */
+export function handleToOffset(
+  handleId: string | null | undefined,
+  width: number,
+  height: number,
+): { x: number; y: number } {
+  const side = handleId?.replace(/-in$/, '') ?? 'top'
+  switch (side) {
+    case 'top':    return { x: Math.round(width / 2), y: 0 }
+    case 'right':  return { x: width, y: Math.round(height / 2) }
+    case 'bottom': return { x: Math.round(width / 2), y: height }
+    case 'left':   return { x: 0, y: Math.round(height / 2) }
+    default:       return { x: 0, y: 0 }
+  }
+}

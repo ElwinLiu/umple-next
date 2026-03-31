@@ -23,6 +23,8 @@ function validateClassName(value: string): string | null {
   return null
 }
 
+const handleCls = '!w-2.5 !h-2.5 !bg-brand !border-2 !border-surface-0 !rounded-full !opacity-0 group-hover:!opacity-100 !transition-opacity'
+
 export const ClassNode = memo(function ClassNode({ id, data, selected }: NodeProps) {
   const d = data as ClassNodeData
   const isEditableView = useSessionStore((s) => s.viewMode === 'class')
@@ -110,15 +112,12 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
   return (
     <div
       className={cn(
-        'h-full w-full bg-surface-0 border-2 shadow-md transition-shadow overflow-hidden',
+        'group h-full w-full bg-surface-0 border-2 shadow-md transition-shadow overflow-hidden',
         selected ? 'border-brand ring-2 ring-brand/30' : 'border-border-strong',
       )}
       style={{ fontFamily: "Times, 'Times New Roman', serif", fontSize: 14 }}
       data-testid={`class-node-${d.name}`}
     >
-      {/* BT layout: edges go upward, so source exits from top, target enters from bottom */}
-      <Handle type="source" position={Position.Top} className="!w-2 !h-2 !bg-border-strong !border-surface-0 !border-2 !opacity-0 hover:!opacity-100 transition-opacity" />
-
       {/* Class name header */}
       <div
         className={cn('px-2.5 py-1.5 font-bold text-center', headerClasses, hasBody && 'border-b border-border-strong')}
@@ -199,10 +198,14 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
         </div>
       )}
 
-      <Handle type="target" position={Position.Bottom} className="!w-2 !h-2 !bg-border-strong !border-surface-0 !border-2 !opacity-0 hover:!opacity-100 transition-opacity" />
-      {/* Right-side handles for self-loop edges */}
-      <Handle type="source" position={Position.Right} id="right-source" className="!invisible" style={{ top: '20%' }} />
-      <Handle type="target" position={Position.Right} id="right-target" className="!invisible" style={{ top: '80%' }} />
+      {/* Connection handles — appear on node hover as branded dots */}
+      <Handle type="source" position={Position.Top} id="top" className={handleCls} />
+      <Handle type="source" position={Position.Right} id="right" className={handleCls} />
+      <Handle type="source" position={Position.Bottom} id="bottom" className={handleCls} />
+      <Handle type="source" position={Position.Left} id="left" className={handleCls} />
+      {/* Self-loop edge routing (invisible, non-interactive) */}
+      <Handle type="source" position={Position.Right} id="right-source" className="!invisible" style={{ top: '20%' }} isConnectable={false} />
+      <Handle type="target" position={Position.Right} id="right-target" className="!invisible" style={{ top: '80%' }} isConnectable={false} />
     </div>
   )
 })

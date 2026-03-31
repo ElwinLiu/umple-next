@@ -13,6 +13,7 @@ import {
   type Node,
   type Edge,
   type Connection,
+  ConnectionMode,
   applyNodeChanges,
   applyEdgeChanges,
 } from '@xyflow/react'
@@ -25,7 +26,7 @@ import { NodeContextMenu } from './menus/NodeContextMenu'
 import { EdgeContextMenu } from './menus/EdgeContextMenu'
 import { ConnectionTypeMenu, type ConnectionChoice } from './menus/ConnectionTypeMenu'
 import { useDiagramSync } from '../../hooks/useDiagramSync'
-import { extractClassName, edgeDeletionParams } from '../../lib/diagramHelpers'
+import { extractClassName, edgeDeletionParams, handleToOffset } from '../../lib/diagramHelpers'
 import { convertClassDiagram } from '../../hooks/diagrams/classConverter'
 import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../../api/types'
 
@@ -173,13 +174,32 @@ function UmpleDiagramInner({ model, layout, storedLayout, editable = true }: Ump
   const rfRef = useRef(rf)
   rfRef.current = rf
 
-  // Reset when model/layout changes
+  // Update when model/layout changes — preserve existing node positions so that
+  // a Graphviz re-layout (triggered by sync or code edit) doesn't overwrite
+  // positions the user has already arranged.  Only genuinely new nodes receive
+  // the computed (Graphviz / stored-layout) position.
   const prevConvertedRef = useRef(converted)
   useEffect(() => {
     if (prevConvertedRef.current === converted) return
     prevConvertedRef.current = converted
-    setRf({ nodes: converted.nodes, edges: converted.edges })
-  }, [converted])
+    const storedIds = new Set(
+      (storedLayout?.nodeNames ?? []).map((name) => `class-${name}`),
+    )
+    setRf((prev) => {
+      const prevPositions = new Map(prev.nodes.map((n) => [n.id, n.position]))
+      return {
+        nodes: converted.nodes.map((n) => {
+          // Nodes with stored positions have authoritative coords from the code —
+          // always honour them so undo/redo and model switches work correctly.
+          if (storedIds.has(n.id)) return n
+          // Auto-laid-out nodes: preserve local position to prevent Graphviz thrashing.
+          const existing = prevPositions.get(n.id)
+          return existing ? { ...n, position: existing } : n
+        }),
+        edges: converted.edges,
+      }
+    })
+  }, [converted, storedLayout])
 
   // Keep session store in sync so child components (ClassNode, DiagramControls) can read from it
   const setDiagramData = useSessionStore((s) => s.setDiagramData)
@@ -193,7 +213,7 @@ function UmpleDiagramInner({ model, layout, storedLayout, editable = true }: Ump
   const theme = usePreferencesStore((s) => s.theme)
   const rfColorMode = theme === 'system' ? 'system' : theme
   const { sync } = useDiagramSync()
-  const { screenToFlowPosition } = useReactFlow()
+  const { screenToFlowPosition, getNode } = useReactFlow()
 
   // Context menu states
   const [paneMenu, setPaneMenu] = useState<MenuState & { flowPosition: { x: number; y: number } | null }>({
@@ -320,13 +340,21 @@ function UmpleDiagramInner({ model, layout, storedLayout, editable = true }: Ump
           parentClass: targetClass,
         })
       } else {
+        const sourceNode = getNode(conn.source!)
+        const targetNode = getNode(conn.target!)
+        const srcOff = handleToOffset(conn.sourceHandle, sourceNode?.measured?.width ?? 0, sourceNode?.measured?.height ?? 0)
+        const tgtOff = handleToOffset(conn.targetHandle, targetNode?.measured?.width ?? 0, targetNode?.measured?.height ?? 0)
         await sync('addAssociation', {
           classOneId: sourceClass,
           classTwoId: targetClass,
+          offsetOneX: String(srcOff.x),
+          offsetOneY: String(srcOff.y),
+          offsetTwoX: String(tgtOff.x),
+          offsetTwoY: String(tgtOff.y),
         })
       }
     },
-    [connectionMenu.data, sync]
+    [connectionMenu.data, sync, getNode]
   )
 
   // Keyboard handlers (stable — reads nodes/edges via ref)
@@ -371,6 +399,7 @@ function UmpleDiagramInner({ model, layout, storedLayout, editable = true }: Ump
         colorMode={rfColorMode}
         minZoom={0.2}
         maxZoom={2}
+        connectionMode={ConnectionMode.Loose}
         defaultEdgeOptions={{ type: 'association' }}
         deleteKeyCode={null}
         nodesDraggable={editable}
