@@ -405,18 +405,34 @@ func (h *SyncHandler) buildLegacySyncCommand(req SyncRequest, umpFile string, di
 		}
 		return rawSyncCommand("addClass", payload, umpFile), nil
 	case "addAssociation":
+		offsetOneX := req.Params["offsetOneX"]
+		if offsetOneX == "" {
+			offsetOneX = "0"
+		}
+		offsetOneY := req.Params["offsetOneY"]
+		if offsetOneY == "" {
+			offsetOneY = "0"
+		}
+		offsetTwoX := req.Params["offsetTwoX"]
+		if offsetTwoX == "" {
+			offsetTwoX = "0"
+		}
+		offsetTwoY := req.Params["offsetTwoY"]
+		if offsetTwoY == "" {
+			offsetTwoY = "0"
+		}
 		assoc := syncAssociation{
 			ClassOnePosition: syncPosition{},
 			ClassTwoPosition: syncPosition{},
 			OffsetOnePosition: syncPosition{
-				X:      "0",
-				Y:      "0",
+				X:      offsetOneX,
+				Y:      offsetOneY,
 				Width:  "0",
 				Height: "0",
 			},
 			OffsetTwoPosition: syncPosition{
-				X:      "0",
-				Y:      "0",
+				X:      offsetTwoX,
+				Y:      offsetTwoY,
 				Width:  "0",
 				Height: "0",
 			},
