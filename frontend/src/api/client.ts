@@ -1,6 +1,7 @@
 import type {
   CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse,
   TaskCreateRequest, TaskCreateResponse, TaskResponse, TaskSubmitResponse, DiagramResponse,
+  GetModelResponse,
 } from './types'
 
 const API_BASE = '/api'
@@ -42,7 +43,7 @@ export const api = {
     return request('/examples')
   },
 
-  getModel(id: string): Promise<{ modelId: string; code: string }> {
+  getModel(id: string): Promise<GetModelResponse> {
     return request(`/models/${encodeURIComponent(id)}`)
   },
 

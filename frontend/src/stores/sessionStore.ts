@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Node, Edge } from '@xyflow/react'
-import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../api/types'
+import type { UmpleModel, GvLayout, StoredLayoutMetadata, ApiTab } from '../api/types'
 import { useEphemeralStore } from './ephemeralStore'
 
 // ── Editor types ──
@@ -84,6 +84,8 @@ interface SessionState {
   generateTargetId: string
   /** Set by setCodeFromSync so useCompiler can skip the debounce */
   syncPending: boolean
+  /** Bumped on tab rename/reorder to trigger a compile that persists tabs.json */
+  tabsVersion: number
 
   // Diagram content
   viewMode: DiagramView
@@ -114,6 +116,7 @@ interface SessionState {
   reorderTabs: (fromIndex: number, toIndex: number) => void
   loadExample: (name: string, code: string, modelId?: string) => void
   closeOtherTabs: (id: string) => void
+  restoreTabs: (tabs: ApiTab[], activeTabId: string) => void
   setSelectedExample: (name: string | null) => void
   setGenerateTargetId: (id: string) => void
 
@@ -152,6 +155,7 @@ export const useSessionStore = create<SessionState>()(
       selectedExample: null,
       generateTargetId: 'Java',
       syncPending: false,
+      tabsVersion: 0,
 
       // ── Diagram content ──
       viewMode: 'class',
@@ -262,9 +266,10 @@ export const useSessionStore = create<SessionState>()(
             tabs: remaining,
             activeTabId: nextTab.id,
             code: nextTab.code,
+            tabsVersion: s.tabsVersion + 1,
           }
         }
-        return { tabs: remaining }
+        return { tabs: remaining, tabsVersion: s.tabsVersion + 1 }
       }),
 
       setActiveTab: (activeTabId) => set((s) => {
@@ -282,13 +287,14 @@ export const useSessionStore = create<SessionState>()(
 
       renameTab: (id, name) => set((s) => ({
         tabs: s.tabs.map((t) => t.id === id ? { ...t, name } : t),
+        tabsVersion: s.tabsVersion + 1,
       })),
 
       reorderTabs: (fromIndex, toIndex) => set((s) => {
         const newTabs = [...s.tabs]
         const [moved] = newTabs.splice(fromIndex, 1)
         newTabs.splice(toIndex, 0, moved)
-        return { tabs: newTabs }
+        return { tabs: newTabs, tabsVersion: s.tabsVersion + 1 }
       }),
 
       setSelectedExample: (selectedExample) => set({ selectedExample }),
@@ -312,6 +318,24 @@ export const useSessionStore = create<SessionState>()(
           tabs: [tab],
           activeTabId: id,
           code: tab.code,
+          tabsVersion: s.tabsVersion + 1,
+        }
+      }),
+
+      restoreTabs: (tabs, activeTabId) => set(() => {
+        const restored = tabs.map((t) => ({
+          ...t,
+          dirty: false,
+          savedCode: t.code,
+        }))
+        const active = restored.find((t) => t.id === activeTabId) ?? restored[0]
+        return {
+          tabs: restored,
+          activeTabId: active.id,
+          code: active.code,
+          undoStack: [],
+          redoStack: [],
+          selectedExample: null,
         }
       }),
 
@@ -443,12 +467,6 @@ export const useSessionStore = create<SessionState>()(
       name: 'umple-session-v1',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
-        code: state.code,
-        tabs: state.tabs,
-        activeTabId: state.activeTabId,
-        modelId: state.modelId,
-        undoStack: state.undoStack,
-        redoStack: state.redoStack,
         selectedExample: state.selectedExample,
         generateTargetId: state.generateTargetId,
         viewMode: state.viewMode,

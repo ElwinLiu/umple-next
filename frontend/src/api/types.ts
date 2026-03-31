@@ -6,6 +6,21 @@ export interface CompileRequest {
   diagramType?: string
   suboptions?: string[]
   needsLayout?: boolean
+  tabs?: ApiTab[]
+  activeTabId?: string
+}
+
+export interface ApiTab {
+  id: string
+  name: string
+  code: string
+}
+
+export interface GetModelResponse {
+  modelId: string
+  code: string
+  tabs?: ApiTab[]
+  activeTabId?: string
 }
 
 export interface CompileResponse {
