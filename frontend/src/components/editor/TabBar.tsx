@@ -4,6 +4,7 @@ import { usePreferencesStore } from '../../stores/preferencesStore'
 import { Plus, X, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 import { OutputBadges } from './ExecutionPanel'
+import { CollabButton } from './CollabButton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   ContextMenu,
@@ -164,6 +165,9 @@ export function TabBar() {
             <ChevronRight className="size-3.5" />
           </button>
         )}
+
+        {/* Collaboration button */}
+        <CollabButton />
 
         {/* Error/warning badges (right-aligned) */}
         <OutputBadges />

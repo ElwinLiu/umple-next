@@ -7,6 +7,7 @@ import { EditorContextMenu } from './EditorContextMenu'
 import { useSessionStore } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
+import { useCollabEditor } from '../../hooks/useCollabEditor'
 
 const AgentPanel = lazy(() => import('../agent/AgentPanel'))
 
@@ -14,6 +15,7 @@ export function EditorPanel() {
   const code = useSessionStore((s) => s.code)
   const setCode = useSessionStore((s) => s.setCode)
   const activeTabId = useSessionStore((s) => s.activeTabId)
+  const collabConfig = useCollabEditor()
   const diffPreview = useEphemeralStore((s) => s.diffPreview)
   const isAiConfigured = usePreferencesStore(
     (s) => {
@@ -49,7 +51,13 @@ export function EditorPanel() {
         ) : (
           <EditorContextMenu editorRef={editorRef}>
             <div className="h-full w-full">
-              <UmpleEditor ref={editorRef} key={activeTabId} code={code} onChange={handleChange} />
+              <UmpleEditor
+                ref={editorRef}
+                key={activeTabId}
+                code={code}
+                onChange={handleChange}
+                collabConfig={collabConfig}
+              />
             </div>
           </EditorContextMenu>
         )}

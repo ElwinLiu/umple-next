@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_PATH="${1:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image>}"
-BACKEND_IMAGE="${2:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image>}"
-FRONTEND_IMAGE="${3:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image>}"
-CODE_EXEC_IMAGE="${4:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image>}"
+DEPLOY_PATH="${1:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <collab-image>}"
+BACKEND_IMAGE="${2:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <collab-image>}"
+FRONTEND_IMAGE="${3:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <collab-image>}"
+CODE_EXEC_IMAGE="${4:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <collab-image>}"
+COLLAB_IMAGE="${5:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <collab-image>}"
 
 compose() {
   if docker compose version >/dev/null 2>&1; then
@@ -70,7 +71,7 @@ rollback_release() {
   ROLLBACK_ARMED=0
   echo "==> Release failed. Attempting automatic rollback..."
 
-  if [ -z "${PREVIOUS_BACKEND_IMAGE:-}" ] || [ -z "${PREVIOUS_FRONTEND_IMAGE:-}" ] || [ -z "${PREVIOUS_CODE_EXEC_IMAGE:-}" ]; then
+  if [ -z "${PREVIOUS_BACKEND_IMAGE:-}" ] || [ -z "${PREVIOUS_FRONTEND_IMAGE:-}" ] || [ -z "${PREVIOUS_CODE_EXEC_IMAGE:-}" ] || [ -z "${PREVIOUS_COLLAB_IMAGE:-}" ]; then
     echo "WARNING: No previous image references were found in .env. Manual rollback required."
     exit "$exit_code"
   fi
@@ -78,6 +79,7 @@ rollback_release() {
   upsert_env "BACKEND_IMAGE" "$PREVIOUS_BACKEND_IMAGE" .env
   upsert_env "FRONTEND_IMAGE" "$PREVIOUS_FRONTEND_IMAGE" .env
   upsert_env "CODE_EXEC_IMAGE" "$PREVIOUS_CODE_EXEC_IMAGE" .env
+  upsert_env "COLLAB_IMAGE" "$PREVIOUS_COLLAB_IMAGE" .env
   upsert_env "DOCKER_GID" "$DOCKER_GID" .env
 
   compose -f docker-compose.prod.yml pull || true
@@ -164,16 +166,19 @@ DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)"
 PREVIOUS_BACKEND_IMAGE="$(read_env_value "BACKEND_IMAGE" .env || true)"
 PREVIOUS_FRONTEND_IMAGE="$(read_env_value "FRONTEND_IMAGE" .env || true)"
 PREVIOUS_CODE_EXEC_IMAGE="$(read_env_value "CODE_EXEC_IMAGE" .env || true)"
+PREVIOUS_COLLAB_IMAGE="$(read_env_value "COLLAB_IMAGE" .env || true)"
 
 upsert_env "BACKEND_IMAGE" "$BACKEND_IMAGE" .env
 upsert_env "FRONTEND_IMAGE" "$FRONTEND_IMAGE" .env
 upsert_env "CODE_EXEC_IMAGE" "$CODE_EXEC_IMAGE" .env
+upsert_env "COLLAB_IMAGE" "$COLLAB_IMAGE" .env
 upsert_env "DOCKER_GID" "$DOCKER_GID" .env
 
 echo "==> Releasing images:"
 echo "    BACKEND_IMAGE=$BACKEND_IMAGE"
 echo "    FRONTEND_IMAGE=$FRONTEND_IMAGE"
 echo "    CODE_EXEC_IMAGE=$CODE_EXEC_IMAGE"
+echo "    COLLAB_IMAGE=$COLLAB_IMAGE"
 echo "    DOCKER_GID=$DOCKER_GID"
 
 cleanup_docker_storage

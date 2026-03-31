@@ -61,6 +61,7 @@ jobs:
             echo "backend_image=${PREFIX}/backend:sha-${SHA}"
             echo "frontend_image=${PREFIX}/frontend:sha-${SHA}"
             echo "code_exec_image=${PREFIX}/code-exec:sha-${SHA}"
+            echo "collab_image=${PREFIX}/collab:sha-${SHA}"
           } >> "$GITHUB_OUTPUT"
 
       - name: Determine latest release behavior
@@ -104,6 +105,7 @@ jobs:
           docker buildx imagetools inspect "${{ steps.meta.outputs.backend_image }}" > /dev/null
           docker buildx imagetools inspect "${{ steps.meta.outputs.frontend_image }}" > /dev/null
           docker buildx imagetools inspect "${{ steps.meta.outputs.code_exec_image }}" > /dev/null
+          docker buildx imagetools inspect "${{ steps.meta.outputs.collab_image }}" > /dev/null
 
       - name: Copy release files to server
         uses: appleboy/scp-action@v1
@@ -134,7 +136,8 @@ jobs:
               "${{ secrets.DEPLOY_PATH }}" \
               "${{ steps.meta.outputs.backend_image }}" \
               "${{ steps.meta.outputs.frontend_image }}" \
-              "${{ steps.meta.outputs.code_exec_image }}"
+              "${{ steps.meta.outputs.code_exec_image }}" \
+              "${{ steps.meta.outputs.collab_image }}"
 
       - name: Create GitHub release
         env:
@@ -151,6 +154,7 @@ jobs:
           - \`${{ steps.meta.outputs.backend_image }}\`
           - \`${{ steps.meta.outputs.frontend_image }}\`
           - \`${{ steps.meta.outputs.code_exec_image }}\`
+          - \`${{ steps.meta.outputs.collab_image }}\`
           EOF
           )"
 
@@ -186,5 +190,6 @@ jobs:
             echo "- Backend: \`${{ steps.meta.outputs.backend_image }}\`"
             echo "- Frontend: \`${{ steps.meta.outputs.frontend_image }}\`"
             echo "- Code Exec: \`${{ steps.meta.outputs.code_exec_image }}\`"
+            echo "- Collab: \`${{ steps.meta.outputs.collab_image }}\`"
             echo "- Updated latest release pointer: \`${{ steps.latest.outputs.mark_latest }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -30,6 +30,23 @@ services:
       retries: 3
       start_period: 15s
 
+  collab:
+    image: ${COLLAB_IMAGE:-ghcr.io/umple/umpleonline/collab:latest}
+    restart: unless-stopped
+    cpus: 0.5
+    mem_limit: 256m
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      - PORT=3002
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
   frontend:
     image: ${FRONTEND_IMAGE:-ghcr.io/umple/umpleonline/frontend:latest}
     restart: unless-stopped
@@ -42,6 +59,8 @@ services:
       - "3100:80"
     depends_on:
       backend:
+        condition: service_healthy
+      collab:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]

@@ -8,6 +8,9 @@ import { umple } from '../../codemirror/lang-umple'
 import { getEditorTheme } from '../../codemirror/theme'
 import { useIsDark } from '../../hooks/useIsDark'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { yCollab } from 'y-codemirror.next'
+import * as Y from 'yjs'
+import type { CollabConfig } from '../../hooks/useCollabEditor'
 
 export interface UmpleEditorHandle {
   view: EditorView | null
@@ -17,14 +20,16 @@ interface UmpleEditorProps {
   code: string
   onChange: (code: string) => void
   readOnly?: boolean
+  collabConfig?: CollabConfig | null
 }
 
-export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(function UmpleEditor({ code, onChange, readOnly = false }, ref) {
+export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(function UmpleEditor({ code, onChange, readOnly = false, collabConfig }, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
   const themeCompartment = useRef(new Compartment())
+  const collabCompartment = useRef(new Compartment())
   const isDark = useIsDark()
 
   useImperativeHandle(ref, () => ({
@@ -67,6 +72,7 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
         basicSetup,
         keymap.of([indentWithTab]),
         themeCompartment.current.of(getEditorTheme(isDark)),
+        collabCompartment.current.of([]),
         umple(),
         updateListener,
         EditorView.theme({
@@ -102,8 +108,63 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
     })
   }, [isDark])
 
-  // Sync external code changes into the editor
+  // Reconfigure collab extensions when collabConfig changes
+  const undoManagerRef = useRef<Y.UndoManager | null>(null)
+
   useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+
+    // Clean up previous UndoManager
+    if (undoManagerRef.current) {
+      undoManagerRef.current.destroy()
+      undoManagerRef.current = null
+    }
+
+    if (collabConfig) {
+      // yCollab's YSyncPlugin does NOT do an initial content sync — it only
+      // observes future changes. We must replace the editor content with
+      // Y.Text content BEFORE installing yCollab so they start in sync.
+      const ytextContent = collabConfig.ytext.toString()
+      const currentDoc = view.state.doc.toString()
+      if (currentDoc !== ytextContent) {
+        isExternalUpdate.current = true
+        view.dispatch({
+          changes: { from: 0, to: currentDoc.length, insert: ytextContent },
+        })
+        // Also update sessionStore.code so useCompiler sees Y.Text content.
+        onChangeRef.current(ytextContent)
+      }
+
+      undoManagerRef.current = new Y.UndoManager(collabConfig.ytext)
+      view.dispatch({
+        effects: collabCompartment.current.reconfigure(
+          yCollab(collabConfig.ytext, collabConfig.awareness, { undoManager: undoManagerRef.current })
+        ),
+      })
+    } else {
+      view.dispatch({
+        effects: collabCompartment.current.reconfigure([]),
+      })
+    }
+  }, [collabConfig])
+
+  // Sync external code changes into the editor.
+  // In collab mode, write to Y.Text (e.g., loading an example) so the change
+  // propagates via yCollab to the editor and to other clients.
+  // Without collab, dispatch directly to the editor.
+  useEffect(() => {
+    if (collabConfig) {
+      const currentYText = collabConfig.ytext.toString()
+      if (currentYText !== code) {
+        collabConfig.ytext.doc?.transact(() => {
+          collabConfig.ytext.delete(0, collabConfig.ytext.length)
+          collabConfig.ytext.insert(0, code)
+        })
+      }
+      return
+    }
+
     const view = viewRef.current
     if (!view) return
     const currentDoc = view.state.doc.toString()
@@ -113,7 +174,7 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
         changes: { from: 0, to: currentDoc.length, insert: code },
       })
     }
-  }, [code])
+  }, [code, collabConfig])
 
   return (
     <div
