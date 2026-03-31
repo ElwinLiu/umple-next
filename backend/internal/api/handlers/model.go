@@ -27,9 +27,18 @@ func (h *ModelHandler) Get(w http.ResponseWriter, r *http.Request) {
 
 	userCode, _, _ := splitModelSections(m.Code)
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
+	// Try to load tabs (nil means no tabs.json / old model)
+	tabsData, _ := h.store.LoadTabs(id)
+
+	resp := map[string]any{
 		"modelId": m.ID,
 		"code":    userCode,
-	})
+	}
+	if tabsData != nil {
+		resp["tabs"] = tabsData.Tabs
+		resp["activeTabId"] = tabsData.ActiveTabID
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(resp)
 }

@@ -2,6 +2,8 @@ package model
 
 import (
 	"crypto/rand"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -10,6 +12,19 @@ import (
 	"strings"
 	"time"
 )
+
+// TabInfo represents a single editor tab for JSON serialization.
+type TabInfo struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Code string `json:"code"`
+}
+
+// TabsData is the structure written to tabs.json.
+type TabsData struct {
+	ActiveTabID string    `json:"activeTabId"`
+	Tabs        []TabInfo `json:"tabs"`
+}
 
 // Store manages filesystem-based model storage, mirroring the PHP DataStore pattern.
 type Store struct {
@@ -98,6 +113,34 @@ func (s *Store) UpdateTask(id, code string) error {
 		return fmt.Errorf("task not found: %s", id)
 	}
 	return os.WriteFile(filepath.Join(dir, "model.ump"), []byte(code), 0644)
+}
+
+// SaveTabs writes tab metadata to {modelDir}/tabs.json.
+func (s *Store) SaveTabs(modelID string, data *TabsData) error {
+	dir := s.ModelDir(modelID)
+	b, err := json.Marshal(data)
+	if err != nil {
+		return fmt.Errorf("marshal tabs: %w", err)
+	}
+	return os.WriteFile(filepath.Join(dir, "tabs.json"), b, 0644)
+}
+
+// LoadTabs reads tab metadata from {modelDir}/tabs.json.
+// Returns nil, nil if the file does not exist (backward compat).
+func (s *Store) LoadTabs(modelID string) (*TabsData, error) {
+	dir := s.ModelDir(modelID)
+	b, err := os.ReadFile(filepath.Join(dir, "tabs.json"))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("read tabs: %w", err)
+	}
+	var data TabsData
+	if err := json.Unmarshal(b, &data); err != nil {
+		return nil, fmt.Errorf("unmarshal tabs: %w", err)
+	}
+	return &data, nil
 }
 
 func (s *Store) cleanup(maxAge time.Duration) {

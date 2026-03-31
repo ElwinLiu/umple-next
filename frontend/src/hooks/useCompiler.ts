@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useSessionStore, type DiagramView } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
+import { urlModelResolved } from './useModelFromURL'
 import {
   usePreferencesStore,
   getEffectiveDiagramType,
@@ -30,7 +31,7 @@ export async function compileAndRefresh(
   isDark: boolean,
   signal?: AbortSignal,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
-  const { code, modelId, setModelId, setUmpleModel } = useSessionStore.getState()
+  const { code, modelId, setModelId, setUmpleModel, tabs, activeTabId } = useSessionStore.getState()
   const { viewMode, clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
   const { setCompiling, setLastError } = useEphemeralStore.getState()
   const { setExecutionOutput } = useEphemeralStore.getState()
@@ -54,9 +55,14 @@ export async function compileAndRefresh(
       code,
       modelId: modelId ?? undefined,
       ...diagramParams,
+      tabs: tabs.map(({ id, name, code }) => ({ id, name, code })),
+      activeTabId,
     }, signal)
 
-    if (res.modelId && !modelId) setModelId(res.modelId)
+    // Read current modelId from the store (not the stale closure value) to
+    // avoid overwriting a modelId that was set by useModelFromURL while the
+    // compile request was in flight.
+    if (res.modelId && !useSessionStore.getState().modelId) setModelId(res.modelId)
     if (res.result) {
       try {
         model = JSON.parse(res.result)
@@ -100,6 +106,7 @@ export async function compileAndRefresh(
 export function useCompiler() {
   const code = useSessionStore((s) => s.code)
   const modelId = useSessionStore((s) => s.modelId)
+  const tabsVersion = useSessionStore((s) => s.tabsVersion)
   const viewMode = useSessionStore((s) => s.viewMode)
   const setSvgForView = useSessionStore((s) => s.setSvgForView)
   const setHtmlForView = useSessionStore((s) => s.setHtmlForView)
@@ -130,6 +137,10 @@ export function useCompiler() {
   // Diagram-sync edits set syncPending, which skips the debounce so the
   // diagram refreshes immediately after a user interaction.
   useEffect(() => {
+    // Don't compile until any URL model has been resolved — sessionStorage
+    // may contain stale data that would overwrite the server model.
+    if (!urlModelResolved) return
+
     if (timerRef.current) clearTimeout(timerRef.current)
 
     const { syncPending, clearSyncPending } = useSessionStore.getState()
@@ -163,7 +174,7 @@ export function useCompiler() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [code, modelId])
+  }, [code, modelId, tabsVersion])
 
   // When viewMode, display preferences, or dark theme change, re-fetch diagram only
   useEffect(() => {

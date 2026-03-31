@@ -22,11 +22,13 @@ func NewCompileHandler(pool *compiler.Pool, store *model.Store) *CompileHandler 
 }
 
 type CompileRequest struct {
-	Code        string   `json:"code"`
-	ModelID     string   `json:"modelId,omitempty"`
-	DiagramType string   `json:"diagramType,omitempty"`
-	Suboptions  []string `json:"suboptions,omitempty"`
-	NeedsLayout *bool    `json:"needsLayout,omitempty"`
+	Code        string       `json:"code"`
+	ModelID     string       `json:"modelId,omitempty"`
+	DiagramType string       `json:"diagramType,omitempty"`
+	Suboptions  []string     `json:"suboptions,omitempty"`
+	NeedsLayout *bool        `json:"needsLayout,omitempty"`
+	Tabs        []model.TabInfo `json:"tabs,omitempty"`
+	ActiveTabID string          `json:"activeTabId,omitempty"`
 }
 
 type CompileResponse struct {
@@ -56,6 +58,16 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
 		return
+	}
+
+	// Persist tab metadata alongside model.ump
+	if len(req.Tabs) > 0 {
+		if err := h.store.SaveTabs(modelID, &model.TabsData{
+			ActiveTabID: req.ActiveTabID,
+			Tabs:        req.Tabs,
+		}); err != nil {
+			log.Printf("failed to save tabs for %s: %v", modelID, err)
+		}
 	}
 
 	// Compile to JSON using umplesync
