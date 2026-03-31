@@ -296,6 +296,7 @@ function EditorTab({
             <TabsTrigger
               value={tab.id}
               className={triggerClassName}
+              onDoubleClick={beginRename}
               onAuxClick={handleAuxClick}
               onMouseDown={handleMouseDown}
             >
