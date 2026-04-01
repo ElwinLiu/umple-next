@@ -29,14 +29,6 @@ export function SelectionToolbar() {
     if (!stable) setInput('')
   }, [stable])
 
-  // Auto-focus textarea when toolbar becomes visible
-  useEffect(() => {
-    if (!stable?.coords) return
-    const id = requestAnimationFrame(() => {
-      textareaRef.current?.focus()
-    })
-    return () => cancelAnimationFrame(id)
-  }, [stable?.coords])
 
   if (!stable?.coords) return null
 
