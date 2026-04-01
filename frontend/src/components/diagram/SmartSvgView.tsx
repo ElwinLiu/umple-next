@@ -163,18 +163,44 @@ function processSvg(raw: string): { html: string; dims: { width: number; height:
 }
 
 const PADDING = 24
+const DRAG_THRESHOLD = 3
 
 const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
-  const [dragging, setDragging] = useState(false)
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
+  const [transform, _setTransform] = useState({ x: 0, y: 0, scale: 1 })
+  const transformRef = useRef({ x: 0, y: 0, scale: 1 })
+  const setTransform: typeof _setTransform = useCallback((action) => {
+    _setTransform((prev) => {
+      const next = typeof action === 'function' ? action(prev) : action
+      transformRef.current = next
+      return next
+    })
+  }, [])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+
+  // Drag state kept in refs to avoid re-renders during mouse interactions.
+  // Re-renders during mousedown break React's event delegation for SVG
+  // elements inside dangerouslySetInnerHTML, suppressing the click event.
+  const dragRef = useRef({ pressed: false, active: false, startX: 0, startY: 0, originX: 0, originY: 0 })
   const { html: sanitizedSvg, dims: svgDims } = useMemo(() => processSvg(svg), [svg])
 
   // Clear selection when SVG changes
   useEffect(() => { setSelectedId(null) }, [svg])
+
+  // Reapply data-selected when selection or SVG content changes.
+  // Direct DOM mutation gets wiped when React re-renders dangerouslySetInnerHTML.
+  useEffect(() => {
+    const contentEl = contentRef.current
+    if (!contentEl) return
+    contentEl.querySelectorAll('[data-selected]').forEach((el) => {
+      el.removeAttribute('data-selected')
+    })
+    if (selectedId) {
+      const el = contentEl.querySelector(`[data-node-id="${CSS.escape(selectedId)}"], [data-edge-id="${CSS.escape(selectedId)}"]`)
+      el?.setAttribute('data-selected', 'true')
+    }
+  }, [selectedId, sanitizedSvg])
 
   const fitToView = useCallback(() => {
     const RESET = { x: 0, y: 0, scale: 1 }
@@ -199,42 +225,56 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
     fitToView()
   }, [sanitizedSvg, fitToView])
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    e.preventDefault()
-
-    const rect = containerRef.current?.getBoundingClientRect()
-    if (!rect) return
-
-    const cursorX = e.clientX - rect.left
-    const cursorY = e.clientY - rect.top
-
-    setTransform((prev) => {
-      const factor = 1 - e.deltaY * 0.005
-      const newScale = Math.min(Math.max(prev.scale * factor, 0.1), 5)
-      const ratio = newScale / prev.scale
-      const newX = cursorX - ratio * (cursorX - prev.x)
-      const newY = cursorY - ratio * (cursorY - prev.y)
-      return { x: newX, y: newY, scale: newScale }
-    })
+  // Attach wheel listener as non-passive so preventDefault() works
+  // (React registers onWheel as passive, which ignores preventDefault).
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      const rect = el.getBoundingClientRect()
+      const cursorX = e.clientX - rect.left
+      const cursorY = e.clientY - rect.top
+      setTransform((prev) => {
+        const factor = 1 - e.deltaY * 0.005
+        const newScale = Math.min(Math.max(prev.scale * factor, 0.1), 5)
+        const ratio = newScale / prev.scale
+        return { x: cursorX - ratio * (cursorX - prev.x), y: cursorY - ratio * (cursorY - prev.y), scale: newScale }
+      })
+    }
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
   }, [])
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return
-    setDragging(true)
-    setDragStart({ x: e.clientX - transform.x, y: e.clientY - transform.y })
-  }, [transform.x, transform.y])
+    const d = dragRef.current
+    const t = transformRef.current
+    d.pressed = true
+    d.active = false
+    d.originX = e.clientX
+    d.originY = e.clientY
+    d.startX = e.clientX - t.x
+    d.startY = e.clientY - t.y
+  }, [])
 
   const handleMouseMove = useCallback((e: React.MouseEvent) => {
-    if (!dragging) return
-    setTransform((prev) => ({
-      ...prev,
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
-    }))
-  }, [dragging, dragStart])
+    const d = dragRef.current
+    if (!d.pressed) return
+    if (!d.active) {
+      if (Math.abs(e.clientX - d.originX) < DRAG_THRESHOLD && Math.abs(e.clientY - d.originY) < DRAG_THRESHOLD) return
+      d.active = true
+      if (containerRef.current) containerRef.current.style.cursor = 'grabbing'
+    }
+    const x = e.clientX - d.startX
+    const y = e.clientY - d.startY
+    setTransform((prev) => ({ ...prev, x, y }))
+  }, [])
 
   const handleMouseUp = useCallback(() => {
-    setDragging(false)
+    dragRef.current.pressed = false
+    dragRef.current.active = false
+    if (containerRef.current) containerRef.current.style.cursor = 'grab'
   }, [])
 
   const handleZoomIn = useCallback(() => {
@@ -283,33 +323,30 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
     }
   }, [handleZoomIn, handleZoomOut, fitToView])
 
-  /** Handle clicks on SVG nodes/edges for selection */
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    const target = e.target as Element
+  // Native click listener — React's onClick doesn't reliably receive events
+  // from SVG elements inside dangerouslySetInnerHTML when re-renders occur.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const handler = (e: MouseEvent) => {
+      const target = e.target as Element
+      const nodeGroup = target.closest('g.node')
+      const edgeGroup = target.closest('g.edge')
 
-    // Walk up to find closest node or edge group
-    const nodeGroup = target.closest('g.node')
-    const edgeGroup = target.closest('g.edge')
-
-    const contentEl = contentRef.current
-    if (!contentEl) return
-
-    // Clear previous selection
-    contentEl.querySelectorAll('[data-selected]').forEach((el) => {
-      el.removeAttribute('data-selected')
-    })
-
-    if (nodeGroup) {
-      const id = nodeGroup.getAttribute('data-node-id')
-      nodeGroup.setAttribute('data-selected', 'true')
-      setSelectedId(id)
-    } else if (edgeGroup) {
-      const id = edgeGroup.getAttribute('data-edge-id')
-      edgeGroup.setAttribute('data-selected', 'true')
-      setSelectedId(id)
-    } else {
-      setSelectedId(null)
+      if (nodeGroup) {
+        const id = nodeGroup.getAttribute('data-node-id')
+        setSelectedId(id)
+        if (id) window.dispatchEvent(new CustomEvent('umple:diagram-select', { detail: { name: id, kind: 'node' } }))
+      } else if (edgeGroup) {
+        const id = edgeGroup.getAttribute('data-edge-id')
+        setSelectedId(id)
+        if (id) window.dispatchEvent(new CustomEvent('umple:diagram-select', { detail: { name: id, kind: 'edge' } }))
+      } else {
+        setSelectedId(null)
+      }
     }
+    el.addEventListener('click', handler)
+    return () => el.removeEventListener('click', handler)
   }, [])
 
   if (!svg) {
@@ -324,17 +361,15 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
     <div
       ref={containerRef}
       className="w-full h-full overflow-hidden relative bg-surface-0 select-none focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]"
-      style={{ cursor: dragging ? 'grabbing' : 'grab' }}
+      style={{ cursor: 'grab' }}
       tabIndex={0}
       role="application"
       aria-label="SVG diagram canvas — use arrow keys to pan, +/- to zoom, scroll to zoom"
-      onWheel={handleWheel}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
       onKeyDown={handleKeyDown}
-      onClick={handleClick}
     >
       {/* Controls */}
       <div className="absolute bottom-3 left-3 z-10 flex flex-col gap-0.5 bg-surface-0 border border-border rounded-lg shadow-sm p-0.5">
