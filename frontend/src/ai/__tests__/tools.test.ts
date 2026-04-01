@@ -54,7 +54,7 @@ describe('editCode execute', () => {
     expect(useSessionStore.getState().code).toBe('class Person { fullName: String; id: Integer; }')
   })
 
-  it('returns error when oldText is not found', async () => {
+  it('returns error with current code when oldText is not found', async () => {
     const { agentTools } = await import('../tools')
 
     const result = await agentTools.editCode.execute!({
@@ -63,10 +63,12 @@ describe('editCode execute', () => {
     }, { messages: [], toolCallId: 'test' } as any)
 
     expect(result).toContain('not found')
+    expect(result).toContain('readEditorCode')
+    expect(result).toContain('Current code:')
     expect(useSessionStore.getState().code).toBe('class Student { name: String; id: Integer; }')
   })
 
-  it('returns error when oldText is ambiguous', async () => {
+  it('returns error with current code when oldText is ambiguous', async () => {
     useSessionStore.setState({ code: 'class Student { Student mentor; }' })
     const { agentTools } = await import('../tools')
 
@@ -75,7 +77,9 @@ describe('editCode execute', () => {
       explanation: 'Bad ambiguous edit',
     }, { messages: [], toolCallId: 'test' } as any)
 
-    expect(result).toContain('Ambiguous edit target')
+    expect(result).toContain('Found 2 matches')
+    expect(result).toContain('must match exactly once')
+    expect(result).toContain('Current code:')
     expect(useSessionStore.getState().code).toBe('class Student { Student mentor; }')
   })
 

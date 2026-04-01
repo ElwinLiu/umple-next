@@ -45,7 +45,8 @@ describe('applyCodeEdits', () => {
     ])
 
     expect(result.errors).toHaveLength(1)
-    expect(result.errors[0]).toContain('Text not found')
+    expect(result.errors[0]).toContain('String to replace not found in code')
+    expect(result.errors[0]).toContain('readEditorCode')
   })
 
   it('output is always LF-normalized', () => {
@@ -65,7 +66,8 @@ describe('applyCodeEdits', () => {
       { oldText: 'Student', newText: 'Person' },
     ])
 
-    expect(result.errors[0]).toContain('Ambiguous edit target')
+    expect(result.errors[0]).toContain('Found 2 matches')
+    expect(result.errors[0]).toContain('must match exactly once')
   })
 })
 

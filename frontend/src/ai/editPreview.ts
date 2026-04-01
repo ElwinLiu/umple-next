@@ -58,12 +58,12 @@ export function applyCodeEdits(code: string, edits: CodeEdit[]): CodeEditResult 
     const occurrences = countOccurrences(nextCode, normalizedOld)
 
     if (occurrences === 0) {
-      errors.push(`Text not found: "${oldText.slice(0, 50)}"`)
+      errors.push(`String to replace not found in code. Call readEditorCode to get the exact current code, then retry with corrected oldText.\noldText: "${oldText.slice(0, 80)}"`)
       continue
     }
 
     if (occurrences > 1) {
-      errors.push(`Ambiguous edit target (${occurrences} matches): "${oldText.slice(0, 50)}"`)
+      errors.push(`Found ${occurrences} matches of oldText, but each edit must match exactly once. Include more surrounding lines to uniquely identify the target.\noldText: "${oldText.slice(0, 80)}"`)
       continue
     }
 
