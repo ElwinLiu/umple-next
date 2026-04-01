@@ -194,11 +194,13 @@ function AgentPanel() {
       <div
         className="absolute bottom-0 left-1/2 z-20 w-full max-w-3xl -translate-x-1/2 px-2 pb-2"
         data-testid="agent-panel-collapsed"
+        role="region"
+        aria-label="AI assistant"
         onPointerDownCapture={resetSuppressClick}
         onClick={handleCollapsedClick}
       >
         <InputBar
-          className="cursor-text shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)]"
+          className="cursor-text shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.4),0_6px_12px_rgba(0,0,0,0.2)]"
           input={input}
           onInputChange={setInput}
           onSend={handleSend}
@@ -227,7 +229,7 @@ function AgentPanel() {
   return (
     <div
       ref={panelRef}
-      className="absolute bottom-2 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 flex-col rounded-2xl border border-border bg-surface-0 shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] animate-in slide-in-from-bottom-4 duration-200"
+      className="absolute bottom-2 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 flex-col rounded-2xl border border-border bg-surface-0 shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.4),0_6px_12px_rgba(0,0,0,0.2)] animate-in slide-in-from-bottom-4 duration-200"
       style={{ height }}
       data-testid="agent-panel"
     >
@@ -271,7 +273,7 @@ function AgentPanel() {
       </div>
 
       {/* Messages */}
-      <div ref={scrollRef} className="scrollbar-thin flex-1 overflow-y-auto px-4 py-3">
+      <div ref={scrollRef} role="log" aria-live="polite" className="scrollbar-thin flex-1 overflow-y-auto px-4 py-3">
         {messages.length === 0 && (
           <div className="flex h-full flex-col items-center justify-center gap-2">
             <div className="flex size-10 items-center justify-center rounded-full bg-surface-1">

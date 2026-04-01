@@ -113,7 +113,7 @@ export function ControlButton({
         aria-label={label}
         aria-pressed={active}
         {...rest}
-        className={`flex items-center justify-center w-7 h-7 rounded-md transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 ${
+        className={`flex items-center justify-center w-9 h-9 rounded-md transition-colors cursor-pointer focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 ${
           active
             ? 'bg-brand/10 text-brand'
             : 'text-ink-muted hover:text-ink hover:bg-surface-1'

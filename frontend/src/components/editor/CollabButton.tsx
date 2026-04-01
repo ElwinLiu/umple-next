@@ -84,6 +84,8 @@ export function CollabButton() {
                 className="size-3 rounded-full border border-surface-0"
                 style={{ backgroundColor: user.color }}
                 title={user.name}
+                role="img"
+                aria-label={user.name}
               />
             ))}
           </div>

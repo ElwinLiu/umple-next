@@ -29,6 +29,15 @@ export function SelectionToolbar() {
     if (!stable) setInput('')
   }, [stable])
 
+  // Auto-focus textarea when toolbar becomes visible
+  useEffect(() => {
+    if (!stable?.coords) return
+    const id = requestAnimationFrame(() => {
+      textareaRef.current?.focus()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [stable?.coords])
+
   if (!stable?.coords) return null
 
   function buildMessage(prompt: string) {
@@ -75,7 +84,7 @@ export function SelectionToolbar() {
 
   return createPortal(
     <div
-      className="fixed z-50 w-[260px] rounded-2xl border border-border bg-surface-0 p-1 pb-0.5 shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] animate-in fade-in-0 zoom-in-95 duration-100"
+      className="fixed z-50 w-[260px] rounded-2xl border border-border bg-surface-0 p-1 pb-0.5 shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.4),0_6px_12px_rgba(0,0,0,0.2)] animate-in fade-in-0 zoom-in-95 duration-100"
       style={{ top, left }}
     >
       {/* Input row */}

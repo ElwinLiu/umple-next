@@ -29,12 +29,12 @@ function BadgePills({ errorCount, warningCount }: { errorCount: number; warningC
   return (
     <>
       {errorCount > 0 && (
-        <span className="flex items-center gap-1 rounded-full bg-status-error/15 px-1.5 py-0.5 text-xxs font-semibold leading-none text-status-error">
+        <span className="flex items-center gap-1 rounded-full bg-status-error/15 px-1.5 py-0.5 text-xs font-semibold leading-none text-status-error">
           {errorCount} {errorCount === 1 ? 'error' : 'errors'}
         </span>
       )}
       {warningCount > 0 && (
-        <span className="flex items-center gap-1 rounded-full bg-status-warning/15 px-1.5 py-0.5 text-xxs font-semibold leading-none text-status-warning">
+        <span className="flex items-center gap-1 rounded-full bg-status-warning/15 px-1.5 py-0.5 text-xs font-semibold leading-none text-status-warning">
           {warningCount} {warningCount === 1 ? 'warning' : 'warnings'}
         </span>
       )}
@@ -131,7 +131,7 @@ export function CompileStatusStrip() {
   if (outputView !== 'strip') return null
 
   return (
-    <div className="flex h-7 shrink-0 items-center justify-between border-t border-border px-3 text-xs animate-strip-in">
+    <div role="status" aria-live="polite" className="flex h-7 shrink-0 items-center justify-between border-t border-border px-3 text-xs animate-strip-in">
       <div className="flex items-center gap-1.5">
         {isSuccess ? (
           <>
@@ -260,6 +260,8 @@ export function OutputPanel() {
       {/* Output area */}
       <div
         ref={outputRef}
+        role="log"
+        aria-live="polite"
         className="flex-1 overflow-auto bg-surface-0"
       >
         {executionOutput && (

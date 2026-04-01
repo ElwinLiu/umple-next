@@ -146,6 +146,7 @@ export function OnboardingTour() {
 
   const [targetRect, setTargetRect] = useState<Rect | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
+  const featureHintsRef = useRef<HTMLDivElement>(null)
   const [cardSize, setCardSize] = useState({ w: 320, h: 200 })
 
   const step = tourStep !== null && tourStep < TOUR_STEPS.length ? TOUR_STEPS[tourStep] : null
@@ -155,6 +156,16 @@ export function OnboardingTour() {
   useEffect(() => {
     if (step?.onActivate) step.onActivate()
   }, [step])
+
+  // Focus tour card when step changes
+  useEffect(() => {
+    if (step) cardRef.current?.focus()
+  }, [tourStep, step])
+
+  // Focus feature hints dialog on mount
+  useEffect(() => {
+    if (showFeatureHints) featureHintsRef.current?.focus()
+  }, [showFeatureHints])
 
   // Measure target element position — only update state when rect actually changes
   useLayoutEffect(() => {
@@ -252,7 +263,7 @@ export function OnboardingTour() {
       <>
         <div className="fixed inset-0 z-50 bg-black/40 animate-fade-in" />
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="bg-surface-0 rounded-xl shadow-2xl w-full max-w-md animate-fade-in overflow-hidden">
+          <div ref={featureHintsRef} tabIndex={-1} className="bg-surface-0 rounded-xl shadow-2xl w-full max-w-md animate-fade-in overflow-hidden">
             <div className="bg-brand px-5 py-4">
               <div className="flex items-center gap-2.5">
                 <Sparkles className="size-5 text-ink-inverse" />
@@ -335,6 +346,7 @@ export function OnboardingTour() {
       {/* Tour card */}
       <div
         ref={cardRef}
+        tabIndex={-1}
         className="fixed z-[46] bg-surface-0 rounded-xl shadow-2xl border border-border animate-fade-in"
         style={cardStyle}
       >

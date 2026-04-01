@@ -29,11 +29,15 @@ export function AppShell() {
   return (
     <TooltipProvider>
     <div className="h-screen flex bg-surface-1" data-testid="app-shell">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-brand focus:px-4 focus:py-2 focus:text-ink-inverse focus:text-sm focus:font-medium">
+        Skip to editor
+      </a>
+
       {/* Left sidebar */}
       <Sidebar />
 
       {/* Main content area */}
-      <div className="flex-1 min-w-0 flex flex-col">
+      <main id="main-content" className="flex-1 min-w-0 flex flex-col">
         <div className="relative flex-1 min-h-0 px-2.5 pb-2.5 pt-1.5">
           <PanelGroup direction="horizontal" className="h-full">
             {editorVisible && (
@@ -76,7 +80,7 @@ export function AppShell() {
         <CommandPalette />
         <WelcomeDialog />
         <OnboardingTour />
-      </div>
+      </main>
     </div>
     </TooltipProvider>
   )

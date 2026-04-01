@@ -19,8 +19,8 @@
 
   /* Ink (text) */
   --color-ink: #2d2d2c;
-  --color-ink-muted: #786c64;
-  --color-ink-faint: #7a726d;
+  --color-ink-muted: #6e6259;
+  --color-ink-faint: #6b635e;
   --color-ink-inverse: #ffffff;
 
   /* Borders */
@@ -62,6 +62,7 @@
   /* Typography */
   --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  --font-diagram: Times, 'Times New Roman', serif;
 
   /* Type scale (extends Tailwind defaults) */
   --text-xxs: 0.625rem;
@@ -129,7 +130,7 @@
 
   --color-ink: #e4e2df;
   --color-ink-muted: #9a9490;
-  --color-ink-faint: #8a8480;
+  --color-ink-faint: #918b87;
   --color-ink-inverse: #1a1a1a;
 
   --color-border: #3a3a3a;

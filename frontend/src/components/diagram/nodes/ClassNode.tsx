@@ -115,7 +115,7 @@ export const ClassNode = memo(function ClassNode({ id, data, selected }: NodePro
         'group h-full w-full bg-surface-0 border-2 shadow-md transition-shadow overflow-hidden',
         selected ? 'border-brand ring-2 ring-brand/30' : 'border-border-strong',
       )}
-      style={{ fontFamily: "Times, 'Times New Roman', serif", fontSize: 14 }}
+      style={{ fontFamily: 'var(--font-diagram)', fontSize: '0.875rem' }}
       data-testid={`class-node-${d.name}`}
     >
       {/* Class name header */}

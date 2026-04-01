@@ -155,6 +155,7 @@ export function CommandPalette() {
           <button
             type="button"
             onClick={popPage}
+            aria-label="Go back"
             className="flex items-center justify-center rounded p-0.5 text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
             data-testid="command-palette-back"
           >

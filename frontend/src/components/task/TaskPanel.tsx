@@ -2,6 +2,7 @@ import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useTask } from '../../hooks/useTask'
 import { SidePanel } from '@/components/ui/side-panel'
 import { ErrorBanner } from '@/components/ui/error-banner'
+import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export function TaskPanel() {
@@ -45,13 +46,14 @@ export function TaskPanel() {
               <div className="text-xs text-ink-muted mb-2">
                 Submit your work when you are ready.
               </div>
-              <button
+              <Button
                 onClick={submitWork}
                 disabled={submitting}
-                className="px-5 py-2 text-sm font-semibold border-none rounded transition-colors bg-status-success text-ink-inverse cursor-pointer hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1"
+                size="sm"
+                className="bg-status-success text-ink-inverse hover:bg-status-success/90"
               >
                 {submitting ? 'Submitting...' : 'Submit Work'}
-              </button>
+              </Button>
 
               {submitStatus && (
                 <div className={cn(
