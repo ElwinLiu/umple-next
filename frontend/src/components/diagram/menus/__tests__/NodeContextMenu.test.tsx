@@ -20,7 +20,6 @@ describe('NodeContextMenu', () => {
     useEphemeralStore.setState({
       editingNodeId: null,
       editingField: null,
-      lastError: null,
       executionOutput: '',
       executionErrors: null,
       outputView: 'hidden',
@@ -43,8 +42,8 @@ describe('NodeContextMenu', () => {
 
     const state = useEphemeralStore.getState()
     expect(state.editingField).toBeNull()
-    expect(state.lastError).toContain('association classes')
-    expect(state.outputView).toBe('hidden')
+    expect(state.rawErrorText).toContain('association classes')
+    expect(state.outputErrorCount).toBe(1)
     expect(onClose).toHaveBeenCalled()
   })
 })

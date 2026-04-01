@@ -67,14 +67,14 @@ export function useDiagramSync() {
       }
 
       if (response.errors) {
-        useEphemeralStore.getState().setLastError(response.errors)
+        useEphemeralStore.getState().setExecutionOutput('', response.errors)
         console.warn(`Diagram sync warning (${action}):`, response.errors)
         return { success: true, code: response.code, error: response.errors }
       }
 
       return { success: true, code: response.code }
     } catch (err: any) {
-      useEphemeralStore.getState().setLastError(err.message)
+      useEphemeralStore.getState().setExecutionOutput('', err.message)
       console.warn(`Diagram sync failed (${action}):`, err.message)
       return { success: false, error: err.message }
     } finally {

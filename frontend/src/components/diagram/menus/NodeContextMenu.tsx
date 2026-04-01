@@ -39,7 +39,7 @@ export function NodeContextMenu({ position, nodeId, onClose }: NodeContextMenuPr
     if (!nodeId) return
     if (isAssociationClassNode) {
       const message = 'Methods cannot be added to association classes from the diagram.'
-      useEphemeralStore.getState().setLastError(message)
+      useEphemeralStore.getState().setExecutionOutput('', message)
       onClose()
       return
     }

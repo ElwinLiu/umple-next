@@ -4,24 +4,78 @@ import type { GenerateResponse, GeneratedArtifact } from '../api/types'
 import { useSessionStore } from './sessionStore'
 import { usePreferencesStore } from './preferencesStore'
 
-/** Parse Umple JSON error string to count errors vs warnings.
- *  Umple severity: 1 = error, 2 = warning, 3 = warning */
-function parseErrorCounts(raw: string | null | undefined): { errors: number; warnings: number } {
-  if (!raw) return { errors: 0, warnings: 0 }
-  try {
-    const parsed = JSON.parse(raw)
-    const results: { severity?: string }[] = parsed?.results ?? []
-    let errors = 0
-    let warnings = 0
-    for (const r of results) {
-      const sev = Number(r.severity)
-      if (sev === 1) errors++
-      else warnings++
+export interface ParsedIssue {
+  severity: number
+  errorCode: string
+  message: string
+  line: number
+  filename: string
+  url: string
+}
+
+/** Parse raw error string (possibly multiple JSON objects joined by newlines)
+ *  into deduplicated, structured issues.
+ *  Umple severity: 1-2 = error, 3-5 = warning. */
+function parseIssuesAndRaw(raw: string | null | undefined): {
+  issues: ParsedIssue[]
+  rawText: string
+  errors: number
+  warnings: number
+} {
+  if (!raw) return { issues: [], rawText: '', errors: 0, warnings: 0 }
+
+  const allResults: ParsedIssue[] = []
+  const rawLines: string[] = []
+
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+    try {
+      const parsed = JSON.parse(trimmed)
+      const results = parsed?.results
+      if (Array.isArray(results)) {
+        for (const r of results) {
+          allResults.push({
+            severity: Number(r.severity ?? 1),
+            errorCode: String(r.errorCode ?? ''),
+            message: String(r.message ?? ''),
+            line: Number(r.line ?? 0),
+            filename: String(r.filename ?? ''),
+            url: String(r.url ?? ''),
+          })
+        }
+      } else {
+        rawLines.push(trimmed)
+      }
+    } catch {
+      rawLines.push(trimmed)
     }
-    return { errors, warnings }
-  } catch {
-    return { errors: 1, warnings: 0 }
   }
+
+  // Deduplicate by errorCode + line + message
+  const seen = new Set<string>()
+  const unique: ParsedIssue[] = []
+  for (const issue of allResults) {
+    const key = `${issue.errorCode}:${issue.line}:${issue.message}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      unique.push(issue)
+    }
+  }
+
+  // Sort: errors first (severity 1-2), then warnings (3-5), then by line number
+  unique.sort((a, b) => {
+    const aIsErr = a.severity <= 2 ? 0 : 1
+    const bIsErr = b.severity <= 2 ? 0 : 1
+    if (aIsErr !== bIsErr) return aIsErr - bIsErr
+    return a.line - b.line
+  })
+
+  const rawText = rawLines.join('\n')
+  const errCount = unique.filter((i) => i.severity <= 2).length + (rawText && !unique.length ? 1 : 0)
+  const warnCount = unique.filter((i) => i.severity > 2).length
+
+  return { issues: unique, rawText, errors: errCount, warnings: warnCount }
 }
 
 type OutputView = 'hidden' | 'strip' | 'panel'
@@ -39,6 +93,8 @@ interface EphemeralState {
   executing: boolean
   executionOutput: string
   executionErrors: string | null
+  parsedIssues: ParsedIssue[]
+  rawErrorText: string
   outputErrorCount: number
   outputWarningCount: number
 
@@ -61,7 +117,6 @@ interface EphemeralState {
   editingNodeId: string | null
   editingField: 'name' | 'newAttribute' | 'newMethod' | null
   compiling: boolean
-  lastError: string | null
 
   // Editor ephemeral
   diffPreview: DiffPreviewState | null
@@ -102,7 +157,7 @@ interface EphemeralState {
   setSelectedEdge: (id: string | null) => void
   setEditing: (nodeId: string | null, field: 'name' | 'newAttribute' | 'newMethod' | null) => void
   setCompiling: (compiling: boolean) => void
-  setLastError: (error: string | null) => void
+
 
   // Editor ephemeral actions
   showDiffPreview: (preview: DiffPreviewState) => void
@@ -127,6 +182,8 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   executing: false,
   executionOutput: '',
   executionErrors: null,
+  parsedIssues: [],
+  rawErrorText: '',
   outputErrorCount: 0,
   outputWarningCount: 0,
 
@@ -149,7 +206,6 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   editingNodeId: null,
   editingField: null,
   compiling: false,
-  lastError: null,
 
   // Editor ephemeral
   diffPreview: null,
@@ -180,11 +236,13 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   // Execution actions
   setExecuting: (executing) => set({ executing }),
   setExecutionOutput: (executionOutput, executionErrors = null) => {
-    const { errors, warnings } = parseErrorCounts(executionErrors)
+    const { issues, rawText, errors, warnings } = parseIssuesAndRaw(executionErrors)
     const showAgentPanel = useSessionStore.getState().showAgentPanel
     set((s) => ({
       executionOutput,
       executionErrors,
+      parsedIssues: issues,
+      rawErrorText: rawText,
       outputErrorCount: errors,
       outputWarningCount: warnings,
       ...(errors > 0 && !showAgentPanel ? { outputView: 'panel' as const } : {}),
@@ -226,7 +284,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   setSelectedEdge: (selectedEdgeId) => set({ selectedEdgeId }),
   setEditing: (editingNodeId, editingField) => set({ editingNodeId, editingField }),
   setCompiling: (compiling) => set({ compiling }),
-  setLastError: (lastError) => set({ lastError }),
+
 
   // Editor ephemeral actions
   showDiffPreview: (diffPreview) => set({ diffPreview }),
