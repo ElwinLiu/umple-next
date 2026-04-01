@@ -200,7 +200,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   generationRequested: false,
 
   // Diagram ephemeral
-  renderMode: 'editable',
+  renderMode: 'graphviz',
   selectedNodeId: null,
   selectedEdgeId: null,
   editingNodeId: null,

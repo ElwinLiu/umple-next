@@ -55,9 +55,9 @@ export function DiagramPanel() {
   const showEditable = canToggleRenderer && renderMode === 'editable'
   const editableLoading = viewMode === 'class' && renderMode === 'editable' && compiling && !hasEditableModel
 
-  // Default: class view starts in editable (RF) mode, other views start in graphviz
+  // Default: all views start in graphviz mode
   useEffect(() => {
-    setRenderMode(viewMode === 'class' ? 'editable' : 'graphviz')
+    setRenderMode('graphviz')
   }, [viewMode, setRenderMode])
   const showHtml = !showEditable && !editableLoading && outputKind === 'html' && !!currentHtml
   const showGv = !showEditable && !editableLoading && !showHtml && !!currentSvg
