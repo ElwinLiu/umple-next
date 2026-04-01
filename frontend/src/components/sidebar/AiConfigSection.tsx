@@ -129,6 +129,7 @@ export function AiConfigSection({ open, onToggle }: { open: boolean; onToggle: (
           <div className="relative">
               <Input
                 id="ai-api-key-input"
+                aria-label="API key"
                 type={showKey ? 'text' : 'password'}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}

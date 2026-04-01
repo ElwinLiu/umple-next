@@ -176,9 +176,13 @@ export function Sidebar() {
   return (
     <>
       {/* Invisible hover trigger zone on left edge */}
-      <div
-        className="h-full w-2 shrink-0"
+      <button
+        type="button"
+        aria-label="Open sidebar"
+        className="h-full w-2 shrink-0 cursor-pointer focus-visible:w-6 focus-visible:bg-brand/10 transition-all"
         onMouseEnter={handlePeekEnter}
+        onFocus={handlePeekEnter}
+        onBlur={handlePeekLeave}
       />
 
       {/* Floating sidebar overlay with slide animation */}
@@ -471,7 +475,7 @@ function SidebarFooter() {
                   onSelect={() => window.open(item.href, '_blank', 'noopener,noreferrer')}
                 >
                   <item.icon className="size-3.5" />
-                  {item.label}
+                  <span>{item.label}<span className="sr-only"> (opens in new window)</span></span>
                   <ExternalLink className="ml-auto size-3 text-ink-faint" />
                 </DropdownMenuItem>
               ))}
