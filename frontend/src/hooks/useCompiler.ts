@@ -33,13 +33,11 @@ export async function compileAndRefresh(
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
   const { code, modelId, setModelId, setUmpleModel, tabs, activeTabId } = useSessionStore.getState()
   const { viewMode, clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
-  const { setCompiling, setLastError } = useEphemeralStore.getState()
-  const { setExecutionOutput } = useEphemeralStore.getState()
+  const { setCompiling, setExecutionOutput } = useEphemeralStore.getState()
 
   if (!code.trim()) return { success: false, model: null }
 
   setCompiling(true)
-  setLastError(null)
   setExecutionOutput('')
   clearSvgCache()
   clearHtmlCache()
@@ -77,7 +75,6 @@ export async function compileAndRefresh(
     const storedLayout: StoredLayoutMetadata | null = res.storedLayout ?? null
 
     if (res.errors) {
-      setLastError(res.errors)
       setExecutionOutput('', res.errors)
     } else {
       success = true
@@ -94,7 +91,6 @@ export async function compileAndRefresh(
   } catch (err: any) {
     if (err.name === 'AbortError') throw err
     const msg = err.message || 'Compilation failed'
-    setLastError(msg)
     setExecutionOutput('', msg)
   } finally {
     setCompiling(false)
@@ -110,7 +106,6 @@ export function useCompiler() {
   const viewMode = useSessionStore((s) => s.viewMode)
   const setSvgForView = useSessionStore((s) => s.setSvgForView)
   const setHtmlForView = useSessionStore((s) => s.setHtmlForView)
-  const setLastError = useEphemeralStore((s) => s.setLastError)
   const suboptionsKey = usePreferencesStore(selectSuboptionsKey)
   const isDark = useIsDark()
 
@@ -207,7 +202,6 @@ export function useCompiler() {
         useSessionStore.getState().setUmpleModel(lastModelRef.current, res.layout ?? null, res.storedLayout ?? null)
       }
       if (res.errors) {
-        setLastError(res.errors)
         useEphemeralStore.getState().setExecutionOutput('', res.errors)
       }
     } catch (err: any) {

@@ -64,29 +64,10 @@ afterEach(() => {
     generatingCode: false,
     generatedError: null,
     generationRequested: false,
-    lastError: null,
   })
 })
 
 describe('DiagramPanel', () => {
-  it('shows and dismisses the diagram reminder banner', () => {
-    useEphemeralStore.setState({
-      lastError: 'Methods cannot be added to association classes from the diagram.',
-    })
-
-    render(
-      <TooltipProvider>
-        <DiagramPanel />
-      </TooltipProvider>
-    )
-
-    expect(screen.getByText('Methods cannot be added to association classes from the diagram.')).toBeDefined()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Dismiss diagram reminder' }))
-
-    expect(useEphemeralStore.getState().lastError).toBeNull()
-  })
-
   it('keeps both class renderers mounted while disabling edit interactions in GV mode', () => {
     useSessionStore.setState({
       viewMode: 'class',

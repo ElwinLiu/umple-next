@@ -1,8 +1,9 @@
 import { useRef, useEffect, useState, useCallback } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
+import type { ParsedIssue } from '../../stores/ephemeralStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
-import { ChevronDown, ChevronUp, Check, AlertTriangle, X, Sparkles, Loader2, Copy } from 'lucide-react'
+import { ChevronDown, Check, AlertTriangle, X, XCircle, Sparkles, Loader2, Copy, ExternalLink } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 
 function useIsAiConfigured() {
@@ -50,6 +51,40 @@ function Badges() {
   return (
     <div className="flex items-center gap-1.5">
       <BadgePills errorCount={errorCount} warningCount={warningCount} />
+    </div>
+  )
+}
+
+// ── Single issue row ────────────────────────────────────────────────
+
+function IssueRow({ issue }: { issue: ParsedIssue }) {
+  const isError = issue.severity <= 2
+  const colorClass = isError ? 'text-status-error' : 'text-status-warning'
+  const bgClass = isError ? 'bg-status-error/5 hover:bg-status-error/10' : 'bg-status-warning/5 hover:bg-status-warning/10'
+  const Icon = isError ? XCircle : AlertTriangle
+
+  return (
+    <div className={`flex items-start gap-2 rounded px-2 py-1.5 ${bgClass} transition-colors`}>
+      <Icon className={`size-3.5 shrink-0 mt-0.5 ${colorClass}`} />
+      <span className={`flex-1 min-w-0 font-mono text-xs leading-relaxed ${colorClass}`}>
+        {issue.message}
+      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        {issue.line > 0 && (
+          <span className="text-xxs text-ink-faint">line {issue.line}</span>
+        )}
+        {issue.url && (
+          <a
+            href={issue.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ink-faint hover:text-brand transition-colors"
+            title="View documentation"
+          >
+            <ExternalLink className="size-3" />
+          </a>
+        )}
+      </div>
     </div>
   )
 }
@@ -149,9 +184,11 @@ export function CompileStatusStrip() {
 export function OutputPanel() {
   const setOutputView = useEphemeralStore((s) => s.setOutputView)
   const executing = useEphemeralStore((s) => s.executing)
-  const outputRef = useRef<HTMLPreElement>(null)
+  const outputRef = useRef<HTMLDivElement>(null)
   const executionOutput = useEphemeralStore((s) => s.executionOutput)
   const executionErrors = useEphemeralStore((s) => s.executionErrors)
+  const parsedIssues = useEphemeralStore((s) => s.parsedIssues)
+  const rawErrorText = useEphemeralStore((s) => s.rawErrorText)
   const errorCount = useEphemeralStore((s) => s.outputErrorCount)
   const warningCount = useEphemeralStore((s) => s.outputWarningCount)
   const isAiConfigured = useIsAiConfigured()
@@ -221,20 +258,33 @@ export function OutputPanel() {
       </div>
 
       {/* Output area */}
-      <pre
+      <div
         ref={outputRef}
-        className="m-0 flex-1 overflow-auto whitespace-pre-wrap break-words p-2.5 font-mono text-xs leading-relaxed text-ink bg-surface-0"
+        className="flex-1 overflow-auto bg-surface-0"
       >
-        {executionOutput}
-        {executionErrors && (
-          <span className="text-status-error">{executionErrors}</span>
+        {executionOutput && (
+          <pre className="m-0 whitespace-pre-wrap break-words px-2.5 pt-2.5 font-mono text-xs leading-relaxed text-ink">
+            {executionOutput}
+          </pre>
         )}
-        {!executionOutput && !executionErrors && (
-          <span className="text-ink-faint">
+        {parsedIssues.length > 0 && (
+          <div className="flex flex-col gap-px px-1.5 py-1.5">
+            {parsedIssues.map((issue, i) => (
+              <IssueRow key={`${issue.errorCode}-${issue.line}-${i}`} issue={issue} />
+            ))}
+          </div>
+        )}
+        {rawErrorText && (
+          <pre className="m-0 whitespace-pre-wrap break-words px-2.5 py-1.5 font-mono text-xs leading-relaxed text-status-error">
+            {rawErrorText}
+          </pre>
+        )}
+        {!executionOutput && !parsedIssues.length && !rawErrorText && (
+          <span className="block px-2.5 pt-2.5 text-xs font-mono text-ink-faint">
             Compile or generation messages will appear here.
           </span>
         )}
-      </pre>
+      </div>
     </div>
   )
 }
