@@ -53,7 +53,7 @@ afterEach(() => {
   })
   useEphemeralStore.setState({
     rightPanelView: 'diagram',
-    renderMode: 'editable',
+    renderMode: 'graphviz',
     compiling: false,
     generatedCode: '',
     generatedHtml: '',
@@ -90,19 +90,19 @@ describe('DiagramPanel', () => {
     const smartSvgView = screen.getByTestId('smart-svg-view')
     const switchControl = screen.getByRole('switch')
 
-    expect(umpleDiagram.getAttribute('data-editable')).toBe('true')
+    expect(umpleDiagram.getAttribute('data-editable')).toBe('false')
     expect(smartSvgView).toBeDefined()
-
-    fireEvent.click(switchControl)
-
-    expect(screen.getByTestId('umple-diagram').getAttribute('data-editable')).toBe('false')
-    expect(screen.getByTestId('smart-svg-view')).toBeDefined()
 
     fireEvent.click(switchControl)
 
     expect(screen.getByTestId('umple-diagram').getAttribute('data-editable')).toBe('true')
     expect(screen.getByTestId('smart-svg-view')).toBeDefined()
-    expect(rendererProps.umpleEditable).toEqual([true, false, true])
+
+    fireEvent.click(switchControl)
+
+    expect(screen.getByTestId('umple-diagram').getAttribute('data-editable')).toBe('false')
+    expect(screen.getByTestId('smart-svg-view')).toBeDefined()
+    expect(rendererProps.umpleEditable).toEqual([false, true, false])
   })
 
   it('does not show the class loading state unless a compile is active', () => {
