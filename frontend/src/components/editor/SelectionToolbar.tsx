@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 
 const TOOLBAR_WIDTH = 260
 const GAP = 8
+const SHOW_DELAY = 350
 
 export function SelectionToolbar() {
   const selection = useEphemeralStore((s) => s.selection)
@@ -14,13 +15,13 @@ export function SelectionToolbar() {
   const [stable, setStable] = useState(selection)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
-  // Debounce: only show after selection settles (avoids flicker during drag)
+  // Delay showing toolbar so accidental selections can be cancelled
   useEffect(() => {
     if (!selection) {
       setStable(null)
       return
     }
-    const id = setTimeout(() => setStable(selection), 150)
+    const id = setTimeout(() => setStable(selection), SHOW_DELAY)
     return () => clearTimeout(id)
   }, [selection])
 
