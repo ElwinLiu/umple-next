@@ -75,11 +75,7 @@ export function useModelFromURL() {
   useEffect(() => {
     if (!resolvedRef.current) return
 
-    // Don't overwrite task URLs or touch the URL during collab mode.
-    // Check the store directly — URL params may already have been modified
-    // by other effects in the same render cycle.
-    const params = new URLSearchParams(window.location.search)
-    if (params.has('task')) return
+    // Don't touch the URL during collab mode.
     if (useCollabStore.getState().isCollaborating) return
 
     const url = new URL(window.location.href)

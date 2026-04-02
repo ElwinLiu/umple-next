@@ -9,7 +9,7 @@ import { getViewForExampleCategory } from '../../constants/diagram'
 import {
   LayoutGrid, Workflow, GitBranch, Network,
   Code, Layers, Maximize2, Minimize2,
-  Terminal, ClipboardList, FileCode,
+  Terminal, FileCode,
   ChevronRight, ChevronLeft, BookOpen, FolderOpen,
 } from 'lucide-react'
 import {
@@ -40,7 +40,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 export function CommandPalette() {
   const {
     commandPaletteOpen, closeCommandPalette,
-    toggleTaskPanel, setDiagramOnly, diagramOnly, toggleOutputPanel,
+    setDiagramOnly, diagramOnly, toggleOutputPanel,
     setRenderMode, renderMode,
   } = useEphemeralStore()
   const { setViewMode } = useSessionStore()
@@ -232,15 +232,6 @@ export function CommandPalette() {
                 <Terminal />
                 Toggle Output Panel
                 <CommandShortcut>Ctrl+'</CommandShortcut>
-              </CommandItem>
-              <CommandItem
-                onSelect={() => {
-                  toggleTaskPanel()
-                  closeCommandPalette()
-                }}
-              >
-                <ClipboardList />
-                Task Panel
               </CommandItem>
             </CommandGroup>
 

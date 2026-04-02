@@ -40,7 +40,6 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 	generatedAssetH := handlers.NewGeneratedAssetHandler(store)
 	execProxy := execution.NewProxy(cfg.ExecutionURL)
 	executeH := handlers.NewExecuteHandler(pool, store, execProxy)
-	taskH := handlers.NewTaskHandler(store)
 	modelH := handlers.NewModelHandler(store)
 	aiProxyH := handlers.NewAIProxyHandler()
 
@@ -62,11 +61,6 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 		// Examples
 		r.Get("/examples", exampleH.List)
 		r.Get("/examples/{name}", exampleH.Get)
-
-		// Tasks
-		r.Post("/tasks", taskH.Create)
-		r.Get("/tasks/{id}", taskH.Get)
-		r.Post("/tasks/{id}/submit", taskH.Submit)
 
 		// AI provider proxy (browser → backend → provider)
 		r.Route("/ai", aiProxyH.Routes())

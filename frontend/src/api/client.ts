@@ -1,7 +1,6 @@
 import type {
   CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse,
-  TaskCreateRequest, TaskCreateResponse, TaskResponse, TaskSubmitResponse, DiagramResponse,
-  GetModelResponse,
+  DiagramResponse, GetModelResponse,
 } from './types'
 
 const API_BASE = '/api'
@@ -55,25 +54,6 @@ export const api = {
     return request('/generate', {
       method: 'POST',
       body: JSON.stringify(req),
-    })
-  },
-
-  // Task endpoints
-  createTask(req: TaskCreateRequest): Promise<TaskCreateResponse> {
-    return request('/tasks', {
-      method: 'POST',
-      body: JSON.stringify(req),
-    })
-  },
-
-  getTask(id: string): Promise<TaskResponse> {
-    return request(`/tasks/${encodeURIComponent(id)}`)
-  },
-
-  submitTask(id: string, code: string): Promise<TaskSubmitResponse> {
-    return request(`/tasks/${encodeURIComponent(id)}/submit`, {
-      method: 'POST',
-      body: JSON.stringify({ code }),
     })
   },
 

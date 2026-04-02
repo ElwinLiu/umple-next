@@ -190,26 +190,3 @@ export interface GenerateResponse {
   iframeUrl?: string
   downloads?: GeneratedArtifact[]
 }
-
-// Task types
-export interface TaskCreateRequest {
-  title: string
-  description: string
-  code: string
-}
-
-export interface TaskCreateResponse {
-  id: string
-  url: string
-}
-
-export interface TaskResponse {
-  id: string
-  title: string
-  description: string
-  code: string
-}
-
-export interface TaskSubmitResponse {
-  status: string
-}

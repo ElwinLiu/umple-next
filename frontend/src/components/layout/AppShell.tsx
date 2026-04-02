@@ -3,7 +3,6 @@ import { Sidebar } from './Sidebar'
 import { EditorPanel } from '../editor/EditorPanel'
 import { OutputPanel, CompileStatusStrip } from '../editor/ExecutionPanel'
 import { DiagramPanel } from '../diagram/DiagramPanel'
-import { TaskPanel } from '../task/TaskPanel'
 import { CommandPalette } from '../command/CommandPalette'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useCompiler } from '../../hooks/useCompiler'
@@ -18,7 +17,6 @@ export function AppShell() {
   const showEditor = useEphemeralStore((s) => s.showEditor)
   const diagramOnly = useEphemeralStore((s) => s.diagramOnly)
   const outputView = useEphemeralStore((s) => s.outputView)
-  const showTaskPanel = useEphemeralStore((s) => s.showTaskPanel)
   useCompiler()
   useModelFromURL()
   useCollab()
@@ -76,7 +74,6 @@ export function AppShell() {
 
         </div>
 
-        {showTaskPanel && <TaskPanel />}
         <CommandPalette />
         <WelcomeDialog />
         <OnboardingTour />

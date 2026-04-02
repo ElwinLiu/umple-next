@@ -83,7 +83,6 @@ type OutputView = 'hidden' | 'strip' | 'panel'
 interface EphemeralState {
   // Layout
   showEditor: boolean
-  showTaskPanel: boolean
   outputView: OutputView
   commandPaletteOpen: boolean
   diagramOnly: boolean
@@ -133,7 +132,6 @@ interface EphemeralState {
 
   // Layout actions
   toggleEditor: () => void
-  toggleTaskPanel: () => void
   setOutputView: (view: OutputView) => void
   toggleOutputPanel: () => void
   openCommandPalette: () => void
@@ -172,7 +170,6 @@ interface EphemeralState {
 export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   // Layout
   showEditor: true,
-  showTaskPanel: false,
   outputView: 'hidden',
   commandPaletteOpen: false,
   diagramOnly: false,
@@ -225,7 +222,6 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
 
   // Layout actions
   toggleEditor: () => set((s) => ({ showEditor: !s.showEditor })),
-  toggleTaskPanel: () => set((s) => ({ showTaskPanel: !s.showTaskPanel })),
   setOutputView: (outputView) => set({ outputView }),
   toggleOutputPanel: () => set((s) => ({ outputView: s.outputView === 'hidden' ? 'panel' : 'hidden' })),
   openCommandPalette: () => set({ commandPaletteOpen: true }),

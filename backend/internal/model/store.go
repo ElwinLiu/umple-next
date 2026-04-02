@@ -35,9 +35,6 @@ func NewStore(root string) (*Store, error) {
 	if err := os.MkdirAll(root, 0755); err != nil {
 		return nil, fmt.Errorf("create store root: %w", err)
 	}
-	if err := os.MkdirAll(filepath.Join(root, "tasks"), 0755); err != nil {
-		return nil, fmt.Errorf("create tasks dir: %w", err)
-	}
 	return &Store{root: root}, nil
 }
 
@@ -79,40 +76,6 @@ func (s *Store) CleanupLoop(interval time.Duration) {
 	for range ticker.C {
 		s.cleanup(maxAge)
 	}
-}
-
-// CreateTask creates a new model in the tasks/ subdirectory.
-func (s *Store) CreateTask(code string) (*Model, error) {
-	id := "task" + randomID()
-	dir := filepath.Join(s.root, "tasks", id)
-	if err := os.MkdirAll(dir, 0755); err != nil {
-		return nil, fmt.Errorf("create task dir: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(dir, "model.ump"), []byte(code), 0644); err != nil {
-		return nil, err
-	}
-	return &Model{ID: id, Code: code}, nil
-}
-
-// GetTask loads a model from the tasks/ subdirectory.
-func (s *Store) GetTask(id string) (*Model, error) {
-	id = sanitizeID(id)
-	dir := filepath.Join(s.root, "tasks", id)
-	data, err := os.ReadFile(filepath.Join(dir, "model.ump"))
-	if err != nil {
-		return nil, fmt.Errorf("task not found: %s", id)
-	}
-	return &Model{ID: id, Code: string(data)}, nil
-}
-
-// UpdateTask writes new code to an existing task.
-func (s *Store) UpdateTask(id, code string) error {
-	id = sanitizeID(id)
-	dir := filepath.Join(s.root, "tasks", id)
-	if _, err := os.Stat(dir); os.IsNotExist(err) {
-		return fmt.Errorf("task not found: %s", id)
-	}
-	return os.WriteFile(filepath.Join(dir, "model.ump"), []byte(code), 0644)
 }
 
 // SaveTabs writes tab metadata to {modelDir}/tabs.json.
