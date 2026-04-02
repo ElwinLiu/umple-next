@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { toast } from 'sonner'
 import { useSessionStore, type DiagramView } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
 import { urlModelResolved } from './useModelFromURL'
@@ -12,6 +13,12 @@ import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
 import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../api/types'
 
+/** Diagram-only messages that are transient (not real compilation errors).
+ *  Matched via exact equality (case-insensitive, trimmed) to avoid
+ *  accidentally swallowing unrelated errors that contain a substring. */
+const DIAGRAM_TOAST_MESSAGES = new Set([
+  'no diagram output generated',
+])
 
 const DEBOUNCE_MS = 1500
 
@@ -23,6 +30,20 @@ function getDiagramRequestParams(view: DiagramView, isDark: boolean) {
     suboptions: buildSuboptions(s, view, isDark),
     needsLayout: view === 'class',
   }
+}
+
+/** Split an error string into real panel errors and transient toast messages. */
+function splitDiagramToasts(errors: string): { panelErrors: string; toastMessages: string[] } {
+  const toastMessages: string[] = []
+  const remaining = errors.split('\n').filter((line) => {
+    const trimmed = line.trim()
+    if (DIAGRAM_TOAST_MESSAGES.has(trimmed.toLowerCase())) {
+      toastMessages.push(trimmed)
+      return false
+    }
+    return true
+  })
+  return { panelErrors: remaining.join('\n').trim(), toastMessages }
 }
 
 /** Core compile + diagram refresh. Shared by auto-compile and manual compile.
@@ -75,7 +96,15 @@ export async function compileAndRefresh(
     const storedLayout: StoredLayoutMetadata | null = res.storedLayout ?? null
 
     if (res.errors) {
-      setExecutionOutput('', res.errors)
+      // Separate transient diagram messages (shown as toasts) from real
+      // compilation errors (shown in the output panel).
+      const { panelErrors, toastMessages } = splitDiagramToasts(res.errors)
+      for (const msg of toastMessages) toast.info(msg, { id: 'diagram-info' })
+      if (panelErrors) {
+        setExecutionOutput('', panelErrors)
+      } else {
+        success = true
+      }
     } else {
       success = true
     }
@@ -206,12 +235,18 @@ export function useCompiler() {
         useSessionStore.getState().setUmpleModel(lastModelRef.current, res.layout ?? null, res.storedLayout ?? null)
       }
       if (res.errors) {
-        useEphemeralStore.getState().setExecutionOutput('', res.errors)
+        const { panelErrors, toastMessages } = splitDiagramToasts(res.errors)
+        for (const msg of toastMessages) toast.info(msg, { id: 'diagram-info' })
+        if (panelErrors) useEphemeralStore.getState().setExecutionOutput('', panelErrors)
       }
     } catch (err: any) {
-      if (err.name !== 'AbortError') {
+      if (err.name === 'AbortError') return
+      const msg = err.message || ''
+      if (DIAGRAM_TOAST_MESSAGES.has(msg.toLowerCase().trim())) {
+        toast.info(msg, { id: 'diagram-info' })
+      } else {
         // Don't overwrite compile errors — diagram fetch is secondary
-        console.warn('Diagram SVG fetch failed:', err.message)
+        console.warn('Diagram SVG fetch failed:', msg)
       }
     }
   }

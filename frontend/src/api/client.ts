@@ -57,11 +57,18 @@ export const api = {
     })
   },
 
-  sync(req: { action: string; modelId: string; params: Record<string, string> }): Promise<{ code: string; result: string; errors?: string; modelId?: string }> {
-    return request('/sync', {
+  async sync(req: { action: string; modelId: string; params: Record<string, string> }): Promise<{ code: string; result: string; errors?: string; modelId?: string; rejected?: boolean; noEffect?: boolean }> {
+    const res = await fetch(`${API_BASE}/sync`, {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(req),
     })
+    // 422 carries a valid SyncResponse with rejected: true — parse it normally.
+    if (!res.ok && res.status !== 422) {
+      const err = await res.json().catch(() => ({ error: res.statusText }))
+      throw new Error(err.error || res.statusText)
+    }
+    return res.json()
   },
 
   diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[]; needsLayout?: boolean }): Promise<DiagramResponse> {
