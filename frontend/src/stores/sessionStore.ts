@@ -46,17 +46,7 @@ export interface ChatMessage {
 
 const MAX_UNDO = 50
 
-const DEFAULT_CODE = `class Student {
-  name;
-  id;
-  1 -- * Course;
-}
-
-class Course {
-  title;
-  code;
-}
-`
+const DEFAULT_CODE = ''
 
 function nextTabNumber(tabs: Tab[]): number {
   const used = new Set(
