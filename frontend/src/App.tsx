@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { AppShell } from './components/layout/AppShell'
 import { usePreferencesStore } from './stores/preferencesStore'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { Toaster } from '@/components/ui/sonner'
 
 function useThemeEffect() {
   const theme = usePreferencesStore((s) => s.theme)
@@ -28,6 +29,7 @@ export default function App() {
   return (
     <TooltipProvider>
       <AppShell />
+      <Toaster />
     </TooltipProvider>
   )
 }

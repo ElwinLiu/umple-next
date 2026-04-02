@@ -3,6 +3,7 @@ package handlers
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -33,10 +34,12 @@ type SyncRequest struct {
 }
 
 type SyncResponse struct {
-	Code    string `json:"code"`
-	Result  string `json:"result"`
-	Errors  string `json:"errors,omitempty"`
-	ModelID string `json:"modelId"`
+	Code     string `json:"code"`
+	Result   string `json:"result"`
+	Errors   string `json:"errors,omitempty"`
+	ModelID  string `json:"modelId"`
+	Rejected bool   `json:"rejected,omitempty"`
+	NoEffect bool   `json:"noEffect,omitempty"`
 }
 
 // Default dimensions for newly created classes (in pixels).
@@ -192,6 +195,23 @@ func (h *SyncHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Snapshot the file before mutating so we can roll back if the
+	// resulting model fails compilation (the "compilation gate").
+	// Position-only edits are exempt — they can never break the model.
+	var snapshot []byte
+	var snapshotCode string
+	needsGate := req.Action != "editPosition"
+	if needsGate {
+		var readErr error
+		snapshot, readErr = os.ReadFile(umpFile)
+		if readErr != nil {
+			log.Printf("sync: snapshot read failed, skipping gate: %v", readErr)
+			needsGate = false
+		} else {
+			snapshotCode = stripModelDelimiter(string(snapshot))
+		}
+	}
+
 	// umplesync.jar does not cascade-delete associations or
 	// generalizations when removing a class, so we must do it ourselves
 	// before issuing the removeClass command (matching the old frontend).
@@ -217,6 +237,12 @@ func (h *SyncHandler) Sync(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if isFatalSyncOutput(result.Output) {
+		// Restore snapshot on fatal error so the file stays valid.
+		if needsGate && snapshot != nil {
+			if wErr := os.WriteFile(umpFile, snapshot, 0o644); wErr != nil {
+				log.Printf("sync: failed to restore snapshot after fatal error: %v", wErr)
+			}
+		}
 		writeError(w, http.StatusBadRequest, strings.TrimSpace(result.Output))
 		return
 	}
@@ -244,21 +270,43 @@ func (h *SyncHandler) Sync(w http.ResponseWriter, r *http.Request) {
 	}
 	code := stripModelDelimiter(fullOutput)
 
-	// Sync succeeded — try to generate model JSON for the frontend.
-	// If the model has validation warnings the compiler may refuse to
-	// produce JSON; return what we have (the code) with an empty result
-	// so the frontend can still update and recompile.
+	// Compilation gate: verify that the mutated model still compiles
+	// into valid JSON.  If it doesn't, roll back to the snapshot and
+	// return the edit as rejected so the frontend does NOT update the
+	// code editor.
 	jsonModel, err := h.generateModelJSON(umpFile, dir)
+	if err != nil && needsGate && snapshot != nil {
+		// Restore the pre-sync file so backend stays consistent.
+		if wErr := os.WriteFile(umpFile, snapshot, 0o644); wErr != nil {
+			log.Printf("sync: failed to restore snapshot after rejected edit: %v", wErr)
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(w).Encode(SyncResponse{
+			Code:     snapshotCode,
+			Result:   "{}",
+			Errors:   err.Error(),
+			ModelID:  modelID,
+			Rejected: true,
+		})
+		return
+	}
 	if err != nil {
 		jsonModel = []byte("{}")
 	}
 
+	// Detect no-op: if a structural edit didn't change the code, flag it
+	// so the frontend can inform the user.
+	noEffect := needsGate && snapshot != nil && snapshotCode == code
+
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(SyncResponse{
-		Code:    code,
-		Result:  string(jsonModel),
-		Errors:  result.Errors,
-		ModelID: modelID,
+		Code:     code,
+		Result:   string(jsonModel),
+		Errors:   result.Errors,
+		ModelID:  modelID,
+		NoEffect: noEffect,
 	})
 }
 
