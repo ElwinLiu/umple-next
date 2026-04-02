@@ -34,6 +34,7 @@ export function useResizablePanel({
       dragStartY.current = e.clientY
       dragStartH.current = panelRef.current?.offsetHeight ?? height
       ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+      panelRef.current?.setAttribute('data-dragging', 'true')
     },
     [height],
   )
@@ -49,6 +50,7 @@ export function useResizablePanel({
         dragging.current = false
         foldedByDrag.current = true
         suppressClick.current = true
+        panelRef.current.removeAttribute('data-dragging')
         onFold()
         return
       }
@@ -60,11 +62,14 @@ export function useResizablePanel({
   )
 
   const onPointerUp = useCallback(() => {
+    panelRef.current?.removeAttribute('data-dragging')
     if (foldedByDrag.current) return
     if (!dragging.current) return
     dragging.current = false
     if (panelRef.current) {
-      setHeight(panelRef.current.offsetHeight)
+      const finalH = panelRef.current.offsetHeight
+      panelRef.current.style.height = `${finalH}px`
+      setHeight(finalH)
       onResize?.()
     }
   }, [onResize])
