@@ -10,6 +10,7 @@
   --color-brand: #8f001a;
   --color-brand-hover: #9c1c30;
   --color-brand-light: #fdf0f2;
+  --color-logo-gray: #636D77;
 
   /* Surfaces */
   --color-surface-0: #ffffff;
@@ -122,6 +123,7 @@
   --color-brand: #d95565;
   --color-brand-hover: #e06070;
   --color-brand-light: #3a1520;
+  --color-logo-gray: #8a9199;
 
   --color-surface-0: #1a1a1a;
   --color-surface-tab: #1f1f1f;

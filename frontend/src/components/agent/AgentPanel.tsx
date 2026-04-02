@@ -20,7 +20,8 @@ import { useDiffPreviewSync } from '@/ai/useDiffPreviewSync'
 import { useResizablePanel } from './useResizablePanel'
 import { InputBar } from './InputBar'
 import { MessageBubble } from './MessageBubble'
-import { AiSpinner } from './AiSpinner'
+import { UmpleSpinner } from '@/components/UmpleSpinner'
+import { SPINNER_VERBS } from '@/constants/spinnerVerbs'
 
 /* ── Constants ── */
 
@@ -83,6 +84,14 @@ function AgentPanel() {
 
   const isStreaming = status === 'submitted' || status === 'streaming'
   const canSend = input.trim().length > 0 && !isStreaming
+
+  // Pick a fresh verb each time streaming begins
+  const [spinnerVerb, setSpinnerVerb] = useState('')
+  useEffect(() => {
+    if (isStreaming) {
+      setSpinnerVerb(SPINNER_VERBS[Math.floor(Math.random() * SPINNER_VERBS.length)])
+    }
+  }, [isStreaming])
 
   const selectionBadge = selection
     ? selection.fromLine === selection.toLine
@@ -301,8 +310,9 @@ function AgentPanel() {
           ))}
 
           {isStreaming && (
-            <div className="px-2 py-1">
-              <AiSpinner className="text-sm" />
+            <div className="flex items-center gap-2 px-2 py-1.5">
+              <UmpleSpinner size={32} />
+              <span className="ai-spinner-text whitespace-nowrap text-sm">{spinnerVerb}…</span>
             </div>
           )}
 
