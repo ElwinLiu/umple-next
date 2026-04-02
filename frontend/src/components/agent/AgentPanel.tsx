@@ -3,6 +3,7 @@ import {
   useRef,
   useState,
   useEffect,
+  useLayoutEffect,
   useCallback,
 } from 'react'
 import {
@@ -127,12 +128,12 @@ function AgentPanel() {
     }
   }, [messages])
 
-  /* Scroll to bottom when the panel re-expands (scroll container remounts) */
-  useEffect(() => {
-    if (expanded && messages.length > 0) {
-      requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'instant' })
-      })
+  /* Scroll to bottom when the panel re-expands (scroll container remounts) —
+     useLayoutEffect + direct scrollTop fires before paint so the user never
+     sees the scroll container at the wrong position. */
+  useLayoutEffect(() => {
+    if (expanded && messages.length > 0 && scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
     }
   }, [expanded]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -229,7 +230,7 @@ function AgentPanel() {
   return (
     <div
       ref={panelRef}
-      className="absolute bottom-2 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 flex-col rounded-2xl border border-border bg-surface-0 shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.4),0_6px_12px_rgba(0,0,0,0.2)] animate-in slide-in-from-bottom-4 duration-200"
+      className="absolute bottom-2 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 flex-col rounded-t-3xl rounded-b-4xl border border-border bg-surface-0 shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.4),0_6px_12px_rgba(0,0,0,0.2)] data-[dragging]:!transition-none"
       style={{ height }}
       data-testid="agent-panel"
     >
