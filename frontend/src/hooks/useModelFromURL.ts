@@ -28,12 +28,17 @@ export function useModelFromURL() {
   // Until then, don't let the sessionStorage modelId overwrite the URL.
   const resolvedRef = useRef(!initialUrlModelId)
 
-  // Load model from URL on mount
+  // Load model from URL on mount.
+  // AbortController ensures React StrictMode's double-mount doesn't fire two
+  // fetches that each bump tabsVersion and trigger duplicate compilations.
   useEffect(() => {
     if (!initialUrlModelId) return
 
-    api.getModel(initialUrlModelId)
+    const abort = new AbortController()
+
+    api.getModel(initialUrlModelId, abort.signal)
       .then((res) => {
+        if (abort.signal.aborted) return
         if (res.tabs?.length) {
           restoreTabs(res.tabs, res.activeTabId ?? res.tabs[0].id)
         } else {
@@ -41,7 +46,8 @@ export function useModelFromURL() {
         }
         setModelId(res.modelId)
       })
-      .catch(() => {
+      .catch((err) => {
+        if (abort.signal.aborted || err.name === 'AbortError') return
         // Model not found or expired — remove the stale param
         const url = new URL(window.location.href)
         url.searchParams.delete('model')
@@ -54,12 +60,15 @@ export function useModelFromURL() {
         }))
       })
       .finally(() => {
+        if (abort.signal.aborted) return
         urlModelResolved = true
         resolvedRef.current = true
         // Force the compile effect to re-fire now that urlModelResolved is true,
         // even if code/modelId didn't change (e.g., sessionStorage matches server).
         useSessionStore.setState((s) => ({ tabsVersion: s.tabsVersion + 1 }))
       })
+
+    return () => abort.abort()
   }, [setCode, setModelId, restoreTabs])
 
   // Sync modelId to URL whenever it changes

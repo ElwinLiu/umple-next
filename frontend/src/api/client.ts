@@ -43,8 +43,8 @@ export const api = {
     return request('/examples')
   },
 
-  getModel(id: string): Promise<GetModelResponse> {
-    return request(`/models/${encodeURIComponent(id)}`)
+  getModel(id: string, signal?: AbortSignal): Promise<GetModelResponse> {
+    return request(`/models/${encodeURIComponent(id)}`, { signal })
   },
 
   getExample(name: string): Promise<{ name: string; code: string; modelId?: string }> {

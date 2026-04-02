@@ -128,7 +128,7 @@ export function useCompiler() {
   const initialCompileRef = useRef(true)
   useEffect(() => { mountedRef.current = true }, [])
 
-  // Main compile effect — debounced on code/modelId changes.
+  // Main compile effect — debounced on code changes.
   // Diagram-sync edits set syncPending, which skips the debounce so the
   // diagram refreshes immediately after a user interaction.
   useEffect(() => {
@@ -169,7 +169,11 @@ export function useCompiler() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-  }, [code, modelId, tabsVersion])
+    // modelId intentionally excluded — compileAndRefresh reads it from the
+    // store, and every legitimate modelId change is accompanied by a code or
+    // tabsVersion change.  Including it here caused a feedback loop: first
+    // compile assigns a modelId → dep changes → second (redundant) compile.
+  }, [code, tabsVersion])
 
   // When viewMode, display preferences, or dark theme change, re-fetch diagram only
   useEffect(() => {
