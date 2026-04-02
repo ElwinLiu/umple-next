@@ -242,12 +242,25 @@ test('loading a composite structure example switches to structure view and rende
     </svg>
   `
 
+  // Track diagram types from both compile and diagram endpoints — when the
+  // editor starts empty the first compile carries the diagram request inline.
+  await page.route('**/api/compile', async (route) => {
+    const body = route.request().postDataJSON() as { diagramType?: string }
+    if (body.diagramType) diagramTypes.push(body.diagramType)
+    const isStructure = body.diagramType === 'StructureDiagram'
+    await route.fulfill({
+      json: {
+        modelId: 'playwright-model',
+        result: JSON.stringify(bankingModel),
+        svg: isStructure ? '' : '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>',
+        html: isStructure ? structureHtml : undefined,
+      },
+    })
+  })
+
   await page.route('**/api/diagram', async (route) => {
     const body = route.request().postDataJSON() as { diagramType?: string }
-    if (body.diagramType) {
-      diagramTypes.push(body.diagramType)
-    }
-
+    if (body.diagramType) diagramTypes.push(body.diagramType)
     await route.fulfill({
       json: {
         html: body.diagramType === 'StructureDiagram' ? structureHtml : undefined,
