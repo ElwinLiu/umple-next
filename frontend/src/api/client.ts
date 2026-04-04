@@ -1,6 +1,6 @@
 import type {
   CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse,
-  DiagramResponse, GetModelResponse,
+  DiagramResponse, GetModelResponse, CrudSchemaResponse,
 } from './types'
 
 const API_BASE = '/api'
@@ -89,6 +89,20 @@ export const api = {
     return request('/execute', {
       method: 'POST',
       body: JSON.stringify(req),
+    })
+  },
+
+  crudSchema(req: { code: string; modelId?: string }): Promise<CrudSchemaResponse> {
+    return request('/crud/schema', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    })
+  },
+
+  crudDiagram(dot: string): Promise<{ svg: string; error?: string }> {
+    return request('/crud/diagram', {
+      method: 'POST',
+      body: JSON.stringify({ dot }),
     })
   },
 }

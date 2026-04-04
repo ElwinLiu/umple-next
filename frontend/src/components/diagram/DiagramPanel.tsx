@@ -6,6 +6,7 @@ import { SmartSvgView } from './SmartSvgView'
 import { HtmlDiagramView } from './HtmlDiagramView'
 import { CanvasToolbar } from './CanvasToolbar'
 import { GeneratedOutputView } from '../generation/GeneratedOutputView'
+import { ObjectExplorer } from '../crud/ObjectExplorer'
 import { CanvasBanner } from '../layout/CanvasBanner'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
@@ -157,7 +158,7 @@ export function DiagramPanel() {
         </div>
 
         {generationRequested && (
-          <div className={cn('absolute inset-0 bg-surface-0 flex flex-col', rightPanelView !== 'generated' && 'invisible')}>
+          <div className={cn('absolute inset-0 bg-surface-0 flex flex-col z-20', rightPanelView !== 'generated' && 'invisible')}>
             {generatedError && (
               <ErrorBanner className="py-1.5 rounded-none border-0 border-b border-border shrink-0">
                 {generatedError}
@@ -189,6 +190,12 @@ export function DiagramPanel() {
                 No output returned — try a different model or language
               </div>
             )}
+          </div>
+        )}
+
+        {rightPanelView === 'objects' && (
+          <div className="absolute inset-0 bg-surface-0 z-20">
+            <ObjectExplorer />
           </div>
         )}
       </div>

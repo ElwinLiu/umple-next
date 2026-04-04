@@ -86,7 +86,7 @@ interface EphemeralState {
   outputView: OutputView
   commandPaletteOpen: boolean
   diagramOnly: boolean
-  rightPanelView: 'diagram' | 'generated'
+  rightPanelView: 'diagram' | 'generated' | 'objects'
 
   // Execution
   executing: boolean
@@ -137,7 +137,7 @@ interface EphemeralState {
   openCommandPalette: () => void
   closeCommandPalette: () => void
   setDiagramOnly: (v: boolean) => void
-  setRightPanelView: (view: 'diagram' | 'generated') => void
+  setRightPanelView: (view: 'diagram' | 'generated' | 'objects') => void
 
   // Execution actions
   setExecuting: (executing: boolean) => void

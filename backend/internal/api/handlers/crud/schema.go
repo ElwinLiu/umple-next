@@ -1,9 +1,29 @@
 package crud
 
 import (
+	"encoding/json"
 	"strconv"
 	"strings"
 )
+
+// FlexBool handles JSON values that may be a boolean or a string ("true"/"false").
+// The Umple compiler emits isAbstract as a string, not a native boolean.
+type FlexBool bool
+
+func (fb *FlexBool) UnmarshalJSON(data []byte) error {
+	var b bool
+	if err := json.Unmarshal(data, &b); err == nil {
+		*fb = FlexBool(b)
+		return nil
+	}
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		*fb = FlexBool(s == "true")
+		return nil
+	}
+	*fb = false
+	return nil
+}
 
 // RawModel is the top-level structure of model.json produced by the Umple compiler.
 type RawModel struct {
@@ -17,7 +37,7 @@ type RawClass struct {
 	Name                  string                  `json:"name"`
 	Attributes            []RawAttribute          `json:"attributes"`
 	Methods               []RawMethod             `json:"methods"`
-	IsAbstract            bool                    `json:"isAbstract"`
+	IsAbstract            FlexBool                `json:"isAbstract"`
 	ExtendsClass          string                  `json:"extendsClass"`
 	ImplementedInterfaces []string                `json:"implementedInterfaces"`
 	Enums                 []map[string][]string   `json:"enums"`
@@ -80,11 +100,13 @@ type CrudAttribute struct {
 }
 
 type CrudAssociation struct {
-	TargetClass   string       `json:"targetClass"`
-	RoleName      string       `json:"roleName"`
-	Multiplicity  Multiplicity `json:"multiplicity"`
-	IsNavigable   bool         `json:"isNavigable"`
-	IsComposition bool         `json:"isComposition"`
+	TargetClass     string       `json:"targetClass"`
+	RoleName        string       `json:"roleName"`
+	ReverseRoleName string       `json:"reverseRoleName"`
+	Multiplicity    Multiplicity `json:"multiplicity"`
+	IsNavigable     bool         `json:"isNavigable"`
+	IsComposition   bool         `json:"isComposition"`
+	IsReflexive     bool         `json:"isReflexive,omitempty"`
 }
 
 type Multiplicity struct {
@@ -205,25 +227,31 @@ func ResolveAssociations(className string, associations []RawAssociation) []Crud
 			continue
 		}
 
+		isReflexive := a.ClassOneID == a.ClassTwoID
+
 		// When class appears as classOne, the target is classTwo
 		if isClassOne {
 			result = append(result, CrudAssociation{
-				TargetClass:   a.ClassTwoID,
-				RoleName:      a.RoleTwo,
-				Multiplicity:  ParseMultiplicity(a.MultiplicityTwo),
-				IsNavigable:   a.IsRightNavigable == "true",
-				IsComposition: a.IsRightComposition == "true",
+				TargetClass:     a.ClassTwoID,
+				RoleName:        a.RoleTwo,
+				ReverseRoleName: a.RoleOne,
+				Multiplicity:    ParseMultiplicity(a.MultiplicityTwo),
+				IsNavigable:     a.IsRightNavigable == "true",
+				IsComposition:   a.IsRightComposition == "true",
+				IsReflexive:     isReflexive,
 			})
 		}
 
 		// When class appears as classTwo, the target is classOne
 		if isClassTwo {
 			result = append(result, CrudAssociation{
-				TargetClass:   a.ClassOneID,
-				RoleName:      a.RoleOne,
-				Multiplicity:  ParseMultiplicity(a.MultiplicityOne),
-				IsNavigable:   a.IsLeftNavigable == "true",
-				IsComposition: a.IsLeftComposition == "true",
+				TargetClass:     a.ClassOneID,
+				RoleName:        a.RoleOne,
+				ReverseRoleName: a.RoleTwo,
+				Multiplicity:    ParseMultiplicity(a.MultiplicityOne),
+				IsNavigable:     a.IsLeftNavigable == "true",
+				IsComposition:   a.IsLeftComposition == "true",
+				IsReflexive:     isReflexive,
 			})
 		}
 	}
@@ -286,7 +314,7 @@ func TransformSchema(raw RawModel) CrudSchema {
 
 		classes = append(classes, CrudClass{
 			Name:         cls.Name,
-			IsAbstract:   cls.IsAbstract,
+			IsAbstract:   bool(cls.IsAbstract),
 			ExtendsClass: cls.ExtendsClass,
 			Attributes:   attrs,
 			Associations: assocs,

@@ -1,8 +1,52 @@
 package crud
 
 import (
+	"encoding/json"
 	"testing"
 )
+
+func TestFlexBool(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		want  bool
+	}{
+		{"string true", `{"isAbstract":"true"}`, true},
+		{"string false", `{"isAbstract":"false"}`, false},
+		{"bool true", `{"isAbstract":true}`, true},
+		{"bool false", `{"isAbstract":false}`, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var c RawClass
+			if err := json.Unmarshal([]byte(tt.input), &c); err != nil {
+				t.Fatalf("unmarshal error: %v", err)
+			}
+			if bool(c.IsAbstract) != tt.want {
+				t.Errorf("got %v, want %v", c.IsAbstract, tt.want)
+			}
+		})
+	}
+}
+
+func TestRawModelUnmarshal(t *testing.T) {
+	// Real compiler output (abbreviated)
+	input := `{"umpleClasses":[{"name":"Student","isAbstract":"false","attributes":[{"name":"name","type":"String"}],"methods":[],"enums":[]}],"umpleAssociations":[],"globalEnums":[]}`
+	var m RawModel
+	if err := json.Unmarshal([]byte(input), &m); err != nil {
+		t.Fatalf("unmarshal error: %v", err)
+	}
+	if len(m.UmpleClasses) != 1 {
+		t.Fatalf("expected 1 class, got %d", len(m.UmpleClasses))
+	}
+	if m.UmpleClasses[0].Name != "Student" {
+		t.Errorf("name = %q, want Student", m.UmpleClasses[0].Name)
+	}
+	if bool(m.UmpleClasses[0].IsAbstract) != false {
+		t.Error("expected isAbstract = false")
+	}
+}
 
 func TestParseMultiplicity(t *testing.T) {
 	tests := []struct {
@@ -259,11 +303,17 @@ func TestResolveAssociations(t *testing.T) {
 		if a.RoleName != "department" {
 			t.Errorf("RoleName = %q, want department", a.RoleName)
 		}
+		if a.ReverseRoleName != "employees" {
+			t.Errorf("ReverseRoleName = %q, want employees", a.ReverseRoleName)
+		}
 		if a.Multiplicity.Min != 1 || a.Multiplicity.Max != 1 {
 			t.Errorf("Multiplicity = %+v, want {1, 1}", a.Multiplicity)
 		}
 		if !a.IsNavigable {
 			t.Error("expected navigable")
+		}
+		if a.IsReflexive {
+			t.Error("Employee->Department should not be reflexive")
 		}
 	})
 
@@ -309,6 +359,22 @@ func TestResolveAssociations(t *testing.T) {
 		got := ResolveAssociations("Employee", selfAssoc)
 		if len(got) != 2 {
 			t.Fatalf("self-ref: got %d associations, want 2", len(got))
+		}
+		for _, a := range got {
+			if !a.IsReflexive {
+				t.Errorf("self-ref association %q should be reflexive", a.RoleName)
+			}
+		}
+		// Verify reverse role names are cross-linked
+		roles := map[string]string{}
+		for _, a := range got {
+			roles[a.RoleName] = a.ReverseRoleName
+		}
+		if roles["reports"] != "manager" {
+			t.Errorf("reports reverse = %q, want manager", roles["reports"])
+		}
+		if roles["manager"] != "reports" {
+			t.Errorf("manager reverse = %q, want reports", roles["manager"])
 		}
 	})
 
@@ -433,7 +499,7 @@ func TestTransformSchema(t *testing.T) {
 	t.Run("abstract class marked", func(t *testing.T) {
 		raw := RawModel{
 			UmpleClasses: []RawClass{
-				{Name: "Shape", IsAbstract: true},
+				{Name: "Shape", IsAbstract: FlexBool(true)},
 			},
 		}
 		schema := TransformSchema(raw)
