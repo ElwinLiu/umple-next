@@ -36,6 +36,18 @@ export function CanvasBanner() {
   const errorCount = useEphemeralStore((s) => s.outputErrorCount)
   const handleGenerate = useGenerate()
 
+  // Track which canvas view (diagram or objects) was last active
+  const lastCanvasRef = useRef<'diagram' | 'objects'>('diagram')
+  useEffect(() => {
+    if (rightPanelView === 'diagram' || rightPanelView === 'objects') {
+      lastCanvasRef.current = rightPanelView
+    }
+  }, [rightPanelView])
+  const lastCanvasView = (rightPanelView === 'diagram' || rightPanelView === 'objects')
+    ? rightPanelView
+    : lastCanvasRef.current
+  const canvasLabel = lastCanvasView === 'objects' ? 'Objects' : 'Diagram'
+
   // Compile success micro-interaction
   const prevCompilingRef = useRef(compiling)
   const [justCompiled, setJustCompiled] = useState(false)
@@ -59,7 +71,11 @@ export function CanvasBanner() {
       if ((e.metaKey || e.ctrlKey) && e.key === '1') {
         e.preventDefault()
         e.stopPropagation()
-        useEphemeralStore.getState().setRightPanelView('diagram')
+        // Ctrl+1 returns to last canvas view (diagram or objects)
+        const state = useEphemeralStore.getState()
+        if (state.rightPanelView === 'generated') {
+          state.setRightPanelView(lastCanvasRef.current)
+        }
       }
       if ((e.metaKey || e.ctrlKey) && e.key === '2') {
         if (useEphemeralStore.getState().generationRequested) {
@@ -67,6 +83,12 @@ export function CanvasBanner() {
           e.stopPropagation()
           useEphemeralStore.getState().setRightPanelView('generated')
         }
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === '3') {
+        e.preventDefault()
+        e.stopPropagation()
+        // Ctrl+3 switches to objects view
+        useEphemeralStore.getState().setRightPanelView('objects')
       }
       if ((e.metaKey || e.ctrlKey) && e.key === "'") {
         e.preventDefault()
@@ -135,14 +157,44 @@ export function CanvasBanner() {
       </div>
 
       <div className="flex items-center justify-center gap-0.5 min-w-0 overflow-hidden">
-        <Tip content="Diagram (Ctrl+1)" side="bottom">
-          <button
-            onClick={() => setRightPanelView('diagram')}
-            className={cn(lineTabClasses({ active: rightPanelView === 'diagram' }), 'text-xs px-2.5 py-1 shrink-0')}
-          >
-            Diagram
-          </button>
-        </Tip>
+        <div className="flex items-center">
+          <Tip content={`${canvasLabel} (Ctrl+1)`} side="bottom">
+            <button
+              onClick={() => {
+                if (rightPanelView === 'generated') {
+                  setRightPanelView(lastCanvasView)
+                }
+              }}
+              className={cn(lineTabClasses({ active: rightPanelView === 'diagram' || rightPanelView === 'objects' }), 'text-xs px-2.5 py-1 shrink-0')}
+            >
+              {canvasLabel}
+            </button>
+          </Tip>
+          <DropdownMenu>
+            <Tip content="Switch canvas view" side="bottom">
+              <DropdownMenuTrigger
+                className="px-0.5 py-0.5 text-xs transition-colors cursor-pointer outline-none text-ink-faint hover:text-ink-muted"
+                aria-label="Switch canvas view"
+              >
+                <ChevronDown className="size-3" />
+              </DropdownMenuTrigger>
+            </Tip>
+            <DropdownMenuContent align="start" className="w-36">
+              <DropdownMenuItem
+                onSelect={() => setRightPanelView('diagram')}
+                className={cn('text-xs', rightPanelView === 'diagram' && 'bg-brand-light text-brand font-semibold')}
+              >
+                Diagram
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => setRightPanelView('objects')}
+                className={cn('text-xs', rightPanelView === 'objects' && 'bg-brand-light text-brand font-semibold')}
+              >
+                Objects
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
         {generationRequested && (
           <div className="flex items-center min-w-0">
             <Tip content="Generated code (Ctrl+2)" side="bottom">

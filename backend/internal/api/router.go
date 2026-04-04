@@ -43,6 +43,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 	modelH := handlers.NewModelHandler(store)
 	aiProxyH := handlers.NewAIProxyHandler()
 	crudSchemaH := handlers.NewCrudSchemaHandler(pool, store)
+	crudDiagramH := handlers.NewCrudDiagramHandler()
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", healthH.Health)
@@ -56,6 +57,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 		r.Post("/execute", executeH.Execute)
 		r.Get("/generated/{modelId}/*", generatedAssetH.Serve)
 		r.Post("/crud/schema", crudSchemaH.Schema)
+		r.Post("/crud/diagram", crudDiagramH.Render)
 
 		// Models
 		r.Get("/models/{id}", modelH.Get)

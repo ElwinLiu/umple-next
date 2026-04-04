@@ -190,3 +190,53 @@ export interface GenerateResponse {
   iframeUrl?: string
   downloads?: GeneratedArtifact[]
 }
+
+// CRUD schema types (from POST /api/crud/schema)
+
+export interface CrudSchemaResponse {
+  schema: CrudSchema
+  errors?: string
+  modelId: string
+}
+
+export interface CrudSchema {
+  classes: CrudClass[]
+  enums: CrudEnum[]
+}
+
+export interface CrudClass {
+  name: string
+  isAbstract: boolean
+  extendsClass?: string
+  attributes: CrudAttribute[]
+  associations: CrudAssociation[]
+}
+
+export interface CrudAttribute {
+  name: string
+  type: string
+  typeKind: 'primitive' | 'enum' | 'class'
+  isInherited: boolean
+  inheritedFrom?: string
+}
+
+export interface CrudAssociation {
+  targetClass: string
+  roleName: string
+  reverseRoleName: string
+  multiplicity: CrudMultiplicity
+  isNavigable: boolean
+  isComposition: boolean
+  isReflexive?: boolean
+}
+
+export interface CrudMultiplicity {
+  min: number
+  max: number // -1 means unbounded
+  raw: string
+}
+
+export interface CrudEnum {
+  name: string
+  values: string[]
+}
