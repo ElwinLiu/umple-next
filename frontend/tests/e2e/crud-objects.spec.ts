@@ -1,5 +1,72 @@
 import { test, expect } from '@playwright/test'
 
+const compileResult = {
+  umpleClasses: [
+    { name: 'Student', attributes: [{ name: 'name', type: '' }, { name: 'age', type: 'Integer' }], methods: [] },
+    { name: 'Course', attributes: [{ name: 'title', type: '' }], methods: [] },
+  ],
+  umpleAssociations: [],
+}
+
+const schemaResponse = {
+  modelId: 'playwright-model',
+  schema: {
+    classes: [
+      {
+        name: 'Student',
+        isAbstract: false,
+        attributes: [
+          { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+          { name: 'age', type: 'Integer', typeKind: 'primitive', isInherited: false },
+        ],
+        associations: [],
+      },
+      {
+        name: 'Course',
+        isAbstract: false,
+        attributes: [
+          { name: 'title', type: 'String', typeKind: 'primitive', isInherited: false },
+        ],
+        associations: [],
+      },
+    ],
+    enums: [],
+  },
+}
+
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('umple-preferences-v1', JSON.stringify({
+      state: { hasSeenWelcome: true },
+      version: 0,
+    }))
+  })
+
+  await page.route('**/api/examples', async (route) => {
+    await route.fulfill({ json: [] })
+  })
+
+  await page.route('**/api/compile', async (route) => {
+    await route.fulfill({
+      json: {
+        modelId: 'playwright-model',
+        result: JSON.stringify(compileResult),
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>',
+      },
+    })
+  })
+
+  await page.route('**/api/crud/schema', async (route) => {
+    await route.fulfill({ json: schemaResponse })
+  })
+
+  await page.route('**/api/crud/diagram', async (route) => {
+    await route.fulfill({
+      json: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>' },
+    })
+  })
+})
+
 test('Objects tab loads schema after compiling an example', async ({ page }) => {
   const errors: string[] = []
   page.on('console', msg => {
@@ -9,12 +76,6 @@ test('Objects tab loads schema after compiling an example', async ({ page }) => 
 
   await page.goto('/')
   await page.waitForSelector('[data-testid="diagram-panel"]', { timeout: 10000 })
-
-  // Dismiss welcome dialog if present
-  const skipBtn = page.getByText("Skip, I'll explore on my own")
-  if (await skipBtn.isVisible({ timeout: 2000 }).catch(() => false)) {
-    await skipBtn.click()
-  }
 
   // Type Umple code
   const editor = page.locator('.cm-content')
@@ -42,9 +103,9 @@ test('Objects tab loads schema after compiling an example', async ({ page }) => 
   await objectsItem.click()
   await schemaPromise
 
-  // Verify classes appear in the Objects view
-  await expect(page.getByText('Student')).toBeVisible({ timeout: 5000 })
-  await expect(page.getByText('Course')).toBeVisible({ timeout: 5000 })
+  // Verify classes appear in the Objects class list
+  await expect(page.getByRole('button', { name: 'Student 0' })).toBeVisible({ timeout: 5000 })
+  await expect(page.getByRole('button', { name: 'Course 0' })).toBeVisible({ timeout: 5000 })
 
   // Page should not be blank
   const body = await page.textContent('body')
