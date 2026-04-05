@@ -18,13 +18,14 @@ export interface Tab {
 
 // ── Diagram types ──
 
-export type DiagramView = 'class' | 'state' | 'feature' | 'structure' | 'erd' | 'instance' | 'eventSequence' | 'stateTables'
+export type DiagramView = 'class' | 'state' | 'feature' | 'structure' | 'erd' | 'instance' | 'eventSequence' | 'stateTables' | 'crud'
 
 /** Classifies each view by its backend output kind */
-export const VIEW_OUTPUT_KIND: Record<DiagramView, 'gv' | 'html'> = {
+export const VIEW_OUTPUT_KIND: Record<DiagramView, 'gv' | 'html' | 'component'> = {
   class: 'gv', state: 'gv', feature: 'gv', structure: 'html',
   erd: 'gv', instance: 'gv',
   eventSequence: 'html', stateTables: 'html',
+  crud: 'component',
 }
 
 interface DiagramElements {

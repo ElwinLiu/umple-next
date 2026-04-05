@@ -207,6 +207,7 @@ export function useCompiler() {
   // When viewMode, display preferences, or dark theme change, re-fetch diagram only
   useEffect(() => {
     if (!mountedRef.current) return
+    if (viewModeRef.current === 'crud') return // CRUD UI is a local component, no backend diagram
     const currentCode = codeRef.current
     const currentModelId = modelIdRef.current
     if (!currentCode?.trim() || !currentModelId) return
