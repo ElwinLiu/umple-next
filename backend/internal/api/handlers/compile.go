@@ -96,7 +96,6 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := h.store.SaveTabs(modelID, &model.TabsData{
 			ActiveTabID: req.ActiveTabID,
-			EntryFile:   entryFile,
 			Tabs:        meta,
 		}); err != nil {
 			writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to save tabs: %v", err))

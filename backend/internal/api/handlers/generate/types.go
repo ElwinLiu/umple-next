@@ -6,7 +6,7 @@ type GenerateRequest struct {
 	Code      string `json:"code"`
 	Language  string `json:"language"`
 	ModelID   string `json:"modelId,omitempty"`
-	EntryFile string `json:"entryFile,omitempty"`
+	ActiveTabID string `json:"activeTabId,omitempty"`
 }
 
 type GeneratedArtifact struct {

@@ -32,7 +32,7 @@ type DiagramRequest struct {
 	ModelID     string   `json:"modelId,omitempty"`
 	Suboptions  []string `json:"suboptions,omitempty"`
 	NeedsLayout *bool    `json:"needsLayout,omitempty"`
-	EntryFile   string   `json:"entryFile,omitempty"`
+	ActiveTabID string   `json:"activeTabId,omitempty"`
 }
 
 type GvTextLine struct {
@@ -473,7 +473,7 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure model directory exists
-	entryFile := resolveEntryFile(h.store, req.ModelID, req.EntryFile)
+	entryFile := resolveEntryFile(h.store, req.ModelID, req.ActiveTabID)
 	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code, entryFile)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))

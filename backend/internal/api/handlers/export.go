@@ -27,7 +27,7 @@ type ExportRequest struct {
 	Code      string `json:"code"`
 	Format    string `json:"format"`
 	ModelID   string `json:"modelId,omitempty"`
-	EntryFile string `json:"entryFile,omitempty"`
+	ActiveTabID string `json:"activeTabId,omitempty"`
 }
 
 // validExportFormats lists the supported export formats.
@@ -59,7 +59,7 @@ func (h *ExportHandler) Export(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure model directory exists
-	entryFile := resolveEntryFile(h.store, req.ModelID, req.EntryFile)
+	entryFile := resolveEntryFile(h.store, req.ModelID, req.ActiveTabID)
 	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code, entryFile)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
