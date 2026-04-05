@@ -172,6 +172,7 @@ export interface GenerateRequest {
   code: string
   language: string
   modelId?: string
+  entryFile?: string
 }
 
 export interface GeneratedArtifact {

@@ -13,6 +13,7 @@ import {
   ContextMenuItem,
 } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
+import { stripUmpExt } from '@/lib/umpFile'
 
 // ── TabBar ────────────────────────────────────────────────────────────
 
@@ -237,10 +238,12 @@ function EditorTab({
     setEditing(false)
   }
 
+  const displayName = stripUmpExt(tab.name)
+
   const beginRename = () => {
     const width = tabShellRef.current?.getBoundingClientRect().width ?? 0
     editingWidthRef.current = width > 0 ? Math.ceil(width) : null
-    setEditValue(tab.name)
+    setEditValue(displayName)
     setEditing(true)
   }
 
@@ -309,7 +312,7 @@ function EditorTab({
                 <span className="absolute right-0 top-[22%] bottom-[22%] w-px bg-border" />
               )}
 
-              <span className="truncate max-w-[120px]">{tab.name}</span>
+              <span className="truncate max-w-[120px]">{displayName}</span>
 
               {/* Close / dirty indicator — fixed-width to prevent layout shift */}
               <div className="w-5 h-5 shrink-0 flex items-center justify-center">
@@ -319,6 +322,7 @@ function EditorTab({
                   <button
                     tabIndex={-1}
                     onClick={(e) => { e.stopPropagation(); onClose() }}
+                    onPointerDown={(e) => e.stopPropagation()}
                     className={cn(
                       'flex items-center justify-center w-5 h-5 rounded transition-colors cursor-pointer',
                       isActive

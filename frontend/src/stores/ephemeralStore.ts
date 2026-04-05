@@ -121,6 +121,9 @@ interface EphemeralState {
   diffPreview: DiffPreviewState | null
   selection: { fromLine: number; toLine: number; text: string; coords?: { x: number; yTop: number; yBottom: number } } | null
 
+  // LSP
+  lspConnected: boolean
+
   // Agent message queue
   pendingAgentMessage: string | null
 
@@ -156,6 +159,9 @@ interface EphemeralState {
   setEditing: (nodeId: string | null, field: 'name' | 'newAttribute' | 'newMethod' | null) => void
   setCompiling: (compiling: boolean) => void
 
+
+  // LSP actions
+  setLspConnected: (connected: boolean) => void
 
   // Editor ephemeral actions
   showDiffPreview: (preview: DiffPreviewState) => void
@@ -207,6 +213,9 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   // Editor ephemeral
   diffPreview: null,
   selection: null,
+
+  // LSP
+  lspConnected: false,
 
   // Agent message queue
   pendingAgentMessage: null,
@@ -281,6 +290,9 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   setEditing: (editingNodeId, editingField) => set({ editingNodeId, editingField }),
   setCompiling: (compiling) => set({ compiling }),
 
+
+  // LSP actions
+  setLspConnected: (lspConnected) => set((s) => s.lspConnected === lspConnected ? s : { lspConnected }),
 
   // Editor ephemeral actions
   showDiffPreview: (diffPreview) => set({ diffPreview }),

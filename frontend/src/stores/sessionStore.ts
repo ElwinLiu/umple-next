@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Node, Edge } from '@xyflow/react'
 import type { UmpleModel, GvLayout, StoredLayoutMetadata, ApiTab } from '../api/types'
 import { useEphemeralStore } from './ephemeralStore'
+import { ensureUmpExt } from '../lib/umpFile'
 
 // ── Editor types ──
 
@@ -132,13 +133,19 @@ setSvgForView: (view: DiagramView, svg: string) => void
   setChatMessages: (messages: ChatMessage[]) => void
 }
 
+/** Returns the active tab's filename, or 'Model.ump' if no tab is active. */
+export function getActiveTabName(): string {
+  const { tabs, activeTabId } = useSessionStore.getState()
+  return tabs.find((t) => t.id === activeTabId)?.name ?? 'Model.ump'
+}
+
 export const useSessionStore = create<SessionState>()(
   persist(
     (set, get) => ({
       // ── Editor state ──
       code: DEFAULT_CODE,
       modelId: null,
-      tabs: [{ id: 'main', name: 'model.ump', code: DEFAULT_CODE, dirty: false, savedCode: DEFAULT_CODE }],
+      tabs: [{ id: 'main', name: 'Model.ump', code: DEFAULT_CODE, dirty: false, savedCode: DEFAULT_CODE }],
       activeTabId: 'main',
       undoStack: [],
       redoStack: [],
@@ -275,16 +282,14 @@ export const useSessionStore = create<SessionState>()(
         }
       }),
 
-      renameTab: (id, name) => set((s) => {
-        let changed = false
-        const tabs = s.tabs.map((t) => {
-          if (t.id !== id || t.name === name) return t
-          changed = true
-          return { ...t, name }
-        })
-        if (!changed) return s
+      renameTab: (id, rawName) => set((s) => {
+        const name = ensureUmpExt(rawName)
+        const target = s.tabs.find((t) => t.id === id)
+        if (!target || target.name === name) return s
+        // Prevent duplicate tab names
+        if (s.tabs.some((t) => t.id !== id && t.name === name)) return s
         return {
-          tabs,
+          tabs: s.tabs.map((t) => (t.id === id ? { ...t, name } : t)),
           tabsVersion: s.tabsVersion + 1,
         }
       }),
@@ -306,7 +311,7 @@ export const useSessionStore = create<SessionState>()(
         ...(modelId ? { modelId } : {}),
         tabs: s.tabs.map((t) =>
           t.id === s.activeTabId
-            ? { ...t, name, code, dirty: false, savedCode: code }
+            ? { ...t, name: ensureUmpExt(name), code, dirty: false, savedCode: code }
             : t
         ),
       })),

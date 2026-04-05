@@ -1,6 +1,6 @@
 import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
 import { EditorView, ViewUpdate, scrollPastEnd } from '@codemirror/view'
-import { EditorState, Compartment } from '@codemirror/state'
+import { EditorState, Compartment, Transaction } from '@codemirror/state'
 import { basicSetup } from 'codemirror'
 import { keymap } from '@codemirror/view'
 import { indentWithTab } from '@codemirror/commands'
@@ -21,13 +21,16 @@ interface UmpleEditorProps {
   onChange: (code: string) => void
   readOnly?: boolean
   collabConfig?: CollabConfig | null
+  onViewReady?: (view: EditorView) => void
 }
 
-export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(function UmpleEditor({ code, onChange, readOnly = false, collabConfig }, ref) {
+export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(function UmpleEditor({ code, onChange, readOnly = false, collabConfig, onViewReady }, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
   onChangeRef.current = onChange
+  const onViewReadyRef = useRef(onViewReady)
+  onViewReadyRef.current = onViewReady
   const themeCompartment = useRef(new Compartment())
   const collabCompartment = useRef(new Compartment())
   const isDark = useIsDark()
@@ -90,6 +93,7 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
     })
 
     viewRef.current = view
+    onViewReadyRef.current?.(view)
 
     return () => {
       view.destroy()
@@ -131,6 +135,7 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
         isExternalUpdate.current = true
         view.dispatch({
           changes: { from: 0, to: currentDoc.length, insert: ytextContent },
+          annotations: [Transaction.addToHistory.of(false)],
         })
         // Also update sessionStore.code so useCompiler sees Y.Text content.
         onChangeRef.current(ytextContent)
@@ -172,6 +177,7 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
       isExternalUpdate.current = true
       view.dispatch({
         changes: { from: 0, to: currentDoc.length, insert: code },
+        annotations: [Transaction.addToHistory.of(false)],
       })
     }
   }, [code, collabConfig])

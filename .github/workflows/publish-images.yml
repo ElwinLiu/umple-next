@@ -154,6 +154,28 @@ jobs:
           sbom: true
           provenance: true
 
+      - name: Build and push lsp-proxy
+        id: lsp_proxy_build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: lsp-proxy/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.prefix }}/lsp-proxy:${{ steps.meta.outputs.sha_tag }}
+            ${{ steps.meta.outputs.prefix }}/lsp-proxy:latest
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.url=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ steps.resolve.outputs.sha }}
+            org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+            org.opencontainers.image.vendor=University of Ottawa
+            org.opencontainers.image.description=UmpleOnline LSP proxy server
+          cache-from: type=gha,scope=lsp-proxy
+          cache-to: type=gha,mode=max,scope=lsp-proxy
+          sbom: true
+          provenance: true
+
       - name: Scan backend image
         uses: aquasecurity/trivy-action@v0.35.0
         with:
@@ -198,6 +220,17 @@ jobs:
           exit-code: '1'
           trivyignores: .trivyignore
 
+      - name: Scan lsp-proxy image
+        uses: aquasecurity/trivy-action@v0.35.0
+        with:
+          image-ref: ${{ steps.meta.outputs.prefix }}/lsp-proxy@${{ steps.lsp_proxy_build.outputs.digest }}
+          version: v0.69.3
+          format: table
+          ignore-unfixed: true
+          severity: CRITICAL
+          exit-code: '1'
+          trivyignores: .trivyignore
+
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.8.1
 
@@ -207,6 +240,7 @@ jobs:
           cosign sign --yes "${{ steps.meta.outputs.prefix }}/frontend@${{ steps.frontend_build.outputs.digest }}"
           cosign sign --yes "${{ steps.meta.outputs.prefix }}/code-exec@${{ steps.code_exec_build.outputs.digest }}"
           cosign sign --yes "${{ steps.meta.outputs.prefix }}/collab@${{ steps.collab_build.outputs.digest }}"
+          cosign sign --yes "${{ steps.meta.outputs.prefix }}/lsp-proxy@${{ steps.lsp_proxy_build.outputs.digest }}"
 
       - name: Summarize published images
         run: |
@@ -217,8 +251,10 @@ jobs:
             echo "- Frontend: \`${{ steps.meta.outputs.prefix }}/frontend:${{ steps.meta.outputs.sha_tag }}\`"
             echo "- Code Exec: \`${{ steps.meta.outputs.prefix }}/code-exec:${{ steps.meta.outputs.sha_tag }}\`"
             echo "- Collab: \`${{ steps.meta.outputs.prefix }}/collab:${{ steps.meta.outputs.sha_tag }}\`"
+            echo "- LSP Proxy: \`${{ steps.meta.outputs.prefix }}/lsp-proxy:${{ steps.meta.outputs.sha_tag }}\`"
             echo "- Signed backend digest: \`${{ steps.meta.outputs.prefix }}/backend@${{ steps.backend_build.outputs.digest }}\`"
             echo "- Signed frontend digest: \`${{ steps.meta.outputs.prefix }}/frontend@${{ steps.frontend_build.outputs.digest }}\`"
             echo "- Signed code-exec digest: \`${{ steps.meta.outputs.prefix }}/code-exec@${{ steps.code_exec_build.outputs.digest }}\`"
             echo "- Signed collab digest: \`${{ steps.meta.outputs.prefix }}/collab@${{ steps.collab_build.outputs.digest }}\`"
+            echo "- Signed lsp-proxy digest: \`${{ steps.meta.outputs.prefix }}/lsp-proxy@${{ steps.lsp_proxy_build.outputs.digest }}\`"
           } >> "$GITHUB_STEP_SUMMARY"

@@ -49,7 +49,8 @@ describe('TabBar', () => {
 
     render(<TabBar />)
 
-    fireEvent.contextMenu(screen.getByText('model.ump'))
+    // Tab display strips .ump extension
+    fireEvent.contextMenu(screen.getByText('model'))
 
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
 
@@ -58,7 +59,8 @@ describe('TabBar', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(input)
     })
-    expect((input as HTMLInputElement).value).toBe('model.ump')
+    // Rename input shows display name (without .ump)
+    expect((input as HTMLInputElement).value).toBe('model')
   })
 
   it('does not bump tabsVersion when rename is blurred without an actual name change', async () => {
@@ -72,7 +74,7 @@ describe('TabBar', () => {
 
     render(<TabBar />)
 
-    fireEvent.contextMenu(screen.getByText('model.ump'))
+    fireEvent.contextMenu(screen.getByText('model'))
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
 
     const input = await screen.findByRole('textbox', { name: 'Rename model.ump' })
@@ -90,7 +92,7 @@ describe('TabBar', () => {
   it('keeps the rename field as wide as the existing tab', async () => {
     const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
     const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      if (this.textContent?.includes('long-model-name.ump')) {
+      if (this.textContent?.includes('long-model-name')) {
         return {
           width: 176,
           height: 30,
@@ -117,7 +119,7 @@ describe('TabBar', () => {
 
     render(<TabBar />)
 
-    fireEvent.contextMenu(screen.getByText('long-model-name.ump'))
+    fireEvent.contextMenu(screen.getByText('long-model-name'))
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
 
     const input = await screen.findByRole('textbox', { name: 'Rename long-model-name.ump' })

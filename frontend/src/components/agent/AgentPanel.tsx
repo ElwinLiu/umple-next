@@ -39,7 +39,7 @@ function AgentPanel() {
   const code = useSessionStore((s) => s.code)
   const selection = useEphemeralStore((s) => s.selection)
   const clearSelection = useEphemeralStore((s) => s.setSelection)
-  const activeTabName = useSessionStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.name ?? 'model.ump')
+  const activeTabName = useSessionStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.name) ?? 'Model.ump'
   const expanded = showAgentPanel
   const [focusExpandedInput, setFocusExpandedInput] = useState(false)
 

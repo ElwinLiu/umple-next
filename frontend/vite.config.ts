@@ -40,6 +40,11 @@ return {
         target: 'ws://localhost:3002',
         ws: true,
       },
+      '/ws/lsp': {
+        target: 'ws://localhost:9999',
+        ws: true,
+        rewrite: (path) => path.replace(/^\/ws\/lsp/, ''),
+      },
     },
   },
 }

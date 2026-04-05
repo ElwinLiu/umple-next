@@ -16,7 +16,7 @@ func TestSanitizeJavaContentForJavadocRemovesSkipDirectives(t *testing.T) {
 		"}",
 	}, "\n")
 
-	got := sanitizeJavaContentForJavadoc(input)
+	got := sanitizeJavaContentForJavadoc(input, "Model.ump")
 
 	if strings.Contains(got, "@@@skipcppcompile") {
 		t.Fatalf("sanitized content should remove skip directives:\n%s", got)
@@ -24,7 +24,7 @@ func TestSanitizeJavaContentForJavadocRemovesSkipDirectives(t *testing.T) {
 	if strings.Contains(got, ".generate-java.ump") {
 		t.Fatalf("sanitized content should rename wrapper source file:\n%s", got)
 	}
-	if !strings.Contains(got, "Positioning") || !strings.Contains(got, "model.ump") {
+	if !strings.Contains(got, "Positioning") || !strings.Contains(got, "Model.ump") {
 		t.Fatalf("sanitized content removed too much:\n%s", got)
 	}
 }

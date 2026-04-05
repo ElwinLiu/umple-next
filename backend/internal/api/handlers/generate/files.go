@@ -51,7 +51,7 @@ func languageExtensions(lang string) []string {
 	}
 }
 
-func readGeneratedFiles(dir, language string) (string, []string, error) {
+func readGeneratedFiles(dir, language, entryFile string) (string, []string, error) {
 	exts := languageExtensions(language)
 	if len(exts) == 0 {
 		return "", nil, fmt.Errorf("unknown language: %s", language)
@@ -67,7 +67,7 @@ func readGeneratedFiles(dir, language string) (string, []string, error) {
 		if err != nil || d.IsDir() {
 			return nil
 		}
-		if extSet[filepath.Ext(path)] && filepath.Base(path) != "model.ump" {
+		if extSet[filepath.Ext(path)] && filepath.Base(path) != entryFile {
 			paths = append(paths, path)
 		}
 		return nil

@@ -13,17 +13,23 @@ import (
 	"time"
 )
 
-// TabInfo represents a single editor tab for JSON serialization.
-type TabInfo struct {
+// DefaultEntryFile is the fallback filename used when no tabs.json exists
+// (backward compatibility with pre-tab models). The frontend may use any
+// name — the backend does not enforce a specific tab name.
+const DefaultEntryFile = "Model.ump"
+
+// TabMeta is the metadata for a single editor tab (id + display name).
+// Code is NOT stored here — it lives in the individual .ump files on disk.
+type TabMeta struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
-	Code string `json:"code"`
 }
 
-// TabsData is the structure written to tabs.json.
+// TabsData is the structure persisted to and loaded from tabs.json.
 type TabsData struct {
 	ActiveTabID string    `json:"activeTabId"`
-	Tabs        []TabInfo `json:"tabs"`
+	EntryFile   string    `json:"entryFile"`
+	Tabs        []TabMeta `json:"tabs"`
 }
 
 // Store manages filesystem-based model storage, mirroring the PHP DataStore pattern.
@@ -45,7 +51,7 @@ func (s *Store) Create(code string) (*Model, error) {
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
 	}
-	if err := os.WriteFile(filepath.Join(dir, "model.ump"), []byte(code), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, DefaultEntryFile), []byte(code), 0644); err != nil {
 		return nil, err
 	}
 	return &Model{ID: id, Code: code}, nil
@@ -60,11 +66,22 @@ func (s *Store) ModelDir(id string) string {
 func (s *Store) Get(id string) (*Model, error) {
 	id = sanitizeID(id)
 	dir := filepath.Join(s.root, id)
-	data, err := os.ReadFile(filepath.Join(dir, "model.ump"))
+	entryFile := s.ResolveEntryFile(id)
+	data, err := os.ReadFile(filepath.Join(dir, entryFile))
 	if err != nil {
 		return nil, fmt.Errorf("model not found: %s", id)
 	}
 	return &Model{ID: id, Code: string(data)}, nil
+}
+
+// ResolveEntryFile returns the compiler entry-point filename for a model.
+// It checks tabs.json first; if absent or empty, falls back to DefaultEntryFile.
+func (s *Store) ResolveEntryFile(modelID string) string {
+	tabs, err := s.LoadTabs(modelID)
+	if err != nil || tabs == nil || tabs.EntryFile == "" {
+		return DefaultEntryFile
+	}
+	return tabs.EntryFile
 }
 
 // CleanupLoop periodically removes tmp model directories older than maxAge.
@@ -88,6 +105,80 @@ func (s *Store) SaveTabs(modelID string, data *TabsData) error {
 	return os.WriteFile(filepath.Join(dir, "tabs.json"), b, 0644)
 }
 
+// SaveTabFiles writes each tab's code as a separate .ump file in the model
+// directory and removes stale .ump files that no longer correspond to any tab.
+// files maps tab name (e.g. "Person.ump") → code.
+// entryFile is skipped because resolveModel manages it (with layout data
+// merged in). All other tabs are written so cross-tab `use` statements resolve.
+func (s *Store) SaveTabFiles(modelID string, files map[string]string, entryFile string) error {
+	dir := s.ModelDir(modelID)
+
+	// Build set of tab filenames that should exist on disk.
+	// Always include entryFile since resolveModel manages it.
+	tabFileNames := make(map[string]bool, len(files)+1)
+	tabFileNames[entryFile] = true
+	for name := range files {
+		safe, err := SafeTabName(name)
+		if err != nil {
+			return err
+		}
+		tabFileNames[safe] = true
+	}
+
+	// Write each tab to its own .ump file (skip entryFile — managed by resolveModel).
+	for name, code := range files {
+		fileName, err := SafeTabName(name)
+		if err != nil {
+			return err
+		}
+		if fileName == entryFile {
+			continue
+		}
+		path := filepath.Join(dir, fileName)
+		if err := os.WriteFile(path, []byte(code), 0644); err != nil {
+			return fmt.Errorf("write tab file %s: %w", fileName, err)
+		}
+	}
+
+	// Remove stale .ump files that don't belong to any tab.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil // non-fatal: directory may not exist yet
+	}
+	for _, e := range entries {
+		name := e.Name()
+		if e.IsDir() || !strings.HasSuffix(name, ".ump") || strings.HasPrefix(name, ".") {
+			continue
+		}
+		if !tabFileNames[name] {
+			if err := os.Remove(filepath.Join(dir, name)); err != nil {
+				log.Printf("failed to remove stale tab file %s: %v", name, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// SafeTabName validates and normalises a tab filename. It rejects names
+// containing path separators or ".." to prevent directory-traversal attacks,
+// and ensures the result has a ".ump" extension.
+func SafeTabName(name string) (string, error) {
+	name = EnsureUmpExt(name)
+	if name != filepath.Base(name) || strings.Contains(name, "..") {
+		return "", fmt.Errorf("invalid tab name: %s", name)
+	}
+	return name, nil
+}
+
+// EnsureUmpExt appends ".ump" if the name doesn't already have it.
+func EnsureUmpExt(name string) string {
+	if strings.HasSuffix(name, ".ump") {
+		return name
+	}
+	return name + ".ump"
+}
+
 // LoadTabs reads tab metadata from {modelDir}/tabs.json.
 // Returns nil, nil if the file does not exist (backward compat).
 func (s *Store) LoadTabs(modelID string) (*TabsData, error) {
@@ -104,6 +195,20 @@ func (s *Store) LoadTabs(modelID string) (*TabsData, error) {
 		return nil, fmt.Errorf("unmarshal tabs: %w", err)
 	}
 	return &data, nil
+}
+
+// ReadTabCode reads a single tab's code from its .ump file on disk.
+func (s *Store) ReadTabCode(modelID, tabName string) (string, error) {
+	fileName, err := SafeTabName(tabName)
+	if err != nil {
+		return "", err
+	}
+	dir := s.ModelDir(modelID)
+	data, err := os.ReadFile(filepath.Join(dir, fileName))
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 func (s *Store) cleanup(maxAge time.Duration) {

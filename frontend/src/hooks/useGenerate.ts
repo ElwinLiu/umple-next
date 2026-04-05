@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { useSessionStore } from '../stores/sessionStore'
+import { useSessionStore, getActiveTabName } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
 import { api } from '../api/client'
 import { getGenerateTarget, resolveGenerateRequestLanguage } from '../generation/targets'
@@ -20,16 +20,15 @@ export function useGenerate() {
       return
     }
 
-    const { code } = useSessionStore.getState()
-    const { modelId } = useSessionStore.getState()
-    const { viewMode } = useSessionStore.getState()
+    const { code, modelId, viewMode } = useSessionStore.getState()
     if (!code.trim()) return
 
+    const entryFile = getActiveTabName()
     const requestLanguage = resolveGenerateRequestLanguage(target, viewMode)
     setGeneratingCode(true, target.id)
     setGeneratedError(null)
     try {
-      const res = await api.generate({ code, language: requestLanguage, modelId: modelId ?? undefined })
+      const res = await api.generate({ code, language: requestLanguage, modelId: modelId ?? undefined, entryFile })
       setGeneratedOutput(res, target.id)
     } catch (err: unknown) {
       setGeneratedError(err instanceof Error ? err.message : 'Generation failed')

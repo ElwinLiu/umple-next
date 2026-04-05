@@ -2,6 +2,7 @@ import { type ReactNode, useCallback } from 'react'
 import { type EditorView } from '@codemirror/view'
 import { undo, redo } from '@codemirror/commands'
 import { openSearchPanel } from '@codemirror/search'
+import { jumpToDefinition, findReferences, renameSymbol } from '@codemirror/lsp-client'
 import {
   ContextMenu,
   ContextMenuTrigger,
@@ -52,6 +53,20 @@ export function EditorContextMenu({ editorRef, children }: EditorContextMenuProp
   const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette)
   const canCutOrCopy = hasClipboardWrite || supportsDocumentCommand('copy')
   const canPaste = hasClipboardRead || supportsDocumentCommand('paste')
+
+  // Move cursor to the right-clicked position so actions (Go to Definition,
+  // etc.) act on the correct location.  Fires in capture phase so it runs
+  // before Radix opens the menu.
+  const moveCursorToPointer = useCallback((e: React.MouseEvent) => {
+    const view = editorRef.current?.view
+    if (!view) return
+    const pos = view.posAtCoords({ x: e.clientX, y: e.clientY })
+    if (pos === null) return
+    // Preserve existing selection if right-clicking inside it
+    const { from, to } = view.state.selection.main
+    if (from !== to && pos >= from && pos <= to) return
+    view.dispatch({ selection: { anchor: pos } })
+  }, [editorRef])
 
   const exec = useCallback((fn: (view: EditorView) => void | Promise<void>) => {
     const view = editorRef.current?.view
@@ -118,10 +133,26 @@ export function EditorContextMenu({ editorRef, children }: EditorContextMenuProp
     openSearchPanel(v)
   }), [exec])
 
+  const handleGoToDefinition = useCallback(() => exec((v) => {
+    jumpToDefinition(v)
+  }), [exec])
+
+  const handleFindReferences = useCallback(() => exec((v) => {
+    findReferences(v)
+  }), [exec])
+
+  const handleRename = useCallback(() => exec((v) => {
+    renameSymbol(v)
+  }), [exec])
+
+  const lspConnected = useEphemeralStore((s) => s.lspConnected)
+
   return (
     <ContextMenu>
       <ContextMenuTrigger asChild>
-        {children}
+        <div onContextMenuCapture={moveCursorToPointer} className="contents">
+          {children}
+        </div>
       </ContextMenuTrigger>
       <ContextMenuContent className="w-52">
         <ContextMenuItem onSelect={handleUndo}>
@@ -150,6 +181,20 @@ export function EditorContextMenu({ editorRef, children }: EditorContextMenuProp
           Search
           <ContextMenuShortcut>{mod}F</ContextMenuShortcut>
         </ContextMenuItem>
+        <ContextMenuSeparator />
+        <ContextMenuItem disabled={!lspConnected} onSelect={handleGoToDefinition}>
+          Go to Definition
+          <ContextMenuShortcut>F12</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem disabled={!lspConnected} onSelect={handleFindReferences}>
+          Find References
+          <ContextMenuShortcut>⇧F12</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuItem disabled={!lspConnected} onSelect={handleRename}>
+          Rename Symbol
+          <ContextMenuShortcut>F2</ContextMenuShortcut>
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem onSelect={openCommandPalette}>
           Command Palette
           <ContextMenuShortcut>{mod}K</ContextMenuShortcut>

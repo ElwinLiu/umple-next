@@ -246,14 +246,14 @@ func TestSyncAddMethod_AssociationClassAccessControlIsRejected(t *testing.T) {
 	}
 
 	modelDir := store.ModelDir(modelRef.ID)
-	currentCode, err := os.ReadFile(filepath.Join(modelDir, "model.ump"))
+	currentCode, err := os.ReadFile(filepath.Join(modelDir, model.DefaultEntryFile))
 	if err != nil {
 		t.Fatalf("read model after rejection: %v", err)
 	}
 	if string(currentCode) != initialCode {
 		t.Fatalf("associationClass addMethod should not mutate the model:\n%s", currentCode)
 	}
-	if _, err := handler.generateModelJSON(filepath.Join(modelDir, "model.ump"), modelDir); err != nil {
+	if _, err := handler.generateModelJSON(filepath.Join(modelDir, model.DefaultEntryFile), modelDir); err != nil {
 		t.Fatalf("original model should still compile after rejection: %v", err)
 	}
 }

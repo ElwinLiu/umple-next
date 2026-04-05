@@ -3,9 +3,10 @@ package generate
 import "strings"
 
 type GenerateRequest struct {
-	Code     string `json:"code"`
-	Language string `json:"language"`
-	ModelID  string `json:"modelId,omitempty"`
+	Code      string `json:"code"`
+	Language  string `json:"language"`
+	ModelID   string `json:"modelId,omitempty"`
+	EntryFile string `json:"entryFile,omitempty"`
 }
 
 type GeneratedArtifact struct {
