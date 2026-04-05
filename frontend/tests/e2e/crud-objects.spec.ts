@@ -112,6 +112,6 @@ test('Objects tab loads schema after compiling an example', async ({ page }) => 
   expect((body?.trim().length ?? 0) > 20, 'Page should not be blank').toBe(true)
 
   // No critical browser errors
-  const criticalErrors = errors.filter(e => !e.includes('favicon'))
+  const criticalErrors = errors.filter(e => !e.includes('favicon') && !e.includes('/ws/lsp') && !e.includes('[lsp]'))
   expect(criticalErrors).toEqual([])
 })

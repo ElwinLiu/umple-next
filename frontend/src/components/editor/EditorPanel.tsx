@@ -6,10 +6,12 @@ import { UmpleEditor, type UmpleEditorHandle } from './UmpleEditor'
 import { UmpleDiffEditor } from './UmpleDiffEditor'
 import { SelectionToolbar } from './SelectionToolbar'
 import { EditorContextMenu } from './EditorContextMenu'
-import { useSessionStore } from '../../stores/sessionStore'
+import { useSessionStore, getActiveTabName } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
 import { useCollabEditor } from '../../hooks/useCollabEditor'
+import { useLsp } from '../../hooks/useLsp'
+import { attachLspToView } from '../../codemirror/lsp'
 
 interface DiagramSelectDetail {
   name: string
@@ -46,7 +48,6 @@ function findClassRange(code: string, className: string): { from: number; to: nu
 export function EditorPanel() {
   const code = useSessionStore((s) => s.code)
   const setCode = useSessionStore((s) => s.setCode)
-  const activeTabId = useSessionStore((s) => s.activeTabId)
   const collabConfig = useCollabEditor()
   const diffPreview = useEphemeralStore((s) => s.diffPreview)
   const isAiConfigured = usePreferencesStore(
@@ -57,6 +58,19 @@ export function EditorPanel() {
   )
 
   const editorRef = useRef<UmpleEditorHandle>(null)
+  // Stable ref wrapper that useLsp can poll for the current EditorView
+  const editorViewRef = useRef<EditorView | null>(null)
+  // Keep editorViewRef in sync via a layout effect after each render
+  useEffect(() => {
+    editorViewRef.current = editorRef.current?.view ?? null
+  })
+  useLsp(editorViewRef)
+
+  // When UmpleEditor mounts, attach LSP to the view.
+  const handleViewReady = useCallback((view: EditorView) => {
+    editorViewRef.current = view
+    attachLspToView(view, getActiveTabName())
+  }, [])
 
   // When a diagram node/edge is clicked, select the corresponding source text.
   // Uses a native DOM CustomEvent so delivery is synchronous and framework-independent.
@@ -113,10 +127,10 @@ export function EditorPanel() {
             <div className="h-full w-full">
               <UmpleEditor
                 ref={editorRef}
-                key={activeTabId}
                 code={code}
                 onChange={handleChange}
                 collabConfig={collabConfig}
+                onViewReady={handleViewReady}
               />
             </div>
           </EditorContextMenu>

@@ -32,6 +32,7 @@ type DiagramRequest struct {
 	ModelID     string   `json:"modelId,omitempty"`
 	Suboptions  []string `json:"suboptions,omitempty"`
 	NeedsLayout *bool    `json:"needsLayout,omitempty"`
+	EntryFile   string   `json:"entryFile,omitempty"`
 }
 
 type GvTextLine struct {
@@ -312,10 +313,11 @@ type processDiagramParams struct {
 	diagramType string
 	suboptions  []string
 	needsLayout bool
+	entryFile   string
 }
 
 // processDiagram generates a diagram from a model directory that already
-// contains model.ump. It returns a DiagramResponse or an error string.
+// contains the entry .ump file. It returns a DiagramResponse or an error string.
 // This is shared by both the /api/diagram endpoint and the merged /api/compile
 // endpoint when diagramType is provided.
 func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
@@ -324,7 +326,7 @@ func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
 		return nil, fmt.Sprintf("unsupported diagram type: %s", p.diagramType)
 	}
 
-	modelPath := filepath.Join(p.dir, "model.ump")
+	modelPath := filepath.Join(p.dir, p.entryFile)
 	modelData, _ := os.ReadFile(modelPath)
 	storedLayout := extractStoredLayoutMetadata(string(modelData))
 
@@ -342,7 +344,7 @@ func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
 	}
 
 	// Generate .gv file using umple, appending validated suboptions as -s flags
-	command := fmt.Sprintf("-generate %s %s/model.ump", p.diagramType, p.dir)
+	command := fmt.Sprintf("-generate %s %s/%s", p.diagramType, p.dir, p.entryFile)
 	for _, opt := range p.suboptions {
 		if validSuboptions[opt] {
 			command += " -s " + opt
@@ -471,7 +473,8 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure model directory exists
-	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code)
+	entryFile := resolveEntryFile(h.store, req.ModelID, req.EntryFile)
+	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code, entryFile)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
 		return
@@ -487,6 +490,7 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		diagramType: req.DiagramType,
 		suboptions:  req.Suboptions,
 		needsLayout: needsLayout,
+		entryFile:   entryFile,
 	})
 	if errMsg != "" {
 		writeError(w, http.StatusInternalServerError, errMsg)

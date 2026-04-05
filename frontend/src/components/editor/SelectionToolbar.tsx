@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowUp, Lightbulb } from 'lucide-react'
-import { useSessionStore } from '@/stores/sessionStore'
+import { useSessionStore, getActiveTabName } from '@/stores/sessionStore'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { cn } from '@/lib/utils'
 
@@ -36,8 +36,7 @@ export function SelectionToolbar() {
   function buildMessage(prompt: string) {
     const sel = useEphemeralStore.getState().selection
     if (!sel) return null
-    const { tabs, activeTabId } = useSessionStore.getState()
-    const tabName = tabs.find((t) => t.id === activeTabId)?.name ?? 'model.ump'
+    const tabName = getActiveTabName()
     const label =
       sel.fromLine === sel.toLine
         ? `${tabName} (${sel.fromLine})`

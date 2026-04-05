@@ -22,8 +22,9 @@ func NewCrudSchemaHandler(pool *compiler.Pool, store *model.Store) *CrudSchemaHa
 }
 
 type CrudSchemaRequest struct {
-	Code    string `json:"code"`
-	ModelID string `json:"modelId,omitempty"`
+	Code      string `json:"code"`
+	ModelID   string `json:"modelId,omitempty"`
+	EntryFile string `json:"entryFile,omitempty"`
 }
 
 type CrudSchemaResponse struct {
@@ -44,14 +45,15 @@ func (h *CrudSchemaHandler) Schema(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code)
+	entryFile := resolveEntryFile(h.store, req.ModelID, req.EntryFile)
+	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code, entryFile)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
 		return
 	}
 
 	// Compile to JSON
-	command := fmt.Sprintf("-generate Json %s/model.ump", dir)
+	command := fmt.Sprintf("-generate Json %s/%s", dir, entryFile)
 	result, err := h.pool.Execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: dir,

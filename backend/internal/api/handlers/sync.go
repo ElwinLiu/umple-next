@@ -189,7 +189,7 @@ func (h *SyncHandler) Sync(w http.ResponseWriter, r *http.Request) {
 	modelMu.Lock()
 	defer modelMu.Unlock()
 
-	umpFile := filepath.Join(dir, "model.ump")
+	umpFile := filepath.Join(dir, h.store.ResolveEntryFile(modelID))
 	if err := ensureDelimitedModelFile(umpFile); err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to prepare model")
 		return
@@ -764,7 +764,7 @@ func isFatalSyncOutput(output string) bool {
 }
 
 // stripModelDelimiter removes the umplesync end-of-model marker and any
-// position metadata that follows it.  The on-disk model.ump keeps both
+// position metadata that follows it.  The on-disk entry file keeps both
 // sections so umplesync can round-trip positions, but the editor should
 // only ever see the user-authored Umple code.
 func stripModelDelimiter(code string) string {

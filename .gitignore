@@ -1,8 +1,6 @@
 # Dependencies
-frontend/node_modules/
+node_modules/
 frontend/package-lock.json
-collab/node_modules/
-code-exec/node_modules/
 
 # Build
 backend/server

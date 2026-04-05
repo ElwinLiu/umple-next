@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -35,7 +36,16 @@ func (h *ModelHandler) Get(w http.ResponseWriter, r *http.Request) {
 		"code":    userCode,
 	}
 	if tabsData != nil {
-		resp["tabs"] = tabsData.Tabs
+		tabs := make([]apiTab, len(tabsData.Tabs))
+		for i, t := range tabsData.Tabs {
+			code, err := h.store.ReadTabCode(id, t.Name)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read tab %q: %v", t.Name, err))
+				return
+			}
+			tabs[i] = apiTab{ID: t.ID, Name: t.Name, Code: code}
+		}
+		resp["tabs"] = tabs
 		resp["activeTabId"] = tabsData.ActiveTabID
 	}
 

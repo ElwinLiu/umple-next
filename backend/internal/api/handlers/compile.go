@@ -27,8 +27,8 @@ type CompileRequest struct {
 	DiagramType string       `json:"diagramType,omitempty"`
 	Suboptions  []string     `json:"suboptions,omitempty"`
 	NeedsLayout *bool        `json:"needsLayout,omitempty"`
-	Tabs        []model.TabInfo `json:"tabs,omitempty"`
-	ActiveTabID string          `json:"activeTabId,omitempty"`
+	Tabs        []apiTab     `json:"tabs,omitempty"`
+	ActiveTabID string       `json:"activeTabId,omitempty"`
 }
 
 type CompileResponse struct {
@@ -53,25 +53,63 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Determine the compiler entry point: the active tab's file, or the
+	// default for single-tab mode.
+	entryFile := model.DefaultEntryFile
+	entryCode := req.Code
+	if len(req.Tabs) > 0 {
+		seen := make(map[string]bool, len(req.Tabs))
+		for _, t := range req.Tabs {
+			safe, err := model.SafeTabName(t.Name)
+			if err != nil {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid tab name: %s", t.Name))
+				return
+			}
+			if seen[safe] {
+				writeError(w, http.StatusBadRequest, fmt.Sprintf("duplicate tab name: %s", safe))
+				return
+			}
+			seen[safe] = true
+			if t.ID == req.ActiveTabID {
+				entryFile = safe
+				entryCode = t.Code
+			}
+		}
+	}
+
 	// Ensure model directory exists (single resolveModel for both compile + diagram)
-	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code)
+	modelID, dir, err := resolveModel(h.store, req.ModelID, entryCode, entryFile)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
 		return
 	}
 
-	// Persist tab metadata alongside model.ump
+	// Persist tab metadata and write each tab as a separate .ump file so
+	// cross-tab `use` statements resolve correctly.
 	if len(req.Tabs) > 0 {
+		meta := make([]model.TabMeta, len(req.Tabs))
+		files := make(map[string]string, len(req.Tabs))
+		for i, t := range req.Tabs {
+			safe := model.EnsureUmpExt(t.Name) // already validated above
+			meta[i] = model.TabMeta{ID: t.ID, Name: safe}
+			files[safe] = t.Code
+		}
 		if err := h.store.SaveTabs(modelID, &model.TabsData{
 			ActiveTabID: req.ActiveTabID,
-			Tabs:        req.Tabs,
+			EntryFile:   entryFile,
+			Tabs:        meta,
 		}); err != nil {
-			log.Printf("failed to save tabs for %s: %v", modelID, err)
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to save tabs: %v", err))
+			return
+		}
+		if err := h.store.SaveTabFiles(modelID, files, entryFile); err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to write tab files: %v", err))
+			return
 		}
 	}
 
 	// Compile to JSON using umplesync
-	command := fmt.Sprintf("-generate Json %s/model.ump", dir)
+	command := fmt.Sprintf("-generate Json %s/%s", dir, entryFile)
 	result, err := h.pool.Execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: dir,
@@ -105,6 +143,7 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 			diagramType: req.DiagramType,
 			suboptions:  req.Suboptions,
 			needsLayout: needsLayout,
+			entryFile:   entryFile,
 		})
 		if errMsg != "" {
 			log.Printf("diagram generation failed during compile: %s", errMsg)

@@ -37,12 +37,12 @@ export function AppShell() {
       {/* Main content area */}
       <main id="main-content" className="flex-1 min-w-0 flex flex-col">
         <div className="relative flex-1 min-h-0 px-2.5 pb-2.5 pt-1.5">
-          <PanelGroup direction="horizontal" className="h-full">
+          <PanelGroup direction="horizontal" className="h-full" id="main-horizontal">
             {editorVisible && (
               <>
-                <Panel defaultSize={50} minSize={20}>
-                  <PanelGroup direction="vertical" className="h-full">
-                    <Panel defaultSize={outputView === 'panel' ? 65 : 100} minSize={20}>
+                <Panel id="editor-col" order={1} defaultSize={50} minSize={20}>
+                  <PanelGroup direction="vertical" className="h-full" id="editor-vertical">
+                    <Panel id="editor" order={1} defaultSize={outputView === 'panel' ? 65 : 100} minSize={20}>
                       <div className="h-full rounded-lg overflow-hidden bg-surface-0 flex flex-col">
                         <div className="flex-1 min-h-0">
                           <EditorPanel />
@@ -53,7 +53,7 @@ export function AppShell() {
                     {outputView === 'panel' && (
                       <>
                         <PanelResizeHandle className="h-2.5 cursor-row-resize" />
-                        <Panel defaultSize={35} minSize={10}>
+                        <Panel id="output" order={2} defaultSize={35} minSize={10}>
                           <div className="h-full rounded-lg overflow-hidden bg-surface-0">
                             <OutputPanel />
                           </div>
@@ -65,7 +65,7 @@ export function AppShell() {
                 <PanelResizeHandle className="w-2.5 cursor-col-resize" />
               </>
             )}
-            <Panel defaultSize={editorVisible ? 50 : 100} minSize={30}>
+            <Panel id="diagram" order={2} defaultSize={editorVisible ? 50 : 100} minSize={30}>
               <div className="h-full rounded-lg overflow-hidden bg-surface-0">
                 <DiagramPanel />
               </div>

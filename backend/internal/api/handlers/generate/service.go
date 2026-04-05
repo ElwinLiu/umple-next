@@ -25,33 +25,33 @@ func NewService(jarPath string) *Service {
 	return &Service{jarPath: jarPath}
 }
 
-func (s *Service) Generate(baseLanguage, dir, modelID string, suboptions []string) (GenerateResponse, error) {
+func (s *Service) Generate(baseLanguage, dir, modelID, entryFile string, suboptions []string) (GenerateResponse, error) {
 	switch baseLanguage {
 	case "javadoc":
-		return s.generateJavadoc(dir, modelID)
+		return s.generateJavadoc(dir, modelID, entryFile)
 	case "Yuml":
-		return s.generateYuml(dir, modelID)
+		return s.generateYuml(dir, modelID, entryFile)
 	default:
-		return s.generateGeneric(baseLanguage, dir, modelID, suboptions)
+		return s.generateGeneric(baseLanguage, dir, modelID, entryFile, suboptions)
 	}
 }
 
-func (s *Service) generateGeneric(language, dir, modelID string, suboptions []string) (GenerateResponse, error) {
+func (s *Service) generateGeneric(language, dir, modelID, entryFile string, suboptions []string) (GenerateResponse, error) {
 	outputDir := dir
 	var stdout, stderr string
 	var runErr error
 	if language == "Java" {
 		var err error
-		outputDir, stdout, stderr, runErr, err = s.generateJavaSources(dir)
+		outputDir, stdout, stderr, runErr, err = s.generateJavaSources(dir, entryFile)
 		if err != nil {
 			return GenerateResponse{}, err
 		}
 	} else {
-		stdout, stderr, runErr = s.runGenerateCommand(language, filepath.Join(dir, "model.ump"), dir, suboptions)
+		stdout, stderr, runErr = s.runGenerateCommand(language, filepath.Join(dir, entryFile), dir, suboptions)
 	}
 	output := strings.TrimSpace(stdout)
 
-	files, paths, err := readGeneratedFiles(outputDir, language)
+	files, paths, err := readGeneratedFiles(outputDir, language, entryFile)
 	if err == nil && files != "" {
 		output = files
 	}
@@ -95,19 +95,19 @@ func (s *Service) generateGeneric(language, dir, modelID string, suboptions []st
 	return resp, nil
 }
 
-func (s *Service) generateJavadoc(dir, modelID string) (GenerateResponse, error) {
-	javaDir, stdout, stderr, runErr, err := s.generateJavaSources(dir)
+func (s *Service) generateJavadoc(dir, modelID, entryFile string) (GenerateResponse, error) {
+	javaDir, stdout, stderr, runErr, err := s.generateJavaSources(dir, entryFile)
 	if err != nil {
 		return GenerateResponse{}, err
 	}
 	output := strings.TrimSpace(stdout)
 
-	javadocSrcDir, err := prepareJavadocSources(javaDir)
+	javadocSrcDir, err := prepareJavadocSources(javaDir, entryFile)
 	if err != nil {
 		return GenerateResponse{}, err
 	}
 
-	files, javaFiles, err := readGeneratedFiles(javadocSrcDir, "Java")
+	files, javaFiles, err := readGeneratedFiles(javadocSrcDir, "Java", entryFile)
 	if err == nil && files != "" {
 		output = files
 	}
@@ -169,11 +169,11 @@ func (s *Service) generateJavadoc(dir, modelID string) (GenerateResponse, error)
 	}, nil
 }
 
-func (s *Service) generateYuml(dir, modelID string) (GenerateResponse, error) {
-	stdout, stderr, runErr := s.runGenerateCommand("Yuml", filepath.Join(dir, "model.ump"), dir, nil)
+func (s *Service) generateYuml(dir, modelID, entryFile string) (GenerateResponse, error) {
+	stdout, stderr, runErr := s.runGenerateCommand("Yuml", filepath.Join(dir, entryFile), dir, nil)
 	output := strings.TrimSpace(stdout)
 	if output == "" {
-		if files, _, err := readGeneratedFiles(dir, "Yuml"); err == nil && files != "" {
+		if files, _, err := readGeneratedFiles(dir, "Yuml", entryFile); err == nil && files != "" {
 			output = strings.TrimSpace(files)
 		}
 	}
@@ -249,16 +249,16 @@ func (s *Service) runGenerateCommand(language, modelFile, workDir string, subopt
 	return stdout.String(), stderr.String(), nil
 }
 
-func (s *Service) generateJavaSources(dir string) (string, string, string, error, error) {
+func (s *Service) generateJavaSources(dir, entryFile string) (string, string, string, error, error) {
 	javaDir, err := prepareGeneratedWorkspace(dir, "Java")
 	if err != nil {
 		return "", "", "", nil, err
 	}
 
-	modelFile := filepath.Join(dir, "model.ump")
+	modelFile := filepath.Join(dir, entryFile)
 	code, err := os.ReadFile(modelFile)
 	if err != nil {
-		return "", "", "", nil, fmt.Errorf("read model.ump: %w", err)
+		return "", "", "", nil, fmt.Errorf("read %s: %w", entryFile, err)
 	}
 
 	wrapperFile := filepath.Join(dir, ".generate-java.ump")
