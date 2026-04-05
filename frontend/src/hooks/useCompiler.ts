@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { useSessionStore, getActiveTabName, type DiagramView } from '../stores/sessionStore'
+import { useSessionStore, type DiagramView } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
 import { urlModelResolved } from './useModelFromURL'
 import {
@@ -223,7 +223,7 @@ export function useCompiler() {
       const res = await api.diagram({
         code: umpleCode,
         modelId: mid,
-        entryFile: getActiveTabName(),
+        activeTabId: useSessionStore.getState().activeTabId,
         ...getDiagramRequestParams(view, isDarkRef.current),
       })
       if (res.svg) {

@@ -28,7 +28,6 @@ type TabMeta struct {
 // TabsData is the structure persisted to and loaded from tabs.json.
 type TabsData struct {
 	ActiveTabID string    `json:"activeTabId"`
-	EntryFile   string    `json:"entryFile"`
 	Tabs        []TabMeta `json:"tabs"`
 }
 
@@ -75,13 +74,38 @@ func (s *Store) Get(id string) (*Model, error) {
 }
 
 // ResolveEntryFile returns the compiler entry-point filename for a model.
-// It checks tabs.json first; if absent or empty, falls back to DefaultEntryFile.
+// It looks up the active tab name from tabs.json; if absent, falls back to
+// DefaultEntryFile.
 func (s *Store) ResolveEntryFile(modelID string) string {
 	tabs, err := s.LoadTabs(modelID)
-	if err != nil || tabs == nil || tabs.EntryFile == "" {
+	if err != nil || tabs == nil {
 		return DefaultEntryFile
 	}
-	return tabs.EntryFile
+	if name := tabNameByID(tabs, tabs.ActiveTabID); name != "" {
+		if safe, err := SafeTabName(name); err == nil {
+			return safe
+		}
+	}
+	return DefaultEntryFile
+}
+
+// TabNameByID returns the filename for a tab identified by tabID within the
+// given model's tabs.json. Returns "" if not found.
+func (s *Store) TabNameByID(modelID, tabID string) string {
+	tabs, err := s.LoadTabs(modelID)
+	if err != nil || tabs == nil {
+		return ""
+	}
+	return tabNameByID(tabs, tabID)
+}
+
+func tabNameByID(data *TabsData, tabID string) string {
+	for _, t := range data.Tabs {
+		if t.ID == tabID {
+			return t.Name
+		}
+	}
+	return ""
 }
 
 // CleanupLoop periodically removes tmp model directories older than maxAge.

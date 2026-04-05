@@ -71,28 +71,28 @@ export const api = {
     return res.json()
   },
 
-  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[]; needsLayout?: boolean; entryFile?: string }): Promise<DiagramResponse> {
+  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[]; needsLayout?: boolean; activeTabId?: string }): Promise<DiagramResponse> {
     return request('/diagram', {
       method: 'POST',
       body: JSON.stringify(req),
     })
   },
 
-  export(req: { code: string; format: string; modelId?: string; entryFile?: string }): Promise<Blob> {
+  export(req: { code: string; format: string; modelId?: string; activeTabId?: string }): Promise<Blob> {
     return requestBlob('/export', {
       method: 'POST',
       body: JSON.stringify(req),
     })
   },
 
-  execute(req: { code: string; language: string; modelId?: string; entryFile?: string }): Promise<{ output: string; errors?: string }> {
+  execute(req: { code: string; language: string; modelId?: string; activeTabId?: string }): Promise<{ output: string; errors?: string }> {
     return request('/execute', {
       method: 'POST',
       body: JSON.stringify(req),
     })
   },
 
-  crudSchema(req: { code: string; modelId?: string; entryFile?: string }): Promise<CrudSchemaResponse> {
+  crudSchema(req: { code: string; modelId?: string; activeTabId?: string }): Promise<CrudSchemaResponse> {
     return request('/crud/schema', {
       method: 'POST',
       body: JSON.stringify(req),

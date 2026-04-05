@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { useSessionStore, getActiveTabName } from '../stores/sessionStore'
+import { useSessionStore } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
 import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
@@ -18,11 +18,10 @@ export function useExecute() {
     setExecutionOutput('')
     setExecuting(true)
 
-    const { code, modelId } = useSessionStore.getState()
-    const entryFile = getActiveTabName()
+    const { code, modelId, activeTabId } = useSessionStore.getState()
     const language = languageOverride || useEphemeralStore.getState().generatedLanguage
     try {
-      const result = await api.execute({ code, language, entryFile, modelId: modelId ?? undefined })
+      const result = await api.execute({ code, language, activeTabId, modelId: modelId ?? undefined })
       setExecutionOutput(result.output || '', result.errors || null)
     } catch (err: unknown) {
       setExecutionOutput('', err instanceof Error ? err.message : 'Execution failed')

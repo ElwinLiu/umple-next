@@ -8,7 +8,7 @@ import { CanvasToolbar } from './CanvasToolbar'
 import { GeneratedOutputView } from '../generation/GeneratedOutputView'
 import { ObjectExplorer } from '../crud/ObjectExplorer'
 import { CanvasBanner } from '../layout/CanvasBanner'
-import { useSessionStore, getActiveTabName, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
+import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
@@ -83,8 +83,8 @@ export function DiagramPanel() {
     }
 
     // GV mode or fallback: use backend export
-    const entryFile = getActiveTabName()
-    const blob = await api.export({ code, format, modelId: modelId ?? undefined, entryFile })
+    const activeTabId = useSessionStore.getState().activeTabId
+    const blob = await api.export({ code, format, modelId: modelId ?? undefined, activeTabId })
     const url = URL.createObjectURL(blob)
     triggerDownload(url, filename)
     URL.revokeObjectURL(url)

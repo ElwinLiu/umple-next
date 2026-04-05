@@ -53,7 +53,7 @@ func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	entryFile := resolveEntryFile(h.store, req.ModelID, req.EntryFile)
+	entryFile := resolveEntryFile(h.store, req.ModelID, req.ActiveTabID)
 	modelID, dir, err := h.resolveModelDir(req.ModelID, req.Code)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())

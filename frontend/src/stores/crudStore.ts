@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { api } from '@/api/client'
 import type { CrudSchema, CrudAssociation } from '@/api/types'
-import { getActiveTabName } from './sessionStore'
+import { useSessionStore } from './sessionStore'
 
 export interface CrudInstance {
   _id: number
@@ -250,8 +250,8 @@ export const useCrudStore = create<CrudState>((set, get) => ({
     const schemaRequestKey = buildCrudSchemaRequestKey(code)
     set({ schemaLoading: true, schemaError: null, schemaRequestKey })
     try {
-      const entryFile = getActiveTabName()
-      const res = await api.crudSchema({ code, modelId, entryFile })
+      const activeTabId = useSessionStore.getState().activeTabId
+      const res = await api.crudSchema({ code, modelId, activeTabId })
       // Ignore stale responses: if another fetch was started while we were
       // awaiting, the stored schemaRequestKey will have changed.
       if (get().schemaRequestKey !== schemaRequestKey) return

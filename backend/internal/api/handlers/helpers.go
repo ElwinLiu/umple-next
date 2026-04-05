@@ -17,13 +17,15 @@ type apiTab struct {
 	Code string `json:"code"`
 }
 
-// resolveEntryFile returns the entry-point filename for a model. If the
-// request provides an explicit entryFile, it is validated and used; otherwise
-// we fall back to the persisted value in tabs.json (or DefaultEntryFile).
-func resolveEntryFile(store *model.Store, modelID, requestEntryFile string) string {
-	if requestEntryFile != "" {
-		if safe, err := model.SafeTabName(requestEntryFile); err == nil {
-			return safe
+// resolveEntryFile returns the entry-point filename for a model. If
+// activeTabID is provided, its name is looked up from tabs.json; otherwise we
+// fall back to the persisted active tab (or DefaultEntryFile).
+func resolveEntryFile(store *model.Store, modelID, activeTabID string) string {
+	if activeTabID != "" {
+		if name := store.TabNameByID(modelID, activeTabID); name != "" {
+			if safe, err := model.SafeTabName(name); err == nil {
+				return safe
+			}
 		}
 	}
 	return store.ResolveEntryFile(modelID)
