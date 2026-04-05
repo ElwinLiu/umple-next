@@ -249,6 +249,40 @@ export function validateInstance(
   return errors
 }
 
+// ── Session storage persistence ─────────────────────────────────────
+
+const CRUD_STORAGE_KEY = 'umple-crud-instances'
+
+function restoreFromSession(schemaKey: string): { instances: Record<string, CrudInstance[]>; nextId: number } | null {
+  try {
+    const raw = sessionStorage.getItem(CRUD_STORAGE_KEY)
+    if (!raw) return null
+    const data = JSON.parse(raw)
+    // Any code change produces a different key — discard everything on mismatch
+    // to avoid confusing users with stale/partial data.
+    if (data.schemaKey !== schemaKey || !data.instances) return null
+    return {
+      instances: data.instances as Record<string, CrudInstance[]>,
+      nextId: typeof data.nextId === 'number' ? data.nextId : 1,
+    }
+  } catch {
+    return null
+  }
+}
+
+function saveToSession(schemaKey: string | null, instances: Record<string, CrudInstance[]>, nextId: number) {
+  try {
+    const hasData = Object.values(instances).some((list) => list.length > 0)
+    if (!schemaKey || !hasData) {
+      sessionStorage.removeItem(CRUD_STORAGE_KEY)
+      return
+    }
+    sessionStorage.setItem(CRUD_STORAGE_KEY, JSON.stringify({ schemaKey, instances, nextId }))
+  } catch {
+    // sessionStorage full or unavailable — ignore
+  }
+}
+
 // ── Store ────────────────────────────────────────────────────────────
 
 export const useCrudStore = create<CrudState>((set, get) => ({
@@ -278,6 +312,7 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       if (!selected || !schema.classes.some((c) => c.name === selected)) {
         selected = schema.classes.find((c) => !c.isAbstract)?.name ?? null
       }
+      const restored = restoreFromSession(schemaRequestKey)
       set({
         schema,
         schemaLoading: false,
@@ -285,8 +320,8 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         schemaRequestKey,
         crudModelId: res.modelId || null,
         selectedClass: selected,
-        instances: {},
-        nextId: 1,
+        instances: restored?.instances ?? {},
+        nextId: restored?.nextId ?? 1,
         editingInstance: null,
         validationErrors: [],
       })
@@ -381,7 +416,10 @@ export const useCrudStore = create<CrudState>((set, get) => ({
 
   setValidationErrors: (errors) => set({ validationErrors: errors }),
 
-  resetInstances: () => set({ instances: {}, nextId: 1, editingInstance: null, validationErrors: [] }),
+  resetInstances: () => {
+    saveToSession(null, {}, 1)
+    set({ instances: {}, nextId: 1, editingInstance: null, validationErrors: [] })
+  },
 
   exportJson: () => {
     const { instances, schema, nextId } = get()
@@ -533,6 +571,19 @@ export const useCrudStore = create<CrudState>((set, get) => ({
     set({ instances: newInstances, nextId, editingInstance: null, validationErrors: [] })
   },
 }))
+
+// ── Auto-persist to sessionStorage (debounced) ──────────────────────
+
+let _saveTimer: ReturnType<typeof setTimeout> | null = null
+
+useCrudStore.subscribe((state, prev) => {
+  if (state.instances === prev.instances && state.nextId === prev.nextId) return
+  if (_saveTimer) clearTimeout(_saveTimer)
+  _saveTimer = setTimeout(() => {
+    const { schemaRequestKey, instances, nextId } = useCrudStore.getState()
+    saveToSession(schemaRequestKey, instances, nextId)
+  }, 300)
+})
 
 // ── Reverse link sync helper ─────────────────────────────────────────
 
