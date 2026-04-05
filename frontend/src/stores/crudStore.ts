@@ -57,6 +57,7 @@ interface CrudState {
   exportJson: () => string
   importJson: (json: string) => boolean
   generateRandom: (className: string, count: number) => void
+  generateRandomAll: () => void
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
@@ -160,6 +161,22 @@ function randomValue(type: string, typeKind: string, schema: import('@/api/types
     return `${pick(WORDS)}-${Math.floor(Math.random() * 1000)}`
   }
   return ''
+}
+
+/** Collect instances for a target class, including concrete subclass instances
+ *  (needed when an association targets an abstract class). */
+function collectTargetInstances(
+  schema: CrudSchema,
+  instances: Record<string, CrudInstance[]>,
+  className: string,
+): CrudInstance[] {
+  const result: CrudInstance[] = [...(instances[className] ?? [])]
+  for (const cls of schema.classes) {
+    if (cls.extendsClass === className) {
+      result.push(...collectTargetInstances(schema, instances, cls.name))
+    }
+  }
+  return result
 }
 
 // ── Validation ───────────────────────────────────────────────────────
@@ -422,6 +439,98 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       newInstances[className] = list
       return { instances: newInstances, nextId }
     })
+  },
+
+  generateRandomAll: () => {
+    const { schema } = get()
+    if (!schema) return
+
+    const concreteClasses = schema.classes.filter((c) => !c.isAbstract)
+    if (concreteClasses.length === 0) return
+
+    // Step 1: Generate 1-2 instances per concrete class with random attributes
+    const newInstances: Record<string, CrudInstance[]> = {}
+    let nextId = 1
+
+    for (const cls of concreteClasses) {
+      const count = Math.random() < 0.5 ? 1 : 2
+      const list: CrudInstance[] = []
+      for (let i = 0; i < count; i++) {
+        const data: Record<string, unknown> = {}
+        for (const attr of cls.attributes) {
+          data[attr.name] = randomValue(attr.type, attr.typeKind, schema)
+        }
+        list.push({ _id: nextId, ...data })
+        nextId++
+      }
+      newInstances[cls.name] = list
+    }
+
+    // Step 2: Generate random associations respecting multiplicity constraints
+    const processed = new Set<string>()
+
+    for (const cls of concreteClasses) {
+      for (const assoc of cls.associations) {
+        if (!assoc.isNavigable) continue
+
+        // Deduplicate bidirectional: skip if reverse direction already handled
+        if (assoc.reverseRoleName) {
+          const reverseKey = `${assoc.targetClass}:${assoc.reverseRoleName}`
+          if (processed.has(reverseKey)) continue
+          processed.add(`${cls.name}:${assoc.roleName}`)
+        }
+
+        const sourceList = newInstances[cls.name] ?? []
+        const targetList = collectTargetInstances(schema, newInstances, assoc.targetClass)
+        if (sourceList.length === 0 || targetList.length === 0) continue
+
+        const reverseAssoc = findReverseAssoc(schema, assoc)
+        const maxReverse = reverseAssoc?.multiplicity.max ?? -1
+
+        // Track how many reverse links each target has accumulated
+        const reverseCount = new Map<number, number>()
+        for (const t of targetList) reverseCount.set(t._id, 0)
+
+        for (const source of sourceList) {
+          const available = targetList.filter((t) => {
+            if (assoc.isReflexive && t._id === source._id) return false
+            // For reflexive to-one (tree/parent), only link to lower IDs to prevent cycles
+            if (assoc.isReflexive && assoc.multiplicity.max === 1 && t._id >= source._id) return false
+            if (maxReverse !== -1 && (reverseCount.get(t._id) ?? 0) >= maxReverse) return false
+            return true
+          })
+
+          const { min, max } = assoc.multiplicity
+          const effectiveMax = max === -1 ? available.length : Math.min(max, available.length)
+          const effectiveMin = Math.min(min, available.length)
+          if (effectiveMax < effectiveMin) continue
+
+          const linkCount = effectiveMin + Math.floor(Math.random() * (effectiveMax - effectiveMin + 1))
+          // Shuffle available targets and pick
+          const shuffled = [...available].sort(() => Math.random() - 0.5)
+          const picked = shuffled.slice(0, linkCount)
+
+          if (picked.length > 0) {
+            setAssocIds(source, assoc.roleName, picked.map((t) => t._id), max)
+
+            if (reverseAssoc) {
+              for (const target of picked) {
+                const existing = getAssocIds(target, assoc.reverseRoleName)
+                setAssocIds(
+                  target,
+                  assoc.reverseRoleName,
+                  [...existing, source._id],
+                  reverseAssoc.multiplicity.max,
+                )
+                reverseCount.set(target._id, (reverseCount.get(target._id) ?? 0) + 1)
+              }
+            }
+          }
+        }
+      }
+    }
+
+    set({ instances: newInstances, nextId, editingInstance: null, validationErrors: [] })
   },
 }))
 

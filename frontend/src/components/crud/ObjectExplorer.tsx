@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
-import { Loader2, RefreshCw, Download, Upload, Network, X } from 'lucide-react'
+import { Loader2, RefreshCw, Download, Upload, Network, X, Dices } from 'lucide-react'
 import { useCrudStore, buildCrudSchemaRequestKey } from '@/stores/crudStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { ClassList } from './ClassList'
@@ -20,6 +20,7 @@ export function ObjectExplorer() {
   const exportJson = useCrudStore((s) => s.exportJson)
   const importJson = useCrudStore((s) => s.importJson)
   const instances = useCrudStore((s) => s.instances)
+  const generateRandomAll = useCrudStore((s) => s.generateRandomAll)
 
   const code = useSessionStore((s) => s.code)
   const sessionModelId = useSessionStore((s) => s.modelId)
@@ -225,6 +226,15 @@ export function ObjectExplorer() {
               </Tip>
             </div>
           </div>
+          <Tip content="Generate random instances for all classes with associations" side="right">
+            <button
+              onClick={generateRandomAll}
+              className="flex items-center gap-1 w-full px-2 py-1 text-[10px] text-ink-faint hover:text-ink-muted transition-colors cursor-pointer rounded hover:bg-surface-1"
+            >
+              <Dices className="size-3" />
+              Generate All
+            </button>
+          </Tip>
           {totalInstances > 0 && (
             <Tip content="View instance diagram" side="right">
               <button
