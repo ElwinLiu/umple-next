@@ -185,7 +185,6 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL
           exit-code: '1'
-          trivyignores: .trivyignore
 
       - name: Scan frontend image
         uses: aquasecurity/trivy-action@v0.35.0
@@ -196,7 +195,6 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL
           exit-code: '1'
-          trivyignores: .trivyignore
 
       - name: Scan code-exec image
         uses: aquasecurity/trivy-action@v0.35.0
@@ -207,7 +205,6 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL
           exit-code: '1'
-          trivyignores: .trivyignore
 
       - name: Scan collab image
         uses: aquasecurity/trivy-action@v0.35.0
@@ -218,7 +215,6 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL
           exit-code: '1'
-          trivyignores: .trivyignore
 
       - name: Scan lsp-proxy image
         uses: aquasecurity/trivy-action@v0.35.0
@@ -229,7 +225,6 @@ jobs:
           ignore-unfixed: true
           severity: CRITICAL
           exit-code: '1'
-          trivyignores: .trivyignore
 
       - name: Install Cosign
         uses: sigstore/cosign-installer@v3.8.1
