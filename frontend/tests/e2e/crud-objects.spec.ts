@@ -88,19 +88,19 @@ test('Objects tab loads schema after compiling an example', async ({ page }) => 
   await page.click('[data-testid="compile-button"]')
   await compilePromise
 
-  // Switch to Objects via the canvas dropdown
-  const canvasDropdown = page.getByRole('button', { name: /Switch canvas view/i })
+  // Switch to Objects via the diagram view dropdown
+  const canvasDropdown = page.getByRole('button', { name: /Diagram view/i })
   await expect(canvasDropdown).toBeVisible()
   await canvasDropdown.click()
-  const objectsItem = page.getByRole('menuitem', { name: /Objects/i })
-  await expect(objectsItem).toBeVisible()
+  const crudItem = page.getByRole('menuitemradio', { name: /CRUD UI/i })
+  await expect(crudItem).toBeVisible()
 
   // Set up schema response waiter before triggering navigation
   const schemaPromise = page.waitForResponse(
     resp => resp.url().includes('/api/crud/schema'),
     { timeout: 10000 },
   )
-  await objectsItem.click()
+  await crudItem.click()
   await schemaPromise
 
   // Verify classes appear in the Objects class list
