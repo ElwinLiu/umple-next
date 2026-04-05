@@ -39,6 +39,7 @@ export const VIEW_MODE_GROUPS: {
     label: 'Other',
     modes: [
       { value: 'instance', label: 'Instance', longLabel: 'Instance Diagram' },
+      { value: 'crud', label: 'CRUD UI', longLabel: 'CRUD UI' },
     ],
   },
 ]
@@ -70,6 +71,7 @@ export const DISPLAY_TOGGLES: Record<DiagramView, { key: DisplayPrefKey; label: 
   instance: [],
   eventSequence: [],
   stateTables: [],
+  crud: [],
 }
 
 /** Layout algorithm options for Graphviz */

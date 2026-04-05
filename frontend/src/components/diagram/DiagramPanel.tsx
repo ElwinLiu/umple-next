@@ -194,7 +194,7 @@ export function DiagramPanel() {
           </div>
         )}
 
-        {rightPanelView === 'objects' && (
+        {viewMode === 'crud' && rightPanelView === 'diagram' && (
           <div className="absolute inset-0 bg-surface-0 z-20">
             <ObjectExplorer />
           </div>
