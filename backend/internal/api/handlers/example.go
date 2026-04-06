@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -142,6 +143,17 @@ func (h *ExampleHandler) List(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(categories)
 }
 
+// categoryForExample returns the category name for the given example (without
+// .ump extension), or empty string if uncategorized.
+func categoryForExample(name string) string {
+	for cat, members := range categoryMembers {
+		if slices.Contains(members, name) {
+			return cat
+		}
+	}
+	return ""
+}
+
 func (h *ExampleHandler) Get(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 	// Sanitize
@@ -159,9 +171,14 @@ func (h *ExampleHandler) Get(w http.ResponseWriter, r *http.Request) {
 	raw := string(data)
 	userCode, _, hasDelimiter := splitModelSections(raw)
 
+	baseName := strings.TrimSuffix(name, ".ump")
 	resp := map[string]string{
-		"name": strings.TrimSuffix(name, ".ump"),
+		"name": baseName,
 		"code": userCode,
+	}
+
+	if cat := categoryForExample(baseName); cat != "" {
+		resp["category"] = cat
 	}
 
 	// If the example has a layout section, pre-create a model on disk with the
