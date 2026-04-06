@@ -241,3 +241,8 @@ export interface CrudEnum {
   name: string
   values: string[]
 }
+
+export interface PromoteResponse {
+  oldId: string
+  newId: string
+}

@@ -1,6 +1,6 @@
 import type {
   CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse,
-  DiagramResponse, GetModelResponse, CrudSchemaResponse,
+  DiagramResponse, GetModelResponse, CrudSchemaResponse, PromoteResponse,
 } from './types'
 
 const API_BASE = '/api'
@@ -104,5 +104,9 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ dot }),
     })
+  },
+
+  promoteModel(id: string): Promise<PromoteResponse> {
+    return request(`/models/${encodeURIComponent(id)}/promote`, { method: 'POST' })
   },
 }

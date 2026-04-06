@@ -30,6 +30,7 @@ export function useLsp(viewRef: React.RefObject<EditorView | null>) {
   const tabsVersion = useSessionStore((s) => s.tabsVersion)
 
   const modelIdRef = useRef(modelId)
+  const prevModelIdRef = useRef(modelId)
   modelIdRef.current = modelId
 
   const doConnect = useCallback(async () => {
@@ -48,9 +49,20 @@ export function useLsp(viewRef: React.RefObject<EditorView | null>) {
     })
   }, [viewRef])
 
-  // Connect when modelId becomes available
+  // Connect when modelId becomes available, or reconnect when it changes
+  // (e.g., after promoting tmp → permanent, the directory is renamed).
   useEffect(() => {
     if (!modelId) return
+
+    const prev = prevModelIdRef.current
+    prevModelIdRef.current = modelId
+
+    // If modelId changed (not just initially set), tear down the old
+    // LSP session so initLsp creates a fresh one for the new directory.
+    if (prev && prev !== modelId) {
+      disconnectLsp()
+    }
+
     // Small delay to let the editor mount
     const timer = setTimeout(doConnect, 500)
     return () => clearTimeout(timer)
