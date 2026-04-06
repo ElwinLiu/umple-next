@@ -295,3 +295,133 @@ func TestReadTabCode_RejectsPathTraversal(t *testing.T) {
 		}
 	}
 }
+
+func TestIsTemporary(t *testing.T) {
+	tests := []struct {
+		id   string
+		want bool
+	}{
+		{"tmpabcdef1234", true},
+		{"tmp", true},
+		{"260405abcdef12", false},
+		{"", false},
+		{"permanent", false},
+	}
+	for _, tt := range tests {
+		if got := IsTemporary(tt.id); got != tt.want {
+			t.Errorf("IsTemporary(%q) = %v, want %v", tt.id, got, tt.want)
+		}
+	}
+}
+
+func TestPromote_TmpToPermanent(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Create a tmp model with some files
+	m, err := store.Create("class Foo {}")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !IsTemporary(m.ID) {
+		t.Fatalf("expected tmp prefix, got %q", m.ID)
+	}
+
+	// Write a tabs.json too
+	if err := store.SaveTabs(m.ID, &TabsData{
+		ActiveTabID: "t1",
+		Tabs:        []TabMeta{{ID: "t1", Name: "Model.ump"}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	oldDir := store.ModelDir(m.ID)
+
+	// Promote
+	newID, err := store.Promote(m.ID)
+	if err != nil {
+		t.Fatalf("Promote: %v", err)
+	}
+
+	// New ID should not be temporary
+	if IsTemporary(newID) {
+		t.Errorf("promoted ID should not be temporary: %q", newID)
+	}
+	// New ID should start with YYMMDD (6 digits)
+	if len(newID) < 6 {
+		t.Fatalf("promoted ID too short: %q", newID)
+	}
+	for _, c := range newID[:6] {
+		if c < '0' || c > '9' {
+			t.Errorf("promoted ID prefix should be digits, got %q", newID[:6])
+			break
+		}
+	}
+
+	// Old directory should be gone
+	if _, err := os.Stat(oldDir); !os.IsNotExist(err) {
+		t.Errorf("old directory should be removed after promote")
+	}
+
+	// New directory should exist with the model file
+	newDir := store.ModelDir(newID)
+	data, err := os.ReadFile(filepath.Join(newDir, "Model.ump"))
+	if err != nil {
+		t.Fatalf("read promoted model: %v", err)
+	}
+	if string(data) != "class Foo {}" {
+		t.Errorf("promoted model code = %q, want %q", string(data), "class Foo {}")
+	}
+
+	// tabs.json should also be preserved
+	tabs, err := store.LoadTabs(newID)
+	if err != nil {
+		t.Fatalf("load promoted tabs: %v", err)
+	}
+	if tabs == nil || len(tabs.Tabs) != 1 {
+		t.Errorf("promoted tabs not preserved")
+	}
+}
+
+func TestPromote_AlreadyPermanent(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Manually create a permanent-style directory
+	permID := "260405testmodel"
+	dir := filepath.Join(root, permID)
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "Model.ump"), []byte("class Bar {}"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Promote should be a no-op
+	result, err := store.Promote(permID)
+	if err != nil {
+		t.Fatalf("Promote permanent: %v", err)
+	}
+	if result != permID {
+		t.Errorf("Promote permanent = %q, want %q (no-op)", result, permID)
+	}
+}
+
+func TestPromote_NonExistent(t *testing.T) {
+	root := t.TempDir()
+	store, err := NewStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = store.Promote("tmpnonexistent")
+	if err == nil {
+		t.Error("expected error promoting non-existent model")
+	}
+}

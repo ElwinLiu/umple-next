@@ -1,22 +1,43 @@
 import { useEffect, useRef } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useCollabStore } from '../stores/collabStore'
+import { isTemporaryModel } from '../lib/modelId'
 import { api } from '../api/client'
 
 /** The URL model param read once at module load — before any React effect. */
 const initialUrlModelId = new URLSearchParams(window.location.search).get('model')
 
 /**
- * True once the initial URL model has been resolved (loaded or failed).
- * Exported so useCompiler can defer compilation until the server state is known,
- * preventing stale sessionStorage data from overwriting the server model.
+ * Read the persisted modelId from sessionStorage (Zustand hydrates async, so
+ * we read the raw storage to get the value synchronously at module load).
  */
-export let urlModelResolved = !initialUrlModelId
+function readStoredModelId(): string | null {
+  try {
+    const raw = sessionStorage.getItem('umple-session-v1')
+    if (!raw) return null
+    const parsed = JSON.parse(raw)
+    return parsed?.state?.modelId ?? null
+  } catch {
+    return null
+  }
+}
+
+const initialStoreModelId = initialUrlModelId ? null : readStoredModelId()
+
+/** The model ID to restore on mount — URL takes priority over sessionStorage. */
+const initialModelId = initialUrlModelId ?? initialStoreModelId
 
 /**
- * On mount, reads `?model=<id>` from the URL and loads the model from the
- * backend (URL takes priority over sessionStorage). After compilation assigns
- * a modelId, syncs it back to the URL so the user can bookmark / share.
+ * True once the initial model (from URL or sessionStorage) has been resolved.
+ * Exported so useCompiler can defer compilation until the server state is known,
+ * preventing stale/empty code from overwriting the server model.
+ */
+export let urlModelResolved = !initialModelId
+
+/**
+ * On mount, reads `?model=<id>` from the URL (or modelId from sessionStorage)
+ * and loads the model from the backend. After compilation assigns a modelId,
+ * syncs permanent IDs back to the URL so the user can bookmark / share.
  */
 export function useModelFromURL() {
   const setCode = useSessionStore((s) => s.setCode)
@@ -24,19 +45,15 @@ export function useModelFromURL() {
   const restoreTabs = useSessionStore((s) => s.restoreTabs)
   const modelId = useSessionStore((s) => s.modelId)
 
-  // True once the initial URL model has been resolved (loaded or failed).
-  // Until then, don't let the sessionStorage modelId overwrite the URL.
-  const resolvedRef = useRef(!initialUrlModelId)
+  const resolvedRef = useRef(!initialModelId)
 
-  // Load model from URL on mount.
-  // AbortController ensures React StrictMode's double-mount doesn't fire two
-  // fetches that each bump tabsVersion and trigger duplicate compilations.
+  // Load model from URL or sessionStorage on mount.
   useEffect(() => {
-    if (!initialUrlModelId) return
+    if (!initialModelId) return
 
     const abort = new AbortController()
 
-    api.getModel(initialUrlModelId, abort.signal)
+    api.getModel(initialModelId, abort.signal)
       .then((res) => {
         if (abort.signal.aborted) return
         if (res.tabs?.length) {
@@ -45,15 +62,24 @@ export function useModelFromURL() {
           setCode(res.code)
         }
         setModelId(res.modelId)
+
+        // Auto-start collab for permanent models loaded from the URL.
+        // Permanent model URLs are always collab-enabled — if a room exists
+        // the user joins it; otherwise a new room is created.
+        if (initialUrlModelId && !isTemporaryModel(res.modelId)) {
+          useCollabStore.getState().startCollab(res.modelId)
+        }
       })
       .catch((err) => {
         if (abort.signal.aborted || err.name === 'AbortError') return
-        // Model not found or expired — remove the stale param
-        const url = new URL(window.location.href)
-        url.searchParams.delete('model')
-        window.history.replaceState({}, '', url.toString())
-        // Clear stale modelId from sessionStorage and bump tabsVersion
-        // so the compile effect fires with a clean slate.
+        // Model not found or expired — clean up
+        if (initialUrlModelId) {
+          const url = new URL(window.location.href)
+          url.searchParams.delete('model')
+          window.history.replaceState({}, '', url.toString())
+        }
+        // Clear stale modelId and bump tabsVersion so the compile effect
+        // fires with a clean slate.
         useSessionStore.setState((s) => ({
           modelId: null,
           tabsVersion: s.tabsVersion + 1,
@@ -63,23 +89,19 @@ export function useModelFromURL() {
         if (abort.signal.aborted) return
         urlModelResolved = true
         resolvedRef.current = true
-        // Force the compile effect to re-fire now that urlModelResolved is true,
-        // even if code/modelId didn't change (e.g., sessionStorage matches server).
+        // Force the compile effect to re-fire now that urlModelResolved is true.
         useSessionStore.setState((s) => ({ tabsVersion: s.tabsVersion + 1 }))
       })
 
     return () => abort.abort()
   }, [setCode, setModelId, restoreTabs])
 
-  // Sync modelId to URL whenever it changes
+  // Sync modelId to URL whenever it changes — only for permanent IDs.
   useEffect(() => {
     if (!resolvedRef.current) return
 
-    // Don't touch the URL during collab mode.
-    if (useCollabStore.getState().isCollaborating) return
-
     const url = new URL(window.location.href)
-    if (modelId) {
+    if (modelId && !isTemporaryModel(modelId)) {
       url.searchParams.set('model', modelId)
     } else {
       url.searchParams.delete('model')

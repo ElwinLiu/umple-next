@@ -2,8 +2,10 @@ package handlers
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/umple/umpleonline/backend/internal/model"
@@ -15,6 +17,26 @@ type ModelHandler struct {
 
 func NewModelHandler(store *model.Store) *ModelHandler {
 	return &ModelHandler{store: store}
+}
+
+func (h *ModelHandler) Promote(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	newID, err := h.store.Promote(id)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			writeError(w, http.StatusNotFound, "model not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to promote model: %v", err))
+		}
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]string{
+		"oldId": id,
+		"newId": newID,
+	})
 }
 
 func (h *ModelHandler) Get(w http.ResponseWriter, r *http.Request) {

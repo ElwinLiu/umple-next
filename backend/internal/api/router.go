@@ -61,6 +61,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 
 		// Models
 		r.Get("/models/{id}", modelH.Get)
+		r.Post("/models/{id}/promote", modelH.Promote)
 
 		// Examples
 		r.Get("/examples", exampleH.List)

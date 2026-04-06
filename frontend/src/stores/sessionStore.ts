@@ -473,6 +473,7 @@ export const useSessionStore = create<SessionState>()(
       name: 'umple-session-v1',
       storage: createJSONStorage(() => sessionStorage),
       partialize: (state) => ({
+        modelId: state.modelId,
         selectedExample: state.selectedExample,
         generateTargetId: state.generateTargetId,
         viewMode: state.viewMode,

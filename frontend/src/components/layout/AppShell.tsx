@@ -8,7 +8,6 @@ import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useCompiler } from '../../hooks/useCompiler'
 import { useModelFromURL } from '../../hooks/useModelFromURL'
 import { useCollab } from '../../hooks/useCollab'
-import { useCollabFromURL } from '../../hooks/useCollabFromURL'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog'
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
@@ -20,7 +19,6 @@ export function AppShell() {
   useCompiler()
   useModelFromURL()
   useCollab()
-  useCollabFromURL()
 
   const editorVisible = showEditor && !diagramOnly
 

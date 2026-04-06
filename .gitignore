@@ -14,9 +14,8 @@ test-results/
 backend/versionRunning.txt
 backend/commandcount.txt
 
-# Data
-data/models/tmp*
-data/models/tasks/
+# Data — all model directories are runtime artifacts
+data/models/
 
 # IDE
 .vscode/

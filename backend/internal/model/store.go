@@ -13,6 +13,11 @@ import (
 	"time"
 )
 
+// IsTemporary reports whether a model ID is a temporary (auto-cleanup) model.
+func IsTemporary(id string) bool {
+	return strings.HasPrefix(id, "tmp")
+}
+
 // DefaultEntryFile is the fallback filename used when no tabs.json exists
 // (backward compatibility with pre-tab models). The frontend may use any
 // name — the backend does not enforce a specific tab name.
@@ -243,7 +248,7 @@ func (s *Store) cleanup(maxAge time.Duration) {
 	}
 	cutoff := time.Now().Add(-maxAge)
 	for _, e := range entries {
-		if !e.IsDir() || !strings.HasPrefix(e.Name(), "tmp") {
+		if !e.IsDir() || !IsTemporary(e.Name()) {
 			continue
 		}
 		info, err := e.Info()
@@ -259,6 +264,30 @@ func (s *Store) cleanup(maxAge time.Duration) {
 			}
 		}
 	}
+}
+
+// Promote converts a temporary model to a permanent one by renaming its
+// directory. Returns the new permanent ID. If the model is already permanent,
+// returns the same ID (no-op).
+func (s *Store) Promote(id string) (string, error) {
+	id = sanitizeID(id)
+	if !IsTemporary(id) {
+		return id, nil
+	}
+	oldDir := filepath.Join(s.root, id)
+	if _, err := os.Stat(oldDir); err != nil {
+		return "", fmt.Errorf("promote: %w", err)
+	}
+	newID := permanentID()
+	newDir := filepath.Join(s.root, newID)
+	if err := os.Rename(oldDir, newDir); err != nil {
+		return "", fmt.Errorf("promote model: %w", err)
+	}
+	return newID, nil
+}
+
+func permanentID() string {
+	return time.Now().Format("060102") + randomID()
 }
 
 func randomID() string {
