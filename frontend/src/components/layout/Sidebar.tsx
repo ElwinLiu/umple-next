@@ -305,7 +305,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
     () => allCategories
       .filter((cat) => (getViewForExampleCategory(cat.name) ?? 'class') === viewMode)
       .flatMap((cat) => cat.examples)
-      .map((ex) => ({ value: ex.name, label: ex.name })),
+      .map((ex) => ({ value: ex.name, label: ex.label })),
     [allCategories, viewMode]
   )
 

@@ -160,6 +160,7 @@ export interface DiagramResponse {
 
 export interface ExampleEntry {
   name: string
+  label: string
   filename: string
 }
 
