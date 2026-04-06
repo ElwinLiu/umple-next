@@ -94,7 +94,7 @@ export function InstanceTable({ cls }: { cls: CrudClass }) {
                   </th>
                 ))}
                 {hiddenAttrCount > 0 && (
-                  <th className="px-3 py-1.5 text-left font-medium text-ink-faint text-[10px]">+{hiddenAttrCount} more</th>
+                  <th className="px-3 py-1.5 text-left font-medium text-ink-faint text-xxs">+{hiddenAttrCount} more</th>
                 )}
                 <th className="px-3 py-1.5 text-right font-medium text-ink-muted w-12" />
               </tr>
@@ -218,16 +218,16 @@ function AssociationDetail({ inst, assocs, allInstances }: {
         return (
           <div key={assoc.roleName}>
             <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">
+              <span className="text-xxs font-semibold text-ink-muted uppercase tracking-wider">
                 {assoc.roleName}
               </span>
-              <span className="text-[10px] text-ink-faint">
+              <span className="text-xxs text-ink-faint">
                 {assoc.multiplicity.raw} {assoc.targetClass}
                 {assoc.isComposition && ' (composition)'}
               </span>
             </div>
             {ids.length === 0 ? (
-              <span className="text-[10px] text-ink-faint italic">none</span>
+              <span className="text-xxs text-ink-faint italic">none</span>
             ) : (
               <div className="flex flex-wrap gap-1">
                 {ids.map((id) => {
@@ -238,7 +238,7 @@ function AssociationDetail({ inst, assocs, allInstances }: {
                   return (
                     <span
                       key={id}
-                      className="inline-flex items-center px-1.5 py-0.5 text-[10px] rounded bg-surface-2 text-ink-muted"
+                      className="inline-flex items-center px-1.5 py-0.5 text-xxs rounded bg-surface-2 text-ink-muted"
                     >
                       {label}
                     </span>

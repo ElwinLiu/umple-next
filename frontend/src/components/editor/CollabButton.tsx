@@ -111,7 +111,10 @@ export function CollabButton() {
               'size-1.5 rounded-full',
               connected && ready ? 'bg-status-success' : 'bg-status-warning'
             )}
+            role="status"
+            aria-label={connected && ready ? 'Connected' : 'Connecting'}
           />
+          <span className="sr-only">{connected && ready ? 'Connected' : 'Connecting'}</span>
           </button>
         </PopoverTrigger>
       </Tip>

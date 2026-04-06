@@ -84,7 +84,7 @@ export function CanvasBanner() {
   }, [compile])
 
   return (
-    <div className="relative grid grid-cols-[minmax(0,auto)_minmax(0,1fr)_auto] items-center h-[38px] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
+    <div className="relative grid grid-cols-[minmax(0,auto)_minmax(0,1fr)_auto] items-center h-[var(--toolbar-h)] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
       <div className="flex items-center gap-2 min-w-0 overflow-hidden">
         <Tip content="Compile (Ctrl+Enter)" side="bottom">
           <button
@@ -159,7 +159,7 @@ export function CanvasBanner() {
                 onClick={() => setRightPanelView('generated')}
                 className={cn(lineTabClasses({ active: rightPanelView === 'generated' }), 'text-xs px-2.5 py-1 flex items-center gap-1.5 min-w-0 max-w-48')}
               >
-                {generatingCode && <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-status-warning animate-pulse" />}
+                {generatingCode && <><span className="w-1.5 h-1.5 shrink-0 rounded-full bg-status-warning animate-pulse" aria-hidden="true" /><span className="sr-only">Generating</span></>}
                 <span className="truncate">{getGenerateTarget(generatedTargetId)?.label ?? generatedTargetId}</span>
               </button>
             </Tip>
@@ -176,7 +176,7 @@ export function CanvasBanner() {
                 {GENERATE_TARGET_GROUPS.map((group, gi) => (
                   <DropdownMenuGroup key={group.label}>
                     {gi > 0 && <DropdownMenuSeparator />}
-                    <DropdownMenuLabel className="text-[10px]">{group.label}</DropdownMenuLabel>
+                    <DropdownMenuLabel className="text-xxs">{group.label}</DropdownMenuLabel>
                     {group.targets.map((target) => (
                       <DropdownMenuItem
                         key={target.id}

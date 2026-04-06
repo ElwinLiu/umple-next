@@ -123,7 +123,7 @@ export function InstanceEditor() {
           {navigableAssocs.length > 0 && (
             <>
               <div className="border-t border-border pt-3 mt-4">
-                <h4 className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider mb-2">Associations</h4>
+                <h4 className="text-xxs font-semibold text-ink-muted uppercase tracking-wider mb-2">Associations</h4>
               </div>
               {navigableAssocs.map((assoc) => (
                 <AssociationField
@@ -260,13 +260,13 @@ function FieldWrapper({ attr, error, children }: { attr: CrudAttribute; error?: 
     <div className="space-y-1">
       <label className="flex items-center gap-1.5 text-xs text-ink-muted">
         <span className={attr.isInherited ? 'italic' : ''}>{attr.name}</span>
-        <span className="text-[10px] text-ink-faint">{attr.type}</span>
+        <span className="text-xxs text-ink-faint">{attr.type}</span>
         {attr.isInherited && attr.inheritedFrom && (
-          <span className="text-[10px] text-ink-faint italic">from {attr.inheritedFrom}</span>
+          <span className="text-xxs text-ink-faint italic">from {attr.inheritedFrom}</span>
         )}
       </label>
       {children}
-      {error && <p className="text-[10px] text-status-error">{error}</p>}
+      {error && <p className="text-xxs text-status-error">{error}</p>}
     </div>
   )
 }
@@ -292,7 +292,7 @@ function AssociationField({ assoc, value, onChange, targetInstances, targetClass
       <div className="space-y-1">
         <label className="flex items-center gap-1.5 text-xs text-ink-muted">
           <span>{label}</span>
-          <span className="text-[10px] text-ink-faint">
+          <span className="text-xxs text-ink-faint">
             {assoc.multiplicity.raw} {targetClassName}
             {assoc.isComposition && <span className="text-status-warning ml-1">(composition)</span>}
           </span>
@@ -310,7 +310,7 @@ function AssociationField({ assoc, value, onChange, targetInstances, targetClass
             </option>
           ))}
         </select>
-        {error && <p className="text-[10px] text-status-error">{error}</p>}
+        {error && <p className="text-xxs text-status-error">{error}</p>}
       </div>
     )
   }
@@ -329,14 +329,14 @@ function AssociationField({ assoc, value, onChange, targetInstances, targetClass
     <div className="space-y-1">
       <label className="flex items-center gap-1.5 text-xs text-ink-muted">
         <span>{label}</span>
-        <span className="text-[10px] text-ink-faint">
+        <span className="text-xxs text-ink-faint">
           {assoc.multiplicity.raw} {targetClassName}
           {assoc.isComposition && <span className="text-status-warning ml-1">(composition)</span>}
         </span>
-        <span className="text-[10px] text-ink-faint ml-auto tabular-nums">{selected.length} selected</span>
+        <span className="text-xxs text-ink-faint ml-auto tabular-nums">{selected.length} selected</span>
       </label>
       {available.length === 0 ? (
-        <p className="text-[10px] text-ink-faint">No {targetClassName} instances available</p>
+        <p className="text-xxs text-ink-faint">No {targetClassName} instances available</p>
       ) : (
         <div className="space-y-0.5 max-h-32 overflow-y-auto">
           {available.map((inst) => (
@@ -353,7 +353,7 @@ function AssociationField({ assoc, value, onChange, targetInstances, targetClass
           ))}
         </div>
       )}
-      {error && <p className="text-[10px] text-status-error">{error}</p>}
+      {error && <p className="text-xxs text-status-error">{error}</p>}
     </div>
   )
 }

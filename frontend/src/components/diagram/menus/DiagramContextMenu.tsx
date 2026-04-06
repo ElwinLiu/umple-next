@@ -6,6 +6,7 @@ import { useDiagramSync } from '@/hooks/useDiagramSync'
 import { useMenuClose } from '@/hooks/useMenuClose'
 import { generateClassName } from '@/lib/diagramHelpers'
 import { MenuItem } from './MenuItem'
+import { ContextMenuShell } from './ContextMenuShell'
 import type { ClassNodeData } from '../nodes/ClassNode'
 
 interface DiagramContextMenuProps {
@@ -57,13 +58,7 @@ export function DiagramContextMenu({ position, flowPosition, onClose }: DiagramC
   if (!position) return null
 
   return (
-    <div
-      ref={menuRef}
-      className="fixed z-50 min-w-[10rem] rounded-md border border-surface-2 bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
-      style={{ left: position.x, top: position.y }}
-      role="menu"
-      aria-label="Diagram context menu"
-    >
+    <ContextMenuShell menuRef={menuRef} position={position} ariaLabel="Diagram context menu">
       <MenuItem onClick={handleAddClass} icon={<Plus className="size-3.5" />}>
         Add Class Here
       </MenuItem>
@@ -71,6 +66,6 @@ export function DiagramContextMenu({ position, flowPosition, onClose }: DiagramC
       <MenuItem onClick={handleFitView} icon={<Maximize className="size-3.5" />}>
         Fit View
       </MenuItem>
-    </div>
+    </ContextMenuShell>
   )
 }

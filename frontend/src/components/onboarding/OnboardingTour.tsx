@@ -3,6 +3,7 @@ import { usePreferencesStore } from '@/stores/preferencesStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { Button } from '@/components/ui/button'
+import { usePrefersReducedMotion } from '@/hooks/useReducedMotion'
 import {
   ArrowRight,
   X,
@@ -144,6 +145,7 @@ export function OnboardingTour() {
   const setTourStep = useEphemeralStore((s) => s.setTourStep)
   const finishTour = useEphemeralStore((s) => s.finishTour)
 
+  const reducedMotion = usePrefersReducedMotion()
   const [targetRect, setTargetRect] = useState<Rect | null>(null)
   const cardRef = useRef<HTMLDivElement>(null)
   const featureHintsRef = useRef<HTMLDivElement>(null)
@@ -326,14 +328,14 @@ export function OnboardingTour() {
       {/* Dark overlay with spotlight cutout — pointer-events: none so
           clicks pass through to the actual UI elements underneath */}
       <div
-        className="fixed inset-0 z-[45] pointer-events-none transition-[clip-path] duration-300 ease-out"
+        className={`fixed inset-0 z-[45] pointer-events-none ${reducedMotion ? '' : 'transition-[clip-path] duration-300 ease-out'}`}
         style={{ backgroundColor: 'rgba(0, 0, 0, 0.45)', clipPath }}
       />
 
       {/* Spotlight ring around target */}
       {targetRect && (
         <div
-          className="fixed z-[45] rounded-lg pointer-events-none ring-2 ring-brand/60 transition-all duration-300 ease-out"
+          className={`fixed z-[45] rounded-lg pointer-events-none ring-2 ring-brand/60 ${reducedMotion ? '' : 'transition-all duration-300 ease-out'}`}
           style={{
             top: targetRect.top - p,
             left: targetRect.left - p,
@@ -391,7 +393,7 @@ export function OnboardingTour() {
 
           {/* Actions */}
           <div className="flex items-center justify-between mt-4">
-            <span className="text-[11px] text-ink-faint">
+            <span className="text-xxs text-ink-faint">
               {tourStep! + 1} of {TOUR_STEPS.length}
             </span>
             {!step.interactive ? (
@@ -402,7 +404,7 @@ export function OnboardingTour() {
             ) : (
               <button
                 onClick={handleNext}
-                className="text-[11px] text-ink-faint hover:text-ink-muted transition-colors cursor-pointer"
+                className="text-xxs text-ink-faint hover:text-ink-muted transition-colors cursor-pointer"
               >
                 Skip step
               </button>

@@ -201,7 +201,7 @@ export function ObjectExplorer() {
               <button
                 onClick={handleRefresh}
                 disabled={schemaLoading}
-                className="flex items-center gap-1 px-2 py-1 text-[10px] text-ink-faint hover:text-ink-muted transition-colors cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1 px-2 py-1 text-xxs text-ink-faint hover:text-ink-muted transition-colors cursor-pointer disabled:opacity-50"
               >
                 <RefreshCw className={`size-3 ${schemaLoading ? 'animate-spin' : ''}`} />
                 Refresh
@@ -229,7 +229,7 @@ export function ObjectExplorer() {
           <Tip content="Generate random instances for all classes with associations" side="right">
             <button
               onClick={generateRandomAll}
-              className="flex items-center gap-1 w-full px-2 py-1 text-[10px] text-ink-faint hover:text-ink-muted transition-colors cursor-pointer rounded hover:bg-surface-1"
+              className="flex items-center gap-1 w-full px-2 py-1 text-xxs text-ink-faint hover:text-ink-muted transition-colors cursor-pointer rounded hover:bg-surface-1"
             >
               <Dices className="size-3" />
               Generate All
@@ -240,7 +240,7 @@ export function ObjectExplorer() {
               <button
                 onClick={handleViewDiagram}
                 disabled={diagramLoading}
-                className="flex items-center gap-1 w-full px-2 py-1 text-[10px] text-ink-faint hover:text-ink-muted transition-colors cursor-pointer disabled:opacity-50 rounded hover:bg-surface-1"
+                className="flex items-center gap-1 w-full px-2 py-1 text-xxs text-ink-faint hover:text-ink-muted transition-colors cursor-pointer disabled:opacity-50 rounded hover:bg-surface-1"
               >
                 {diagramLoading
                   ? <Loader2 className="size-3 animate-spin" />

@@ -16,7 +16,7 @@ export function ClassList() {
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 py-2 border-b border-border">
-        <h3 className="text-[11px] font-semibold text-ink-muted uppercase tracking-wider">Classes</h3>
+        <h3 className="text-xxs font-semibold text-ink-muted uppercase tracking-wider">Classes</h3>
       </div>
       <div className="flex-1 overflow-y-auto py-1">
         {concreteClasses.map((cls) => (
@@ -31,7 +31,7 @@ export function ClassList() {
         {abstractClasses.length > 0 && (
           <>
             <div className="px-3 pt-3 pb-1">
-              <span className="text-[10px] font-medium text-ink-faint uppercase tracking-wider">Abstract</span>
+              <span className="text-xxs font-medium text-ink-faint uppercase tracking-wider">Abstract</span>
             </div>
             {abstractClasses.map((cls) => (
               <ClassItem
@@ -72,7 +72,7 @@ function ClassItem({ cls, count, selected, disabled, onClick }: {
       <span className="truncate">{cls.name}</span>
       {!disabled && (
         <span className={cn(
-          'text-[10px] tabular-nums ml-2 shrink-0',
+          'text-xxs tabular-nums ml-2 shrink-0',
           selected ? 'text-brand' : 'text-ink-faint',
         )}>
           {count}

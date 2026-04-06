@@ -12,9 +12,12 @@ export function HtmlDiagramView({ html, viewMode }: HtmlDiagramViewProps) {
   const isDark = useIsDark()
 
   const srcDoc = useMemo(() => {
-    const bgColor = isDark ? '#1a1a1a' : '#ffffff'
-    const textColor = isDark ? '#e4e2df' : '#2d2d2c'
-    const borderColor = isDark ? '#3a3a3a' : '#d4d0cd'
+    // Use the design-token values so they stay in sync with the main app theme
+    const bgColor = isDark ? 'var(--color-surface-0, #1a1a1a)' : 'var(--color-surface-0, #ffffff)'
+    const textColor = isDark ? 'var(--color-ink, #e4e2df)' : 'var(--color-ink, #2d2d2c)'
+    const borderColor = isDark ? 'var(--color-border, #3a3a3a)' : 'var(--color-border, #d4d0cd)'
+    // Derived shades for table headers and backgrounds
+    const headerBg = isDark ? '#252525' : '#f5f5f5'
 
     // Umple's HTML output includes its own <style> blocks with hardcoded light-mode
     // colors (black borders, white/light-gray backgrounds). We inject overrides AFTER
@@ -33,10 +36,10 @@ export function HtmlDiagramView({ html, viewMode }: HtmlDiagramViewProps) {
   }
   .statetable .state-header,
   .statetable .event-header {
-    background-color: #252525 !important;
+    background-color: ${headerBg} !important;
   }
   .event-sequence-grid .floating-col td {
-    background-color: #1a1a1a !important;
+    background-color: ${bgColor} !important;
   }
   h1, h2, h3, h4, h5, h6 {
     color: ${textColor};
@@ -136,7 +139,7 @@ export function HtmlDiagramView({ html, viewMode }: HtmlDiagramViewProps) {
 <style>
   body {
     margin: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
     font-size: 13px;
     line-height: 1.5;
     background: ${bgColor};
@@ -153,7 +156,7 @@ export function HtmlDiagramView({ html, viewMode }: HtmlDiagramViewProps) {
   }
   th {
     font-weight: 600;
-    background: ${isDark ? '#252525' : '#f5f5f5'};
+    background: ${headerBg};
   }
   img { max-width: 100%; }
   ${darkOverrides}

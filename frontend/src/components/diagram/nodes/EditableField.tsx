@@ -81,7 +81,7 @@ export function EditableField({
         style={{ fontFamily: "inherit", fontSize: 'inherit' }}
       />
       {error && (
-        <div className="text-[10px] text-status-error mt-0.5 px-0.5">{error}</div>
+        <div className="text-xxs text-status-error mt-0.5 px-0.5">{error}</div>
       )}
     </div>
   )

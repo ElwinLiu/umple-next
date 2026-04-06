@@ -33,7 +33,7 @@ export function CanvasToolbar() {
           className="w-full px-2.5 py-1.5 flex items-center gap-1.5 cursor-pointer hover:bg-surface-1 transition-colors"
         >
           <Eye className="size-3 text-ink-faint" />
-          <span className="text-[10px] font-semibold text-ink-muted uppercase tracking-wider">Display Options</span>
+          <span className="text-xxs font-semibold text-ink-muted uppercase tracking-wider">Display Options</span>
           <ChevronDown className={`size-3 text-ink-faint ml-auto transition-transform ${expanded ? 'rotate-180' : ''}`} />
         </button>
         {expanded && (
@@ -63,7 +63,7 @@ function CanvasToggleItem({
       className="flex items-center justify-between gap-3 py-0.5 cursor-pointer group min-w-[120px]"
       data-testid={`canvas-toggle-${prefKey}`}
     >
-      <span className={`text-[11px] transition-colors ${checked ? 'text-ink font-medium' : 'text-ink-muted'}`}>
+      <span className={`text-xxs transition-colors ${checked ? 'text-ink font-medium' : 'text-ink-muted'}`}>
         {label}
       </span>
       <Switch
