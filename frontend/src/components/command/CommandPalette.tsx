@@ -291,7 +291,7 @@ export function CommandPalette() {
                   data-testid={`command-item-example-${ex.name}`}
                 >
                   <FileCode />
-                  {ex.name}
+                  {ex.label}
                 </CommandItem>
               ))}
           </CommandGroup>
