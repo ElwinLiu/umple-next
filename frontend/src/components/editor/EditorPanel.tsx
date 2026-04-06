@@ -52,6 +52,7 @@ export function EditorPanel() {
   const collabConfig = useCollabEditor()
   useCollabTabs()
   const diffPreview = useEphemeralStore((s) => s.diffPreview)
+  const readOnly = useEphemeralStore((s) => s.readOnly)
   const isAiConfigured = usePreferencesStore(
     (s) => {
       const activeConfig = s.configs[s.activeProvider]
@@ -131,6 +132,7 @@ export function EditorPanel() {
                 ref={editorRef}
                 code={code}
                 onChange={handleChange}
+                readOnly={readOnly}
                 collabConfig={collabConfig}
                 onViewReady={handleViewReady}
               />

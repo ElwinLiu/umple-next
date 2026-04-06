@@ -46,7 +46,7 @@ export const api = {
     return request(`/models/${encodeURIComponent(id)}`, { signal })
   },
 
-  getExample(name: string): Promise<{ name: string; code: string; modelId?: string }> {
+  getExample(name: string): Promise<{ name: string; code: string; modelId?: string; category?: string }> {
     return request(`/examples/${encodeURIComponent(name)}`)
   },
 

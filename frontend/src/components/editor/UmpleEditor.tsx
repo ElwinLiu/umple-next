@@ -32,6 +32,7 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
   const onViewReadyRef = useRef(onViewReady)
   onViewReadyRef.current = onViewReady
   const themeCompartment = useRef(new Compartment())
+  const readOnlyCompartment = useRef(new Compartment())
   const collabCompartment = useRef(new Compartment())
   const isDark = useIsDark()
 
@@ -83,7 +84,7 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
           '.cm-scroller': { overflow: 'auto' },
         }),
         scrollPastEnd(),
-        ...(readOnly ? [EditorState.readOnly.of(true)] : []),
+        readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly)),
       ],
     })
 
@@ -111,6 +112,15 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
       effects: themeCompartment.current.reconfigure(getEditorTheme(isDark)),
     })
   }, [isDark])
+
+  // Reconfigure readOnly when prop changes
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view) return
+    view.dispatch({
+      effects: readOnlyCompartment.current.reconfigure(EditorState.readOnly.of(readOnly)),
+    })
+  }, [readOnly])
 
   // Reconfigure collab extensions when collabConfig changes
   const undoManagerRef = useRef<Y.UndoManager | null>(null)

@@ -1,11 +1,38 @@
 import { useEffect, useRef } from 'react'
-import { useSessionStore } from '../stores/sessionStore'
+import { useSessionStore, type DiagramView } from '../stores/sessionStore'
 import { useCollabStore } from '../stores/collabStore'
+import { useEphemeralStore } from '../stores/ephemeralStore'
 import { isTemporaryModel } from '../lib/modelId'
+import { getViewForExampleCategory } from '../constants/diagram'
+import { getGenerateTarget } from '../generation/targets'
 import { api } from '../api/client'
 
+const initialParams = new URLSearchParams(window.location.search)
+
 /** The URL model param read once at module load — before any React effect. */
-const initialUrlModelId = new URLSearchParams(window.location.search).get('model')
+const initialUrlModelId = initialParams.get('model')
+
+/** The URL example param read once at module load. */
+const initialUrlExample = initialParams.get('example')
+
+/** Legacy ?diagramtype= param (GvClass, state, etc.). */
+const initialDiagramType = initialParams.get('diagramtype')
+
+/** ?readOnly flag. */
+const initialReadOnly = initialParams.has('readOnly')
+
+/** ?generateDefault= param. */
+const initialGenerateDefault = initialParams.get('generateDefault')
+
+/** Map legacy ?diagramtype= values to new view modes. */
+const DIAGRAM_TYPE_MAP: Record<string, DiagramView> = {
+  GvClass: 'class',
+  class: 'class',
+  state: 'state',
+  feature: 'feature',
+  structure: 'structure',
+  erd: 'erd',
+}
 
 /**
  * Read the persisted modelId from sessionStorage (Zustand hydrates async, so
@@ -22,33 +49,113 @@ function readStoredModelId(): string | null {
   }
 }
 
-const initialStoreModelId = initialUrlModelId ? null : readStoredModelId()
+const initialStoreModelId = (initialUrlModelId || initialUrlExample) ? null : readStoredModelId()
 
 /** The model ID to restore on mount — URL takes priority over sessionStorage. */
 const initialModelId = initialUrlModelId ?? initialStoreModelId
 
-/**
- * True once the initial model (from URL or sessionStorage) has been resolved.
- * Exported so useCompiler can defer compilation until the server state is known,
- * preventing stale/empty code from overwriting the server model.
- */
-export let urlModelResolved = !initialModelId
+/** True when any startup loading (model or example) needs to resolve first. */
+const needsResolve = !!(initialModelId || initialUrlExample)
 
 /**
- * On mount, reads `?model=<id>` from the URL (or modelId from sessionStorage)
- * and loads the model from the backend. After compilation assigns a modelId,
- * syncs permanent IDs back to the URL so the user can bookmark / share.
+ * True once the initial model/example (from URL or sessionStorage) has been
+ * resolved. Exported so useCompiler can defer compilation until the server
+ * state is known, preventing stale/empty code from overwriting the server model.
+ */
+export let urlModelResolved = !needsResolve
+
+/**
+ * On mount, reads URL params and applies them:
+ * - `?example=<name>` loads a built-in example (priority over ?model)
+ * - `?model=<id>` loads a saved model
+ * - `?diagramtype=<type>` sets the diagram view mode
+ * - `?readOnly` enables read-only mode
+ * - `?generateDefault=<lang>` sets the default generate target
+ *
+ * After compilation assigns a modelId, syncs permanent IDs back to the URL.
  */
 export function useModelFromURL() {
   const setCode = useSessionStore((s) => s.setCode)
   const setModelId = useSessionStore((s) => s.setModelId)
   const restoreTabs = useSessionStore((s) => s.restoreTabs)
+  const loadExample = useSessionStore((s) => s.loadExample)
+  const setViewMode = useSessionStore((s) => s.setViewMode)
   const modelId = useSessionStore((s) => s.modelId)
 
-  const resolvedRef = useRef(!initialModelId)
+  const resolvedRef = useRef(!needsResolve)
 
-  // Load model from URL or sessionStorage on mount.
+  // Apply simple URL options synchronously on first mount.
   useEffect(() => {
+    // ?diagramtype=
+    if (initialDiagramType) {
+      const mapped = DIAGRAM_TYPE_MAP[initialDiagramType]
+      if (mapped) useSessionStore.getState().setViewMode(mapped)
+    }
+
+    // ?readOnly
+    if (initialReadOnly) {
+      useEphemeralStore.getState().setReadOnly(true)
+    }
+
+    // ?generateDefault=
+    if (initialGenerateDefault) {
+      // Case-insensitive lookup: try exact match first, then lowercase match.
+      if (getGenerateTarget(initialGenerateDefault)) {
+        useSessionStore.getState().setGenerateTargetId(initialGenerateDefault)
+      } else {
+        const lower = initialGenerateDefault.toLowerCase()
+        // Capitalize first letter to match target IDs like "Java", "Python".
+        const capitalized = lower.charAt(0).toUpperCase() + lower.slice(1)
+        if (getGenerateTarget(capitalized)) {
+          useSessionStore.getState().setGenerateTargetId(capitalized)
+        }
+      }
+    }
+  }, [])
+
+  // Load example from ?example= param on mount.
+  useEffect(() => {
+    if (!initialUrlExample) return
+
+    let cancelled = false
+
+    api.getExample(initialUrlExample)
+      .then((res) => {
+        if (cancelled) return
+        loadExample(res.name, res.code, res.modelId)
+
+        // Auto-switch view mode from category, unless ?diagramtype= overrides.
+        if (!initialDiagramType && res.category) {
+          const view = getViewForExampleCategory(res.category)
+          if (view) setViewMode(view)
+        }
+
+        // Clean ?example from URL — normal ?model sync takes over from here.
+        const url = new URL(window.location.href)
+        url.searchParams.delete('example')
+        window.history.replaceState({}, '', url.toString())
+      })
+      .catch(() => {
+        if (cancelled) return
+        // Example not found — clean up URL
+        const url = new URL(window.location.href)
+        url.searchParams.delete('example')
+        window.history.replaceState({}, '', url.toString())
+      })
+      .finally(() => {
+        if (cancelled) return
+        urlModelResolved = true
+        resolvedRef.current = true
+        useSessionStore.setState((s) => ({ tabsVersion: s.tabsVersion + 1 }))
+      })
+
+    return () => { cancelled = true }
+  }, [loadExample, setViewMode])
+
+  // Load model from ?model= or sessionStorage on mount.
+  useEffect(() => {
+    // Skip if ?example= is present — it takes priority.
+    if (initialUrlExample) return
     if (!initialModelId) return
 
     const abort = new AbortController()
