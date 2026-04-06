@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
+import { useCollabStore } from '../../stores/collabStore'
+import { collabLoadExample } from '../../hooks/useCollabTabs'
 import { useGenerate } from '../../hooks/useGenerate'
 import { api } from '../../api/client'
 import type { ExampleCategory } from '../../api/types'
@@ -44,7 +46,8 @@ export function CommandPalette() {
     setRenderMode, renderMode,
   } = useEphemeralStore()
   const { setViewMode } = useSessionStore()
-  const loadExample = useSessionStore((s) => s.loadExample)
+  const localLoadExample = useSessionStore((s) => s.loadExample)
+  const isCollaborating = useCollabStore((s) => s.isCollaborating)
   const generate = useGenerate()
 
   const [categories, setCategories] = useState<ExampleCategory[]>([])
@@ -115,14 +118,18 @@ export function CommandPalette() {
     closeCommandPalette()
     try {
       const res = await api.getExample(name)
-      loadExample(res.name, res.code, res.modelId)
+      if (isCollaborating) {
+        collabLoadExample(res.name, res.code, res.modelId)
+      } else {
+        localLoadExample(res.name, res.code, res.modelId)
+      }
       const view = getViewForExampleCategory(category)
       if (view) {
         setViewMode(view)
       }
       useEphemeralStore.getState().setRightPanelView('diagram')
     } catch { /* ignore */ }
-  }, [closeCommandPalette, loadExample, setViewMode])
+  }, [closeCommandPalette, localLoadExample, isCollaborating, setViewMode])
 
   const currentCategory = useMemo(
     () => page && page !== 'examples' ? categories.find((c) => c.name === page) : undefined,

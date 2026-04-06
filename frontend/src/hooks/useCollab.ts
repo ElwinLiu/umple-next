@@ -3,6 +3,7 @@ import * as Y from 'yjs'
 import { WebsocketProvider } from 'y-websocket'
 import { useCollabStore, type CollabUser } from '../stores/collabStore'
 import { useSessionStore } from '../stores/sessionStore'
+import { readYTabs } from './useCollabTabs'
 import { generateIdentity } from '../lib/identity'
 
 // Module-level refs — non-serializable objects kept outside Zustand
@@ -17,8 +18,11 @@ export function getAwareness() { return provider?.awareness ?? null }
  * Main collab orchestration hook. Watches collabStore.roomId and manages
  * the Yjs provider lifecycle, awareness, and initial sync.
  *
- * Collab is single-tab: the shared Y.Text("code") syncs with the active
- * tab's code. Tabs are local-only — each user manages their own tabs.
+ * Shared types on the Y.Doc:
+ *   Y.Map("tabs")          — tab registry { id → Y.Map{ name, order } }
+ *   Y.Text("tab:<id>")     — per-tab code content
+ *
+ * Each user's activeTabId is local; the tab list and content are shared.
  */
 export function useCollab() {
   const roomId = useCollabStore((s) => s.roomId)
@@ -91,28 +95,37 @@ export function useCollab() {
       useCollabStore.getState().setConnected(status === 'connected')
     })
 
-    // Sync event — populate or hydrate, THEN mark the editor as ready.
-    // The order matters: Y.Text must have content before yCollab binds
-    // to the editor, otherwise the editor's existing text and the Y.Text
-    // insert merge together and duplicate the code.
+    // Sync event — populate or hydrate shared tabs, THEN mark the editor
+    // as ready.  The order matters: Y.Text must have content before yCollab
+    // binds to the editor, otherwise the editor's existing text and the
+    // Y.Text insert merge together and duplicate the code.
     const handleSync = (synced: boolean) => {
       if (!synced) return
 
-      const ytext = doc.getText('code')
+      const ytabs = doc.getMap('tabs')
 
-      if (ytext.length === 0) {
-        // Room creator: populate Y.Text from current editor code
-        const { code } = useSessionStore.getState()
-        if (code) {
-          ytext.insert(0, code)
-        }
+      if (ytabs.size === 0) {
+        // Room creator: populate Y.Doc from local tabs
+        const { tabs } = useSessionStore.getState()
+        doc.transact(() => {
+          tabs.forEach((tab, index) => {
+            const meta = new Y.Map<unknown>()
+            meta.set('name', tab.name)
+            meta.set('order', index)
+            ytabs.set(tab.id, meta)
+            const ytext = doc.getText(`tab:${tab.id}`)
+            if (tab.code) ytext.insert(0, tab.code)
+          })
+        })
       } else {
-        // Joiner: hydrate sessionStore from Y.Text
-        useSessionStore.getState().setCode(ytext.toString())
+        // Joiner: hydrate sessionStore from Y.Doc
+        const tabs = readYTabs(doc)
+        useSessionStore.getState().restoreTabs(
+          tabs.map((t) => ({ id: t.id, name: t.name, code: t.code })),
+          tabs[0]?.id ?? 'main',
+        )
       }
 
-      // NOW mark ready — the Y.Text is populated, so yCollab can
-      // safely bind without duplicating content.
       useCollabStore.getState().setReady(true)
       awarenessHandler()
     }

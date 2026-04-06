@@ -50,7 +50,7 @@ const MAX_UNDO = 50
 
 const DEFAULT_CODE = ''
 
-function nextTabNumber(tabs: Tab[]): number {
+export function nextTabNumber(tabs: Array<{ name: string }>): number {
   const used = new Set(
     tabs
       .map((t) => t.name.match(/^untitled-(\d+)\.ump$/))

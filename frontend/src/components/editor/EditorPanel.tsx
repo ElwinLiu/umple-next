@@ -10,6 +10,7 @@ import { useSessionStore, getActiveTabName } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
 import { useCollabEditor } from '../../hooks/useCollabEditor'
+import { useCollabTabs } from '../../hooks/useCollabTabs'
 import { useLsp } from '../../hooks/useLsp'
 import { attachLspToView } from '../../codemirror/lsp'
 
@@ -49,6 +50,7 @@ export function EditorPanel() {
   const code = useSessionStore((s) => s.code)
   const setCode = useSessionStore((s) => s.setCode)
   const collabConfig = useCollabEditor()
+  useCollabTabs()
   const diffPreview = useEphemeralStore((s) => s.diffPreview)
   const isAiConfigured = usePreferencesStore(
     (s) => {

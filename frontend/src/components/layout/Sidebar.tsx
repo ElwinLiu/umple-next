@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { usePreferencesStore, type GvLayoutAlgorithm } from '../../stores/preferencesStore'
+import { useCollabStore } from '../../stores/collabStore'
+import { collabLoadExample } from '../../hooks/useCollabTabs'
 import { api } from '../../api/client'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
@@ -267,7 +269,8 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
   const { execute } = useExecute()
   const running = useEphemeralStore((s) => s.executing)
   const generate = useGenerate()
-  const loadExample = useSessionStore((s) => s.loadExample)
+  const localLoadExample = useSessionStore((s) => s.loadExample)
+  const isCollaborating = useCollabStore((s) => s.isCollaborating)
 
   const [allCategories, setAllCategories] = useState<ExampleCategory[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -309,10 +312,14 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
   const handleLoadExample = useCallback(async (name: string) => {
     try {
       const res = await api.getExample(name)
-      loadExample(res.name, res.code, res.modelId)
+      if (isCollaborating) {
+        collabLoadExample(res.name, res.code, res.modelId)
+      } else {
+        localLoadExample(res.name, res.code, res.modelId)
+      }
       useEphemeralStore.getState().setRightPanelView('diagram')
     } catch { /* ignore */ }
-  }, [loadExample])
+  }, [localLoadExample, isCollaborating])
 
   const handleGenerate = useCallback(async () => {
     if (!code.trim() || generatingCode) return
