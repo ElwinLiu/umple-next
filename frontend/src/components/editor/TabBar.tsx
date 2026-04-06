@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
 import { useSessionStore, type Tab } from '../../stores/sessionStore'
 import { usePreferencesStore } from '../../stores/preferencesStore'
+import { useCollabStore } from '../../stores/collabStore'
+import {
+  collabAddNewTab,
+  collabRemoveTab,
+  collabRenameTab,
+  collabCloseOtherTabs,
+} from '../../hooks/useCollabTabs'
 import { Plus, X, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 import { OutputBadges } from './ExecutionPanel'
@@ -21,10 +28,24 @@ export function TabBar() {
   const tabs = useSessionStore((s) => s.tabs)
   const activeTabId = useSessionStore((s) => s.activeTabId)
   const setActiveTab = useSessionStore((s) => s.setActiveTab)
-  const removeTab = useSessionStore((s) => s.removeTab)
-  const addNewTab = useSessionStore((s) => s.addNewTab)
-  const renameTab = useSessionStore((s) => s.renameTab)
-  const closeOtherTabs = useSessionStore((s) => s.closeOtherTabs)
+  const isCollaborating = useCollabStore((s) => s.isCollaborating)
+
+  const removeTab = useCallback(
+    (id: string) => isCollaborating ? collabRemoveTab(id) : useSessionStore.getState().removeTab(id),
+    [isCollaborating],
+  )
+  const addNewTab = useCallback(
+    () => isCollaborating ? collabAddNewTab() : useSessionStore.getState().addNewTab(),
+    [isCollaborating],
+  )
+  const renameTab = useCallback(
+    (id: string, name: string) => isCollaborating ? collabRenameTab(id, name) : useSessionStore.getState().renameTab(id, name),
+    [isCollaborating],
+  )
+  const closeOtherTabs = useCallback(
+    (id: string) => isCollaborating ? collabCloseOtherTabs(id) : useSessionStore.getState().closeOtherTabs(id),
+    [isCollaborating],
+  )
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)

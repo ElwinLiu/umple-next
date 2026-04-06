@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type * as Y from 'yjs'
 import type { Awareness } from 'y-protocols/awareness'
 import { useCollabStore } from '../stores/collabStore'
+import { useSessionStore } from '../stores/sessionStore'
 import { getYDoc, getAwareness } from './useCollab'
 
 export interface CollabConfig {
@@ -10,12 +11,16 @@ export interface CollabConfig {
 }
 
 /**
- * Returns the Yjs collab config for the shared code buffer, or null if not collaborating.
- * Used by EditorPanel to pass into UmpleEditor.
+ * Returns the Yjs collab config for the **active tab's** shared text buffer,
+ * or null when not collaborating / not ready.
+ *
+ * When `activeTabId` changes, a new CollabConfig is returned (different ytext
+ * reference), which causes UmpleEditor to rebind yCollab to the new tab.
  */
 export function useCollabEditor(): CollabConfig | null {
   const isCollaborating = useCollabStore((s) => s.isCollaborating)
   const ready = useCollabStore((s) => s.ready)
+  const activeTabId = useSessionStore((s) => s.activeTabId)
 
   return useMemo(() => {
     if (!isCollaborating || !ready) return null
@@ -25,8 +30,8 @@ export function useCollabEditor(): CollabConfig | null {
     if (!doc || !awareness) return null
 
     return {
-      ytext: doc.getText('code'),
+      ytext: doc.getText(`tab:${activeTabId}`),
       awareness,
     }
-  }, [isCollaborating, ready])
+  }, [isCollaborating, ready, activeTabId])
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useImperativeHandle, forwardRef, useCallback } from 'react'
+import { useEffect, useRef, useImperativeHandle, forwardRef } from 'react'
 import { EditorView, ViewUpdate, scrollPastEnd } from '@codemirror/view'
 import { EditorState, Compartment, Transaction } from '@codemirror/state'
 import { basicSetup } from 'codemirror'
@@ -126,6 +126,13 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
     }
 
     if (collabConfig) {
+      // Detach the OLD yCollab binding BEFORE replacing editor content.
+      // Otherwise the old plugin observes the content swap and propagates
+      // the new tab's text into the previous tab's Y.Text.
+      view.dispatch({
+        effects: collabCompartment.current.reconfigure([]),
+      })
+
       // yCollab's YSyncPlugin does NOT do an initial content sync — it only
       // observes future changes. We must replace the editor content with
       // Y.Text content BEFORE installing yCollab so they start in sync.
@@ -154,21 +161,12 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
     }
   }, [collabConfig])
 
-  // Sync external code changes into the editor.
-  // In collab mode, write to Y.Text (e.g., loading an example) so the change
-  // propagates via yCollab to the editor and to other clients.
-  // Without collab, dispatch directly to the editor.
+  // Sync external code changes into the editor (non-collab only).
+  // In collab mode, Y.Text is the source of truth — external code changes
+  // (example loads, diagram sync) write to Y.Text at their call site, and
+  // yCollab propagates them to the editor. So this effect is a no-op.
   useEffect(() => {
-    if (collabConfig) {
-      const currentYText = collabConfig.ytext.toString()
-      if (currentYText !== code) {
-        collabConfig.ytext.doc?.transact(() => {
-          collabConfig.ytext.delete(0, collabConfig.ytext.length)
-          collabConfig.ytext.insert(0, code)
-        })
-      }
-      return
-    }
+    if (collabConfig) return
 
     const view = viewRef.current
     if (!view) return

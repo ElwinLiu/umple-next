@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useSessionStore, type DiagramView } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
+import { useCollabStore } from '../stores/collabStore'
+import { getYDoc } from './useCollab'
 import { urlModelResolved } from './useModelFromURL'
 import {
   usePreferencesStore,
@@ -69,12 +71,21 @@ export async function compileAndRefresh(
   try {
     const diagramParams = getDiagramRequestParams(viewMode, isDark)
 
+    // In collab mode, read tab content from Y.Text (authoritative) instead
+    // of the possibly-stale sessionStore cache for non-active tabs.
+    const doc = useCollabStore.getState().isCollaborating ? getYDoc() : null
+    const compileTabs = tabs.map(({ id, name, code: localCode }) => ({
+      id,
+      name,
+      code: doc ? doc.getText(`tab:${id}`).toString() : localCode,
+    }))
+
     // Single request: compile + diagram generation
     const res = await api.compile({
       code,
       modelId: modelId ?? undefined,
       ...diagramParams,
-      tabs: tabs.map(({ id, name, code }) => ({ id, name, code })),
+      tabs: compileTabs,
       activeTabId,
     }, signal)
 
