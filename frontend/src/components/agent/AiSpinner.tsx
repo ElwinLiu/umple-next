@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { SPINNER_VERBS } from '../../constants/spinnerVerbs'
+import { usePrefersReducedMotion } from '@/hooks/useReducedMotion'
 
 // ── Glyph frames (forward + reverse for pulsing effect) ──
 const GLYPH_CHARS = ['·', '✢', '*', '✶', '✻', '✽']
@@ -20,12 +21,14 @@ function sample<T>(arr: T[]): T {
 export function AiSpinner({ className }: { className?: string }) {
   const [verb] = useState(() => sample(SPINNER_VERBS))
   const message = verb + '…'
+  const reducedMotion = usePrefersReducedMotion()
 
   // Only JS-drive the glyph; shimmer is pure CSS
   const frameRef = useRef(0)
   const [glyph, setGlyph] = useState(GLYPH_FRAMES[0])
 
   useEffect(() => {
+    if (reducedMotion) return
     const id = setInterval(() => {
       frameRef.current++
       const time = frameRef.current * GLYPH_INTERVAL
@@ -33,7 +36,7 @@ export function AiSpinner({ className }: { className?: string }) {
       setGlyph(GLYPH_FRAMES[idx])
     }, GLYPH_INTERVAL)
     return () => clearInterval(id)
-  }, [])
+  }, [reducedMotion])
 
   return (
     <span className={className} aria-label="Loading">

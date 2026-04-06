@@ -106,7 +106,7 @@ export function TabBar() {
 
   return (
     <Tabs value={activeTabId} onValueChange={setActiveTab} className="shrink-0">
-      <div className="flex items-center h-[38px] shrink-0 border-b border-border">
+      <div className="flex items-center h-[var(--toolbar-h)] shrink-0 border-b border-border">
         {/* Sidebar toggle (visible when sidebar is closed) */}
         {!showSidebar && (
           <Tip content="Show sidebar" side="bottom">
@@ -338,7 +338,7 @@ function EditorTab({
               {/* Close / dirty indicator — fixed-width to prevent layout shift */}
               <div className="w-5 h-5 shrink-0 flex items-center justify-center">
                 {showDirtyDot ? (
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand opacity-70" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand opacity-70" role="status" aria-label="Unsaved changes" title="Unsaved changes" />
                 ) : showClose ? (
                   <button
                     tabIndex={-1}

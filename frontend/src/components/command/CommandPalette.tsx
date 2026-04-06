@@ -51,6 +51,7 @@ export function CommandPalette() {
   const generate = useGenerate()
 
   const [categories, setCategories] = useState<ExampleCategory[]>([])
+  const [loadingExamples, setLoadingExamples] = useState(false)
   const [pages, setPages] = useState<string[]>([])
   const [search, setSearch] = useState('')
 
@@ -59,7 +60,8 @@ export function CommandPalette() {
   // Load categories on first open
   useEffect(() => {
     if (commandPaletteOpen && categories.length === 0) {
-      api.listExamples().then(setCategories).catch(() => {})
+      setLoadingExamples(true)
+      api.listExamples().then(setCategories).catch(() => {}).finally(() => setLoadingExamples(false))
     }
   }, [commandPaletteOpen, categories.length])
 
@@ -242,21 +244,21 @@ export function CommandPalette() {
               </CommandItem>
             </CommandGroup>
 
-            {categories.length > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup heading="Examples">
-                  <CommandItem
-                    onSelect={() => pushPage('examples')}
-                    data-testid="command-item-examples-browse"
-                  >
-                    <BookOpen />
-                    Browse Examples...
-                    <ChevronRight className="ml-auto size-4 text-muted-foreground" />
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            )}
+            <CommandSeparator />
+            <CommandGroup heading="Examples">
+              {loadingExamples ? (
+                <div className="py-2 text-center text-xs text-muted-foreground">Loading examples...</div>
+              ) : categories.length > 0 ? (
+                <CommandItem
+                  onSelect={() => pushPage('examples')}
+                  data-testid="command-item-examples-browse"
+                >
+                  <BookOpen />
+                  Browse Examples...
+                  <ChevronRight className="ml-auto size-4 text-muted-foreground" />
+                </CommandItem>
+              ) : null}
+            </CommandGroup>
           </>
         )}
 

@@ -331,7 +331,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
       <div className="space-y-4">
         {/* Examples */}
         <div data-tour="examples">
-          <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Examples</div>
+          <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Examples</div>
           <div className="space-y-1.5">
             <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
               <SelectTrigger>
@@ -368,7 +368,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
 
         {/* Generate */}
         <div data-tour="generate">
-          <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Generate</div>
+          <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Generate</div>
           <div className="space-y-2">
             <Combobox
               groups={generateGroups}
@@ -413,7 +413,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
         {/* Layout Algorithm */}
         {showLayout && (
           <div data-tour="layout-algorithm">
-            <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Layout Algorithm</div>
+            <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Layout Algorithm</div>
             <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
               <SelectTrigger>
                 <SelectValue />

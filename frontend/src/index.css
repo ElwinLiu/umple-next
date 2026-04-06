@@ -60,14 +60,27 @@
   --color-garnet-100: #f8d8dd;
   --color-garnet-50: #fdf0f2;
 
+  /* Layout */
+  --toolbar-h: 38px;
+
   /* Typography */
   --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
   --font-diagram: Times, 'Times New Roman', serif;
 
   /* Type scale (extends Tailwind defaults) */
-  --text-xxs: 0.625rem;
-  --text-xxs--line-height: 0.875rem;
+  --text-xxs: 0.6875rem;
+  --text-xxs--line-height: 0.9375rem;
+
+  /*
+   * Z-index scale:
+   *   canvas (5-10): controls, toolbars within diagram
+   *   panel  (20):   overlays within panels (generated output, agent)
+   *   sidebar(40):   floating sidebar peek
+   *   tour   (45):   onboarding spotlight overlay & ring
+   *   tour-card(46): onboarding card (above spotlight)
+   *   popover(50):   context menus, tooltips, dialogs, sheets
+   */
 }
 
 /* ── shadcn/ui Semantic Layer ── */
@@ -166,6 +179,15 @@
   --color-node-final-fg: #e07080;
   --color-action-entry: #70c080;
   --color-action-exit: #e07080;
+}
+
+/* ── Elevated Panel Shadow ── */
+
+:root {
+  --shadow-elevated: 0 14px 32px rgba(15,23,42,0.16), 0 6px 12px rgba(15,23,42,0.08);
+}
+.dark {
+  --shadow-elevated: 0 14px 32px rgba(0,0,0,0.4), 0 6px 12px rgba(0,0,0,0.2);
 }
 
 /* ── Base Styles ── */

@@ -11,6 +11,7 @@ import { useCollab } from '../../hooks/useCollab'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog'
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 
 export function AppShell() {
   const showEditor = useEphemeralStore((s) => s.showEditor)
@@ -35,6 +36,7 @@ export function AppShell() {
       {/* Main content area */}
       <main id="main-content" className="flex-1 min-w-0 flex flex-col">
         <div className="relative flex-1 min-h-0 px-2.5 pb-2.5 pt-1.5">
+          <ErrorBoundary>
           <PanelGroup direction="horizontal" className="h-full" id="main-horizontal">
             {editorVisible && (
               <>
@@ -69,7 +71,7 @@ export function AppShell() {
               </div>
             </Panel>
           </PanelGroup>
-
+          </ErrorBoundary>
         </div>
 
         <CommandPalette />
