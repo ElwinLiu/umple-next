@@ -11,9 +11,10 @@ import (
 	"github.com/umple/umpleonline/backend/internal/config"
 	"github.com/umple/umpleonline/backend/internal/execution"
 	"github.com/umple/umpleonline/backend/internal/model"
+	"github.com/umple/umpleonline/backend/internal/task"
 )
 
-func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http.Handler {
+func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store, taskStore *task.Store) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(middleware.Logger)
@@ -44,6 +45,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 	aiProxyH := handlers.NewAIProxyHandler()
 	crudSchemaH := handlers.NewCrudSchemaHandler(pool, store)
 	crudDiagramH := handlers.NewCrudDiagramHandler()
+	taskH := handlers.NewTaskHandler(taskStore)
 
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", healthH.Health)
@@ -69,6 +71,15 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store) http
 
 		// AI provider proxy (browser → backend → provider)
 		r.Route("/ai", aiProxyH.Routes())
+
+		// Tasks
+		r.Post("/tasks", taskH.Create)
+		r.Get("/tasks/{name}", taskH.Get)
+		r.Put("/tasks/{name}", taskH.Update)
+		r.Post("/tasks/{name}/responses", taskH.CreateResponse)
+		r.Get("/tasks/responses/{id}", taskH.GetResponse)
+		r.Post("/tasks/responses/{id}/submit", taskH.SubmitResponse)
+		r.Get("/tasks/{name}/responses", taskH.ListResponses)
 	})
 
 	return r
