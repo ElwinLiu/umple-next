@@ -14,6 +14,7 @@ import (
 	"github.com/umple/umpleonline/backend/internal/compiler"
 	"github.com/umple/umpleonline/backend/internal/config"
 	"github.com/umple/umpleonline/backend/internal/model"
+	"github.com/umple/umpleonline/backend/internal/task"
 )
 
 func main() {
@@ -32,7 +33,12 @@ func main() {
 
 	go store.CleanupLoop(30 * time.Minute)
 
-	router := api.NewRouter(cfg, pool, store)
+	taskStore, err := task.NewStore(cfg.TaskStorePath)
+	if err != nil {
+		log.Fatalf("failed to initialize task store: %v", err)
+	}
+
+	router := api.NewRouter(cfg, pool, store, taskStore)
 
 	srv := &http.Server{
 		Addr:         fmt.Sprintf(":%d", cfg.Port),
