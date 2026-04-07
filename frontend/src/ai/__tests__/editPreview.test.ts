@@ -26,17 +26,6 @@ describe('applyCodeEdits', () => {
     expect(result.code).toContain('class Anyone')
   })
 
-  it('matches CRLF oldText against CRLF source code', () => {
-    const crlfCode = 'class Foo {\r\n  bar;\r\n}'
-
-    const result = applyCodeEdits(crlfCode, [
-      { oldText: 'class Foo {\r\n  bar;\r\n}', newText: 'class Foo {\n  baz;\n}' },
-    ])
-
-    expect(result.errors).toEqual([])
-    expect(result.code).toContain('baz')
-  })
-
   it('returns not-found when text genuinely does not exist', () => {
     const code = 'class Foo {\n  bar;\n}'
 

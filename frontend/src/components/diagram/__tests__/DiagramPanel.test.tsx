@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { DiagramPanel } from '../DiagramPanel'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { useSessionStore } from '@/stores/sessionStore'
@@ -116,13 +116,16 @@ describe('DiagramPanel', () => {
   })
 
   it('shows the class loading state while compiling without an editable model', () => {
-    useEphemeralStore.setState({ compiling: true })
-
     render(
       <TooltipProvider>
         <DiagramPanel />
       </TooltipProvider>
     )
+
+    // Simulate: user was in editable mode, then a recompile starts
+    act(() => {
+      useEphemeralStore.setState({ renderMode: 'editable', compiling: true })
+    })
 
     expect(screen.getByText('Loading diagram...')).toBeDefined()
   })
