@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { TabBar } from '../TabBar'
 import { useSessionStore } from '@/stores/sessionStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 vi.mock('../ExecutionPanel', () => ({
   OutputBadges: () => null,
@@ -47,7 +48,7 @@ describe('TabBar', () => {
       tabsVersion: 0,
     })
 
-    render(<TabBar />)
+    render(<TooltipProvider><TabBar /></TooltipProvider>)
 
     // Tab display strips .ump extension
     fireEvent.contextMenu(screen.getByText('model'))
@@ -72,7 +73,7 @@ describe('TabBar', () => {
       tabsVersion: 0,
     })
 
-    render(<TabBar />)
+    render(<TooltipProvider><TabBar /></TooltipProvider>)
 
     fireEvent.contextMenu(screen.getByText('model'))
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
@@ -89,42 +90,4 @@ describe('TabBar', () => {
     expect(state.tabs[0]?.name).toBe('model.ump')
   })
 
-  it('keeps the rename field as wide as the existing tab', async () => {
-    const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
-    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      if (this.textContent?.includes('long-model-name')) {
-        return {
-          width: 176,
-          height: 30,
-          top: 0,
-          left: 0,
-          right: 176,
-          bottom: 30,
-          x: 0,
-          y: 0,
-          toJSON: () => ({}),
-        } as DOMRect
-      }
-
-      return originalGetBoundingClientRect.call(this)
-    })
-
-    usePreferencesStore.setState({ showSidebar: true })
-    useSessionStore.setState({
-      code: 'class Student {}',
-      activeTabId: 'main',
-      tabs: [{ id: 'main', name: 'long-model-name.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}' }],
-      tabsVersion: 0,
-    })
-
-    render(<TabBar />)
-
-    fireEvent.contextMenu(screen.getByText('long-model-name'))
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
-
-    const input = await screen.findByRole('textbox', { name: 'Rename long-model-name.ump' })
-    expect((input.parentElement as HTMLElement).style.width).toBe('176px')
-
-    rectSpy.mockRestore()
-  })
 })

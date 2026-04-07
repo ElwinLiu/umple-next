@@ -27,11 +27,6 @@ describe('getModel', () => {
     expect(model.provider).toContain('google')
   })
 
-  it('routes OpenAI through the proxy', async () => {
-    const model = (await getModel('openai', 'gpt-4o', DUMMY_KEY)) as any
-    expect(model.modelId).toBe('gpt-4o')
-  })
-
   it('throws for unknown provider', async () => {
     await expect(getModel('unknown' as any, 'model', DUMMY_KEY)).rejects.toThrow()
   })

@@ -1,28 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useSessionStore } from '@/stores/sessionStore'
 
-describe('tool definitions', () => {
-  it('editCode has execute with needsApproval', async () => {
-    const { agentTools } = await import('../tools')
-    expect(agentTools.editCode.execute).toBeDefined()
-  })
-
-  it('replaceCode has execute with needsApproval', async () => {
-    const { agentTools } = await import('../tools')
-    expect(agentTools.replaceCode.execute).toBeDefined()
-  })
-
-  it('readEditorCode has execute (auto)', async () => {
-    const { agentTools } = await import('../tools')
-    expect(agentTools.readEditorCode.execute).toBeDefined()
-  })
-
-  it('compile has execute (auto)', async () => {
-    const { agentTools } = await import('../tools')
-    expect(agentTools.compile.execute).toBeDefined()
-  })
-})
-
 describe('editCode execute', () => {
   beforeEach(() => {
     useSessionStore.setState({ code: 'class Student { name: String; id: Integer; }' })

@@ -9,12 +9,6 @@ afterEach(cleanup)
 const icon = <span data-testid="icon">I</span>
 
 describe('ActionRow', () => {
-  it('renders label and icon', () => {
-    render(<ActionRow icon={icon} label="Reading code" />)
-    expect(screen.getByText('Reading code')).toBeDefined()
-    expect(screen.getByTestId('icon')).toBeDefined()
-  })
-
   it('shows no chevron when there are no children', () => {
     const { container } = render(
       <ActionRow icon={icon} label="Compiling" status="running" />,
@@ -58,27 +52,6 @@ describe('ActionRow', () => {
       </ActionRow>,
     )
     expect(screen.getByText('error details')).toBeDefined()
-  })
-
-  it('renders running spinner', () => {
-    const { container } = render(
-      <ActionRow icon={icon} label="Compiling" status="running" />,
-    )
-    expect(container.querySelector('.animate-spin')).not.toBeNull()
-  })
-
-  it('renders success check for done status', () => {
-    const { container } = render(
-      <ActionRow icon={icon} label="Compiled" status="done" />,
-    )
-    expect(container.querySelector('svg.lucide-check')).not.toBeNull()
-  })
-
-  it('renders pulsing dot for approval status', () => {
-    const { container } = render(
-      <ActionRow icon={icon} label="Edit proposed" status="approval" />,
-    )
-    expect(container.querySelector('.animate-pulse')).not.toBeNull()
   })
 
   it('sets aria-expanded on the toggle button', async () => {

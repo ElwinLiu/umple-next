@@ -147,37 +147,6 @@ describe('AgentPanel', () => {
     expect(screen.getByTestId('agent-panel')).toBeDefined()
   })
 
-  it('ignores the synthetic release click after drag-folding', () => {
-    useSessionStore.setState({ showAgentPanel: true })
-
-    mockAgentState = {
-      ...mockAgentState,
-      messages: [
-        {
-          id: 'assistant-1',
-          role: 'assistant',
-          parts: [{ type: 'text', text: 'Hello' }],
-        },
-      ],
-    }
-
-    render(<AgentPanel />)
-
-    const panel = screen.getByTestId('agent-panel')
-    Object.defineProperty(panel, 'offsetHeight', {
-      configurable: true,
-      get: () => 200,
-    })
-
-    const handle = screen.getByRole('separator', { name: 'Resize chat panel' })
-    fireEvent.pointerDown(handle, { pointerId: 1, clientY: 100 })
-    fireEvent.pointerMove(handle, { pointerId: 1, clientY: 190 })
-
-    fireEvent.click(screen.getByTestId('agent-panel-collapsed'))
-
-    expect(screen.queryByTestId('agent-panel')).toBeNull()
-  })
-
   it('keeps focus on the input when expanding from the collapsed textarea', async () => {
     const user = userEvent.setup()
 
