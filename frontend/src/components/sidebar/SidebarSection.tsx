@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { ChevronDown, ChevronRight } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { ChevronRight } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 // ── Collapsible sidebar section ──
@@ -36,11 +36,56 @@ export function SidebarSection({
   const isOpen = openProp ?? internalOpen
   const toggle = onToggle ?? (() => setInternalOpen((v) => !v))
 
+  // ── Animate content height ──
+  const contentRef = useRef<HTMLDivElement>(null)
+  const [height, setHeight] = useState<number | undefined>(isOpen ? undefined : 0)
+  const [isAnimating, setIsAnimating] = useState(false)
+  const firstRender = useRef(true)
+
+  const measureAndAnimate = useCallback((opening: boolean) => {
+    const el = contentRef.current
+    if (!el) return
+
+    if (opening) {
+      // Expanding: measure scroll height, animate from 0
+      setHeight(0)
+      setIsAnimating(true)
+      requestAnimationFrame(() => {
+        setHeight(el.scrollHeight)
+      })
+    } else {
+      // Collapsing: lock to current height, then animate to 0
+      setHeight(el.scrollHeight)
+      setIsAnimating(true)
+      requestAnimationFrame(() => {
+        setHeight(0)
+      })
+    }
+  }, [])
+
+  useEffect(() => {
+    // Skip animation on first render
+    if (firstRender.current) {
+      firstRender.current = false
+      return
+    }
+    measureAndAnimate(isOpen)
+  }, [isOpen, measureAndAnimate])
+
+  const handleTransitionEnd = () => {
+    setIsAnimating(false)
+    if (isOpen) {
+      // After expanding, remove fixed height so content can reflow naturally
+      setHeight(undefined)
+    }
+  }
+
   return (
-    <div className={className} data-tour={rest['data-tour']}>
+    <div className={cn('group/section', className)} data-tour={rest['data-tour']}>
+      {/* ── Header: Layer 1 — navigation/toggle ── */}
       <button
         onClick={toggle}
-        className="flex items-center gap-2 w-full px-4 pt-2.5 pb-1.5 text-[13px] font-medium text-ink hover:bg-surface-2/60 transition-colors cursor-pointer text-left"
+        className="flex items-center gap-2 w-full px-4 py-2 text-[13px] font-medium text-ink hover:bg-surface-2/60 transition-colors cursor-pointer text-left"
       >
         <Icon className="size-4 text-ink-muted shrink-0" />
         <span className="flex-1 text-left">{title}</span>
@@ -53,17 +98,33 @@ export function SidebarSection({
             {actions}
           </span>
         )}
-        {isOpen ? (
-          <ChevronDown className="size-3.5 text-ink-faint shrink-0" />
-        ) : (
-          <ChevronRight className="size-3.5 text-ink-faint shrink-0" />
-        )}
+        <ChevronRight
+          className={cn(
+            'size-3.5 text-ink-faint shrink-0 transition-transform duration-200 ease-out',
+            isOpen && 'rotate-90',
+          )}
+        />
       </button>
-      {isOpen && (
-        <div className="px-4 pb-3 pt-0.5 ml-6">
-          {children}
+
+      {/* ── Content: Layer 2 — collapsible body ── */}
+      <div
+        ref={contentRef}
+        className={cn(
+          'overflow-hidden transition-[height,opacity] duration-200 ease-out',
+          // When fully collapsed and not mid-animation, hide from DOM flow
+          !isOpen && !isAnimating && 'h-0',
+        )}
+        style={height !== undefined ? { height } : undefined}
+        onTransitionEnd={handleTransitionEnd}
+      >
+        <div className="relative px-4 pb-3 pt-1 ml-4">
+          {/* Subtle left guide line connecting content to header icon */}
+          <div className="absolute left-4 top-0 bottom-2 w-px bg-border/50" />
+          <div className="pl-3">
+            {children}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   )
 }
