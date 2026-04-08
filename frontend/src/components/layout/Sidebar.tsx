@@ -87,6 +87,7 @@ function SidebarContent() {
   const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette)
   const sidebarWidth = usePreferencesStore((s) => s.sidebarWidth)
   const [toolsOpen, setToolsOpen] = useState(true)
+  const [tasksOpen, setTasksOpen] = useState(false)
   const [aiOpen, setAiOpen] = useState(false)
   const isNarrow = sidebarWidth < 260
 
@@ -118,6 +119,7 @@ function SidebarContent() {
       {/* Scrollable sections */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin py-1 space-y-1">
         <ToolsSection open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
+        <TasksSection open={tasksOpen} onToggle={() => setTasksOpen((v) => !v)} />
         <AiConfigSection open={aiOpen} onToggle={() => setAiOpen((v) => !v)} />
       </div>
 
@@ -435,25 +437,45 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
           </div>
         )}
 
-        {/* Tasks */}
-        <div>
-          <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Tasks</div>
-          <div className="space-y-0.5">
-            <button
-              onClick={() => useTaskStore.getState().openSheet('create')}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer w-full text-left"
-            >
+      </div>
+    </Section>
+  )
+}
+
+// ── SECTION: Tasks (Create + Manage) ──
+
+function TasksSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  return (
+    <Section title="Tasks" open={open} onToggle={onToggle}>
+      <div className="space-y-3">
+        <p className="text-xs text-ink-muted leading-relaxed">
+          Create assignments for students or manage existing ones.
+        </p>
+        <div className="space-y-1">
+          <button
+            onClick={() => useTaskStore.getState().openSheet('create')}
+            className="group flex items-center gap-2 rounded-md px-2.5 py-2 text-xs text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer w-full text-left"
+          >
+            <div className="flex items-center justify-center size-6 rounded-md bg-brand/8 text-brand group-hover:bg-brand/12 transition-colors">
               <ClipboardList className="size-3.5" />
-              Create a Task
-            </button>
-            <button
-              onClick={() => useTaskStore.getState().openSheet('manage')}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer w-full text-left"
-            >
-              <ClipboardList className="size-3.5" />
-              Manage a Task
-            </button>
-          </div>
+            </div>
+            <div>
+              <span className="font-medium text-ink block leading-tight">Create Task</span>
+              <span className="text-xxs text-ink-faint">New assignment from current model</span>
+            </div>
+          </button>
+          <button
+            onClick={() => useTaskStore.getState().openSheet('manage')}
+            className="group flex items-center gap-2 rounded-md px-2.5 py-2 text-xs text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer w-full text-left"
+          >
+            <div className="flex items-center justify-center size-6 rounded-md bg-surface-2 text-ink-muted group-hover:bg-surface-2/80 transition-colors">
+              <Search className="size-3.5" />
+            </div>
+            <div>
+              <span className="font-medium text-ink block leading-tight">Manage Task</span>
+              <span className="text-xxs text-ink-faint">Edit, view responses, share</span>
+            </div>
+          </button>
         </div>
       </div>
     </Section>
