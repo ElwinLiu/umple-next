@@ -1,76 +1,174 @@
-import { useState, useRef, useEffect } from 'react'
+import { Eye, ChevronDown, Download, LayoutGrid } from 'lucide-react'
 import { useSessionStore } from '../../stores/sessionStore'
-import { usePreferencesStore, type DisplayPrefKey } from '../../stores/preferencesStore'
-import { DISPLAY_TOGGLES } from '../../constants/diagram'
+import { usePreferencesStore, type DisplayPrefKey, type GvLayoutAlgorithm } from '../../stores/preferencesStore'
+import { DISPLAY_TOGGLES, LAYOUT_OPTIONS } from '../../constants/diagram'
+import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu'
 import { Switch } from '@/components/ui/switch'
-import { Eye, ChevronDown } from 'lucide-react'
+import { Tip } from '@/components/ui/tooltip'
 
-export function CanvasToolbar() {
+const btnBase =
+  'px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 text-ink-muted hover:text-ink hover:bg-surface-2 flex items-center gap-1'
+
+interface CanvasToolbarProps {
+  onExport: (format: string) => void
+  canToggleRenderer: boolean
+  renderMode: 'editable' | 'graphviz'
+  onRenderModeChange: (mode: 'editable' | 'graphviz') => void
+  showDisplayOptions?: boolean
+}
+
+export function CanvasToolbar({
+  onExport,
+  canToggleRenderer,
+  renderMode,
+  onRenderModeChange,
+  showDisplayOptions = true,
+}: CanvasToolbarProps) {
   const viewMode = useSessionStore((s) => s.viewMode)
-  const [expanded, setExpanded] = useState(false)
-
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (!expanded) return
-    const handler = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setExpanded(false)
-      }
-    }
-    document.addEventListener('pointerdown', handler, true)
-    return () => document.removeEventListener('pointerdown', handler, true)
-  }, [expanded])
-
   const toggles = DISPLAY_TOGGLES[viewMode]
-  if (toggles.length === 0) return null
+  const hasToggles = showDisplayOptions && toggles.length > 0
 
   return (
-    <div className="pointer-events-auto" ref={containerRef}>
-      <div className="bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg shadow-sm overflow-hidden">
-        <button
-          onClick={() => setExpanded(!expanded)}
-          className="w-full px-2.5 py-1.5 flex items-center gap-1.5 cursor-pointer hover:bg-surface-1 transition-colors"
-        >
-          <Eye className="size-3 text-ink-faint" />
-          <span className="text-xxs font-semibold text-ink-muted uppercase tracking-wider">Display Options</span>
-          <ChevronDown className={`size-3 text-ink-faint ml-auto transition-transform ${expanded ? 'rotate-180' : ''}`} />
-        </button>
-        {expanded && (
-          <div className="px-2 py-1.5 flex flex-col gap-1 border-t border-border/60 animate-fade-in">
-            {toggles.map(({ key, label }) => (
-              <CanvasToggleItem key={key} prefKey={key} label={label} />
-            ))}
-          </div>
-        )}
-      </div>
+    <div
+      className="pointer-events-auto flex items-center bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1 py-1 shadow-sm"
+      data-testid="canvas-toolbar"
+    >
+      {canToggleRenderer && (
+        <>
+          <RendererToggle renderMode={renderMode} onRenderModeChange={onRenderModeChange} />
+          <ToolbarDivider />
+        </>
+      )}
+
+      <LayoutGroup />
+
+      {hasToggles && (
+        <>
+          <ToolbarDivider />
+          <DisplayOptionsGroup toggles={toggles} />
+        </>
+      )}
+
+      <ToolbarDivider />
+
+      <ExportGroup onExport={onExport} />
     </div>
   )
 }
 
-function CanvasToggleItem({
-  prefKey,
-  label,
+export function ToolbarDivider() {
+  return <div className="w-px self-stretch bg-border/60 mx-0.5" />
+}
+
+function DisplayOptionsGroup({ toggles }: { toggles: { key: DisplayPrefKey; label: string }[] }) {
+  return (
+    <Popover>
+      <Tip content="Display options" side="bottom">
+        <PopoverTrigger asChild>
+          <button className={btnBase}>
+            <Eye className="size-3" />
+            <ChevronDown className="size-2.5 text-ink-faint" />
+          </button>
+        </PopoverTrigger>
+      </Tip>
+      <PopoverContent className="w-auto p-2" align="start">
+        <div className="flex flex-col gap-1">
+          {toggles.map(({ key, label }) => (
+            <ToggleItem key={key} prefKey={key} label={label} />
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  )
+}
+
+function LayoutGroup() {
+  const layoutAlgorithm = usePreferencesStore((s) => s.layoutAlgorithm)
+  const setLayoutAlgorithm = usePreferencesStore((s) => s.setLayoutAlgorithm)
+  const current = LAYOUT_OPTIONS.find((o) => o.value === layoutAlgorithm)
+
+  return (
+    <DropdownMenu>
+      <Tip content="Layout algorithm" side="bottom">
+        <DropdownMenuTrigger asChild>
+          <button className={btnBase}>
+            <LayoutGrid className="size-3" />
+            {current?.label ?? 'Dot'}
+            <ChevronDown className="size-2.5 text-ink-faint" />
+          </button>
+        </DropdownMenuTrigger>
+      </Tip>
+      <DropdownMenuContent align="center">
+        <DropdownMenuRadioGroup value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
+          {LAYOUT_OPTIONS.map((opt) => (
+            <DropdownMenuRadioItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function ExportGroup({ onExport }: { onExport: (format: string) => void }) {
+  return (
+    <DropdownMenu>
+      <Tip content="Export diagram" side="bottom">
+        <DropdownMenuTrigger asChild>
+          <button className={btnBase}>
+            <Download className="size-3" />
+          </button>
+        </DropdownMenuTrigger>
+      </Tip>
+      <DropdownMenuContent align="center">
+        <DropdownMenuItem onClick={() => onExport('svg')}>SVG</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => onExport('png')}>PNG</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
+function RendererToggle({
+  renderMode,
+  onRenderModeChange,
 }: {
-  prefKey: DisplayPrefKey
-  label: string
+  renderMode: 'editable' | 'graphviz'
+  onRenderModeChange: (mode: 'editable' | 'graphviz') => void
 }) {
+  return (
+    <Tip content={`Renderer: ${renderMode === 'editable' ? 'Editable' : 'Graphviz'}`} side="bottom">
+      <label className="flex items-center gap-1.5 cursor-pointer px-1">
+        <span className={`text-xs ${renderMode === 'editable' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>
+          Edit
+        </span>
+        <Switch
+          size="sm"
+          checked={renderMode === 'graphviz'}
+          onCheckedChange={(checked) => onRenderModeChange(checked ? 'graphviz' : 'editable')}
+        />
+        <span className={`text-xs ${renderMode === 'graphviz' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>
+          GV
+        </span>
+      </label>
+    </Tip>
+  )
+}
+
+function ToggleItem({ prefKey, label }: { prefKey: DisplayPrefKey; label: string }) {
   const checked = usePreferencesStore((s) => s[prefKey])
   const toggleDisplayPref = usePreferencesStore((s) => s.toggleDisplayPref)
 
   return (
     <label
-      className="flex items-center justify-between gap-3 py-0.5 cursor-pointer group min-w-[120px]"
+      className="flex items-center justify-between gap-3 py-0.5 cursor-pointer min-w-[120px]"
       data-testid={`canvas-toggle-${prefKey}`}
     >
       <span className={`text-xxs transition-colors ${checked ? 'text-ink font-medium' : 'text-ink-muted'}`}>
         {label}
       </span>
-      <Switch
-        size="sm"
-        checked={checked}
-        onCheckedChange={() => toggleDisplayPref(prefKey)}
-      />
+      <Switch size="sm" checked={checked} onCheckedChange={() => toggleDisplayPref(prefKey)} />
     </label>
   )
 }

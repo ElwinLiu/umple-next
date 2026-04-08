@@ -2,12 +2,9 @@ import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { usePreferencesStore, type GvLayoutAlgorithm } from '../../stores/preferencesStore'
-import { useCollabStore } from '../../stores/collabStore'
-import { collabLoadExample } from '../../hooks/useCollabTabs'
-import { api } from '../../api/client'
+import { useExamples } from '../../hooks/useExamples'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
-import type { ExampleCategory } from '../../api/types'
 import { GENERATE_TARGETS, GENERATE_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
 import { LAYOUT_OPTIONS, ALL_VIEW_MODES, PINNED_VIEW_MODES, getViewForExampleCategory } from '../../constants/diagram'
 import { Combobox } from '@/components/ui/combobox'
@@ -242,11 +239,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
   const { execute } = useExecute()
   const running = useEphemeralStore((s) => s.executing)
   const generate = useGenerate()
-  const localLoadExample = useSessionStore((s) => s.loadExample)
-  const isCollaborating = useCollabStore((s) => s.isCollaborating)
-
-  const [allCategories, setAllCategories] = useState<ExampleCategory[]>([])
-  const [loaded, setLoaded] = useState(false)
+  const { categories: allCategories, loadExample } = useExamples()
   const targetId = useSessionStore((s) => s.generateTargetId)
   const setTargetId = useSessionStore((s) => s.setGenerateTargetId)
   const selectedExample = useSessionStore((s) => s.selectedExample)
@@ -267,13 +260,6 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
     []
   )
 
-  useEffect(() => {
-    if (!loaded) {
-      setLoaded(true)
-      api.listExamples().then(setAllCategories).catch(() => {})
-    }
-  }, [loaded])
-
   const exampleOptions = useMemo(
     () => allCategories
       .filter((cat) => (getViewForExampleCategory(cat.name) ?? 'class') === viewMode)
@@ -281,18 +267,6 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
       .map((ex) => ({ value: ex.name, label: ex.label })),
     [allCategories, viewMode]
   )
-
-  const handleLoadExample = useCallback(async (name: string) => {
-    try {
-      const res = await api.getExample(name)
-      if (isCollaborating) {
-        collabLoadExample(res.name, res.code, res.modelId)
-      } else {
-        localLoadExample(res.name, res.code, res.modelId)
-      }
-      useEphemeralStore.getState().setRightPanelView('diagram')
-    } catch { /* ignore */ }
-  }, [localLoadExample, isCollaborating])
 
   const handleGenerate = useCallback(async () => {
     if (!code.trim() || generatingCode) return
@@ -332,7 +306,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
               key={viewMode}
               options={exampleOptions}
               value={selectedExample ?? undefined}
-              onSelect={handleLoadExample}
+              onSelect={loadExample}
               placeholder={exampleOptions.length > 0 ? 'Load an example...' : 'No examples'}
               searchPlaceholder="Search examples..."
             />

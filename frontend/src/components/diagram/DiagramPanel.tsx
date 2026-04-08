@@ -1,5 +1,4 @@
 import { type ReactNode, useCallback, useEffect } from 'react'
-import { Download } from 'lucide-react'
 import { toSvg, toPng } from 'html-to-image'
 import { UmpleDiagram } from './UmpleDiagram'
 import { SmartSvgView } from './SmartSvgView'
@@ -10,10 +9,7 @@ import { ObjectExplorer } from '../crud/ObjectExplorer'
 import { CanvasBanner } from '../layout/CanvasBanner'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
-import { Tip } from '@/components/ui/tooltip'
 import { ErrorBanner } from '@/components/ui/error-banner'
-import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { api } from '@/api/client'
 
@@ -95,40 +91,14 @@ export function DiagramPanel() {
       <CanvasBanner />
       <div className="flex-1 relative" data-testid="diagram-canvas">
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
-          <div className="absolute top-2 left-2 right-2 z-10 flex items-start gap-2 pointer-events-none flex-wrap">
-          {!showHtml && <CanvasToolbar />}
-          <div className="ml-auto pointer-events-auto flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
-              <DropdownMenu>
-                <Tip content="Export diagram" side="bottom">
-                  <DropdownMenuTrigger asChild>
-                    <button className={`${toolbarBtnBase} text-ink-muted hover:text-ink hover:bg-surface-2 flex items-center gap-1`}>
-                      <Download className="size-3" />
-                      Export
-                    </button>
-                  </DropdownMenuTrigger>
-                </Tip>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleExport('svg')}>SVG</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('png')}>PNG</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {canToggleRenderer && (
-                <>
-                  <div className="w-px h-3.5 bg-border mx-0.5" />
-                  <Tip content={`Renderer: ${renderMode === 'editable' ? 'Editable' : 'Graphviz'}`} side="bottom">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <span className={`text-xs ${renderMode === 'editable' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>Edit</span>
-                      <Switch
-                        size="sm"
-                        checked={renderMode === 'graphviz'}
-                        onCheckedChange={(checked) => setRenderMode(checked ? 'graphviz' : 'editable')}
-                      />
-                      <span className={`text-xs ${renderMode === 'graphviz' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>GV</span>
-                    </label>
-                  </Tip>
-                </>
-              )}
-            </div>
+          <div className="absolute top-2 left-0 right-0 z-10 flex justify-center pointer-events-none">
+            <CanvasToolbar
+              onExport={handleExport}
+              canToggleRenderer={canToggleRenderer}
+              renderMode={renderMode}
+              onRenderModeChange={setRenderMode}
+              showDisplayOptions={!showHtml}
+            />
           </div>
           {mountEditable && (
             <DiagramLayer active={showEditable}>
@@ -203,8 +173,6 @@ export function DiagramPanel() {
     </div>
   )
 }
-
-const toolbarBtnBase = 'px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1'
 
 function DiagramLayer({ active, children }: { active: boolean; children: ReactNode }) {
   return (
