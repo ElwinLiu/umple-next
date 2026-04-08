@@ -1,6 +1,9 @@
 import { useState, useCallback } from 'react'
 import { toast } from 'sonner'
-import { Copy, Check, RefreshCw, Clock, ExternalLink } from 'lucide-react'
+import {
+  Copy, Check, RefreshCw, Clock, ExternalLink, Send, ArrowLeft,
+  ClipboardList, Search, Loader2, Users,
+} from 'lucide-react'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
 } from '@/components/ui/sheet'
@@ -20,7 +23,7 @@ export function TaskSheet() {
 
   return (
     <Sheet open={sheetMode !== 'closed'} onOpenChange={(open) => { if (!open) closeSheet() }}>
-      <SheetContent side="right" className="sm:max-w-lg w-full overflow-y-auto">
+      <SheetContent side="right" className="sm:max-w-md w-full overflow-y-auto">
         {sheetMode === 'create' && <CreateView />}
         {sheetMode === 'manage' && <ManageView />}
       </SheetContent>
@@ -41,13 +44,13 @@ function CreateView() {
   const [created, setCreated] = useState<TaskView | null>(null)
 
   const nameValid = taskName.length === 0 || NAME_PATTERN.test(taskName)
+  const tabCount = useSessionStore((s) => s.tabs.length)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!NAME_PATTERN.test(taskName)) return
 
-    // Read current editor code and tabs
-    const { code, tabs, activeTabId } = useSessionStore.getState()
+    const { code, tabs } = useSessionStore.getState()
     const hasTabs = tabs.length > 1
 
     setSubmitting(true)
@@ -78,85 +81,125 @@ function CreateView() {
   return (
     <>
       <SheetHeader>
-        <SheetTitle>Create a Task</SheetTitle>
+        <SheetTitle className="flex items-center gap-2">
+          <ClipboardList className="size-4 text-brand" />
+          Create Task
+        </SheetTitle>
       </SheetHeader>
-      <div className="p-4">
-        <SheetDescription className="mb-4">
-          The current editor code will be used as the starter model for participants.
-        </SheetDescription>
 
-        {error && (
-          <div className="mb-4 rounded-md border border-status-error/30 bg-status-error/5 px-3 py-2 text-sm text-status-error">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Field label="Task Name" required hint="Alphanumeric, underscores, and dots only">
-            <Input
-              value={taskName}
-              onChange={(e) => setTaskName(e.target.value)}
-              placeholder="e.g. hw1_uml_basics"
-              aria-invalid={taskName.length > 0 && !nameValid}
-              data-testid="task-name-input"
-            />
-            {taskName.length > 0 && !nameValid && (
-              <p className="text-xs text-status-error mt-1">
-                Only letters, digits, underscores, and dots (1-100 chars)
-              </p>
-            )}
-          </Field>
-
-          <Field label="Requestor Name" hint="Your name (shown to participants)">
-            <Input
-              value={requestorName}
-              onChange={(e) => setRequestorName(e.target.value)}
-              placeholder="e.g. Prof. Smith"
-              data-testid="requestor-name-input"
-            />
-          </Field>
-
-          <Field label="Completion URL" hint="Optional redirect after submission (e.g. a survey)">
-            <Input
-              value={completionURL}
-              onChange={(e) => setCompletionURL(e.target.value)}
-              placeholder="https://..."
-              type="url"
-            />
-          </Field>
-
-          <div className="flex items-center justify-between rounded-md border border-border bg-surface-0 px-3 py-2.5">
-            <div>
-              <p className="text-sm font-medium text-ink">Experiment Mode</p>
-              <p className="text-xs text-ink-muted">Log participant commands for research</p>
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 pt-4 pb-6">
+          {error && (
+            <div className="mb-4 rounded-lg border border-status-error/20 bg-status-error/5 px-3 py-2.5 text-sm text-status-error">
+              {error}
             </div>
-            <Switch checked={isExperiment} onCheckedChange={setIsExperiment} />
-          </div>
+          )}
 
-          <Field label="Instructions" hint="Markdown supported">
-            <textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              rows={6}
-              className="w-full rounded-md border border-border bg-surface-0 px-2.5 py-2 text-sm text-ink placeholder:text-ink-faint outline-none transition-colors hover:bg-surface-1 focus:border-brand focus:ring-1 focus:ring-brand resize-y"
-              placeholder="Write the task instructions here..."
-              data-testid="instructions-input"
-            />
-          </Field>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Task identity */}
+            <fieldset className="space-y-3">
+              <legend className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-2">
+                Identity
+              </legend>
+              <Field label="Task Name" required>
+                <Input
+                  value={taskName}
+                  onChange={(e) => setTaskName(e.target.value)}
+                  placeholder="hw1_uml_basics"
+                  aria-invalid={taskName.length > 0 && !nameValid}
+                  data-testid="task-name-input"
+                />
+                {taskName.length > 0 && !nameValid && (
+                  <p className="text-xs text-status-error mt-1">
+                    Only letters, digits, underscores, and dots (1-100 chars)
+                  </p>
+                )}
+              </Field>
+              <Field label="Your Name">
+                <Input
+                  value={requestorName}
+                  onChange={(e) => setRequestorName(e.target.value)}
+                  placeholder="Prof. Smith"
+                  data-testid="requestor-name-input"
+                />
+              </Field>
+            </fieldset>
 
-          <div className="rounded-md border border-border bg-surface-1 px-3 py-2">
-            <p className="text-xs text-ink-muted">
-              Starter model: using the code currently in the editor
-              {useSessionStore.getState().tabs.length > 1 && ` (${useSessionStore.getState().tabs.length} tabs)`}
-            </p>
-          </div>
+            {/* Instructions */}
+            <fieldset className="space-y-3">
+              <legend className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-2">
+                Instructions
+              </legend>
+              <Field label="Task Instructions" hint="Markdown supported — participants see this when they start">
+                <textarea
+                  value={instructions}
+                  onChange={(e) => setInstructions(e.target.value)}
+                  rows={5}
+                  className="w-full rounded-md border border-border bg-surface-0 px-2.5 py-2 text-sm text-ink placeholder:text-ink-faint outline-none transition-colors hover:bg-surface-1 focus:border-brand focus:ring-1 focus:ring-brand resize-y"
+                  placeholder="Describe what participants should do..."
+                  data-testid="instructions-input"
+                />
+              </Field>
+            </fieldset>
 
-          <Button type="submit" disabled={!NAME_PATTERN.test(taskName) || submitting} className="w-full" data-testid="create-task-btn">
-            {submitting ? 'Creating...' : 'Create Task'}
-          </Button>
-        </form>
+            {/* Options */}
+            <fieldset className="space-y-3">
+              <legend className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-2">
+                Options
+              </legend>
+
+              <Field label="Completion URL" hint="Redirect after submission (e.g. a survey)">
+                <Input
+                  value={completionURL}
+                  onChange={(e) => setCompletionURL(e.target.value)}
+                  placeholder="https://..."
+                  type="url"
+                />
+              </Field>
+
+              <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+                <div>
+                  <p className="text-sm font-medium text-ink">Experiment Mode</p>
+                  <p className="text-xs text-ink-muted">Log participant commands for research</p>
+                </div>
+                <Switch checked={isExperiment} onCheckedChange={setIsExperiment} />
+              </div>
+            </fieldset>
+
+            {/* Starter model indicator */}
+            <div className="flex items-center gap-2 rounded-lg bg-surface-1 px-3 py-2.5 text-xs text-ink-muted">
+              <Code className="size-3.5 shrink-0" />
+              <span>
+                Starter model: current editor content
+                {tabCount > 1 && <span className="text-ink-faint"> ({tabCount} tabs)</span>}
+              </span>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={!NAME_PATTERN.test(taskName) || submitting}
+              className="w-full"
+              data-testid="create-task-btn"
+            >
+              {submitting ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <ClipboardList className="size-3.5" />
+              )}
+              {submitting ? 'Creating...' : 'Create Task'}
+            </Button>
+          </form>
+        </div>
       </div>
     </>
+  )
+}
+
+function Code(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
+      <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
+    </svg>
   )
 }
 
@@ -164,35 +207,70 @@ function CreateView() {
 
 function PostCreateView({ task }: { task: TaskView }) {
   const [copied, setCopied] = useState(false)
+  const participantURL = `${window.location.origin}/tasks/${task.taskName}`
 
   function copyURL() {
-    const url = `${window.location.origin}/tasks/${task.taskName}`
-    navigator.clipboard.writeText(url)
+    navigator.clipboard.writeText(participantURL)
     setCopied(true)
-    toast.success('Participant URL copied')
+    toast.success('URL copied to clipboard')
     setTimeout(() => setCopied(false), 2000)
   }
-
-  const participantURL = `${window.location.origin}/tasks/${task.taskName}`
 
   return (
     <>
       <SheetHeader>
-        <SheetTitle>Task Created</SheetTitle>
+        <SheetTitle className="flex items-center gap-2">
+          <Check className="size-4 text-status-success" />
+          Task Created
+        </SheetTitle>
       </SheetHeader>
-      <div className="p-4 space-y-5">
-        <div className="rounded-md border border-status-success/30 bg-status-success/5 px-3 py-2 text-sm text-status-success">
-          Task "{task.taskName}" created successfully.
-        </div>
 
-        <Field label="Participant URL" hint="Share this with students">
-          <div className="flex gap-1.5">
-            <Input value={participantURL} readOnly className="flex-1 font-mono text-xs" />
-            <Button variant="outline" size="sm" onClick={copyURL}>
-              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 pt-5 pb-6 space-y-5">
+          {/* Success banner */}
+          <div className="rounded-lg border border-status-success/20 bg-status-success/5 px-4 py-3">
+            <p className="text-sm font-medium text-status-success">
+              {task.taskName}
+            </p>
+            <p className="text-xs text-status-success/80 mt-0.5">
+              Ready for participants
+            </p>
+          </div>
+
+          {/* Share URL */}
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-ink">
+              Share this URL with participants
+            </label>
+            <div className="flex gap-1.5">
+              <Input
+                value={participantURL}
+                readOnly
+                className="flex-1 font-mono text-xs select-all"
+                onFocus={(e) => e.target.select()}
+              />
+              <Button variant="outline" size="sm" onClick={copyURL} className="shrink-0">
+                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              </Button>
+            </div>
+          </div>
+
+          {/* Quick actions */}
+          <div className="space-y-1.5">
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full justify-start text-xs"
+              onClick={() => {
+                useTaskStore.getState().closeSheet()
+                setTimeout(() => useTaskStore.getState().openSheet('manage'), 300)
+              }}
+            >
+              <Search className="size-3.5" />
+              Manage this task
             </Button>
           </div>
-        </Field>
+        </div>
       </div>
     </>
   )
@@ -230,7 +308,7 @@ function ManageView() {
       setIsExperiment(t.isExperiment)
       setInstructions(t.instructions)
 
-      // Load the task's model into the editor so the professor can edit it
+      // Load the task's model into the editor
       if (t.tabs && t.tabs.length > 0) {
         const apiTabs = t.tabs.map((tab, i) => ({ id: `tab-${i}`, name: tab.name, code: tab.code }))
         useSessionStore.getState().restoreTabs(apiTabs, apiTabs[0].id)
@@ -255,7 +333,6 @@ function ManageView() {
     if (!task) return
     setSaving(true)
 
-    // Read current editor code
     const { code, tabs } = useSessionStore.getState()
     const hasTabs = tabs.length > 1
 
@@ -282,141 +359,188 @@ function ManageView() {
     const url = `${window.location.origin}/tasks/${task.taskName}`
     navigator.clipboard.writeText(url)
     setCopied(true)
-    toast.success('Participant URL copied')
+    toast.success('URL copied to clipboard')
     setTimeout(() => setCopied(false), 2000)
   }
 
-  // Not loaded yet — prompt for task name
+  // ── Lookup prompt ──
   if (!task) {
     return (
       <>
         <SheetHeader>
-          <SheetTitle>Manage Task</SheetTitle>
+          <SheetTitle className="flex items-center gap-2">
+            <Search className="size-4 text-ink-muted" />
+            Manage Task
+          </SheetTitle>
         </SheetHeader>
-        <div className="p-4">
-          <SheetDescription className="mb-4">
-            Enter the task name to view and edit it.
-          </SheetDescription>
 
-          {error && (
-            <div className="mb-4 rounded-md border border-status-error/30 bg-status-error/5 px-3 py-2 text-sm text-status-error">
-              {error}
-            </div>
-          )}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-4 pt-5 pb-6">
+            <SheetDescription className="mb-5">
+              Look up an existing task to edit it, view responses, or share the participant URL.
+            </SheetDescription>
 
-          <form onSubmit={handleLoad} className="space-y-4">
-            <Field label="Task Name">
-              <Input value={taskName} onChange={(e) => setTaskName(e.target.value)} placeholder="e.g. hw1_uml_basics" />
-            </Field>
-            <Button type="submit" disabled={loading || !taskName.trim()} className="w-full">
-              {loading ? 'Loading...' : 'Load Task'}
-            </Button>
-          </form>
+            {error && (
+              <div className="mb-4 rounded-lg border border-status-error/20 bg-status-error/5 px-3 py-2.5 text-sm text-status-error">
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleLoad} className="space-y-4">
+              <Field label="Task Name">
+                <Input
+                  value={taskName}
+                  onChange={(e) => setTaskName(e.target.value)}
+                  placeholder="hw1_uml_basics"
+                  autoFocus
+                />
+              </Field>
+              <Button type="submit" disabled={loading || !taskName.trim()} className="w-full">
+                {loading ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <Search className="size-3.5" />
+                )}
+                {loading ? 'Loading...' : 'Load Task'}
+              </Button>
+            </form>
+          </div>
         </div>
       </>
     )
   }
 
-  // Loaded — management view
+  // ── Task management ──
   const participantURL = `${window.location.origin}/tasks/${task.taskName}`
 
   return (
     <>
       <SheetHeader>
-        <SheetTitle>{task.taskName}</SheetTitle>
+        <SheetTitle className="flex items-center gap-2 min-w-0">
+          <button
+            onClick={() => { setTask(null); setError(null) }}
+            className="p-0.5 -ml-0.5 rounded hover:bg-surface-2 transition-colors text-ink-muted hover:text-ink cursor-pointer"
+            aria-label="Back to task lookup"
+          >
+            <ArrowLeft className="size-3.5" />
+          </button>
+          <span className="truncate">{task.taskName}</span>
+        </SheetTitle>
       </SheetHeader>
-      <div className="p-4 space-y-6 pb-8">
-        {/* Share section */}
-        <div>
-          <div className="text-xs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Participant URL</div>
-          <div className="flex gap-1.5">
-            <Input value={participantURL} readOnly className="flex-1 font-mono text-xs" />
-            <Button variant="outline" size="sm" onClick={copyParticipantURL}>
-              {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            </Button>
-          </div>
-        </div>
 
-        {/* Edit form */}
-        <form onSubmit={handleSave} className="space-y-4">
-          <div className="text-xs font-semibold text-ink-faint uppercase tracking-wider">Edit Task</div>
-
-          <Field label="Requestor Name">
-            <Input value={requestorName} onChange={(e) => setRequestorName(e.target.value)} />
-          </Field>
-
-          <Field label="Completion URL">
-            <Input value={completionURL} onChange={(e) => setCompletionURL(e.target.value)} type="url" placeholder="https://..." />
-          </Field>
-
-          <div className="flex items-center justify-between rounded-md border border-border bg-surface-0 px-3 py-2.5">
-            <div>
-              <p className="text-sm font-medium text-ink">Experiment Mode</p>
-              <p className="text-xs text-ink-muted">Log commands for research</p>
+      <div className="flex-1 overflow-y-auto">
+        <div className="px-4 pt-4 pb-8 space-y-6">
+          {/* Share section */}
+          <div className="space-y-2">
+            <label className="block text-xxs font-semibold text-ink-faint uppercase tracking-wider">
+              Participant URL
+            </label>
+            <div className="flex gap-1.5">
+              <Input
+                value={participantURL}
+                readOnly
+                className="flex-1 font-mono text-xs select-all"
+                onFocus={(e) => e.target.select()}
+              />
+              <Button variant="outline" size="sm" onClick={copyParticipantURL} className="shrink-0">
+                {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+              </Button>
             </div>
-            <Switch checked={isExperiment} onCheckedChange={setIsExperiment} />
           </div>
 
-          <Field label="Instructions">
-            <textarea
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              rows={5}
-              className="w-full rounded-md border border-border bg-surface-0 px-2.5 py-2 text-sm text-ink placeholder:text-ink-faint outline-none transition-colors hover:bg-surface-1 focus:border-brand focus:ring-1 focus:ring-brand resize-y"
-            />
-          </Field>
-
-          <div className="rounded-md border border-border bg-surface-1 px-3 py-2">
-            <p className="text-xs text-ink-muted">
-              Starter model: saving whatever is currently in the editor
-            </p>
-          </div>
-
-          <Button type="submit" disabled={saving} className="w-full">
-            {saving ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </form>
-
-        {/* Responses */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs font-semibold text-ink-faint uppercase tracking-wider">
-              Responses ({responses.length})
+          {/* Responses */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5 text-xxs font-semibold text-ink-faint uppercase tracking-wider">
+                <Users className="size-3" />
+                Responses ({responses.length})
+              </div>
+              <Button variant="ghost" size="icon-xs" onClick={() => loadData(task.taskName)} aria-label="Refresh responses">
+                <RefreshCw className="size-3" />
+              </Button>
             </div>
-            <Button variant="ghost" size="icon-xs" onClick={() => loadData(task.taskName)}>
-              <RefreshCw className="size-3" />
-            </Button>
-          </div>
-          {responses.length === 0 ? (
-            <p className="text-sm text-ink-muted py-3 text-center">No responses yet.</p>
-          ) : (
-            <div className="border border-border rounded-md divide-y divide-border">
-              {responses.map((r) => (
-                <div key={r.responseId} className="flex items-center justify-between px-3 py-2">
-                  <div className="min-w-0">
-                    <p className="font-mono text-xs text-ink truncate">{r.responseId}</p>
-                    {r.submittedAt ? (
-                      <p className="flex items-center gap-1 text-xs text-status-success mt-0.5">
-                        <Check className="size-3" /> Submitted {new Date(r.submittedAt).toLocaleDateString()}
-                      </p>
-                    ) : (
-                      <p className="flex items-center gap-1 text-xs text-ink-muted mt-0.5">
-                        <Clock className="size-3" /> In progress
-                      </p>
-                    )}
+            {responses.length === 0 ? (
+              <div className="rounded-lg border border-border border-dashed py-6 text-center">
+                <p className="text-xs text-ink-faint">No responses yet</p>
+                <p className="text-xxs text-ink-faint mt-0.5">Share the participant URL to get started</p>
+              </div>
+            ) : (
+              <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
+                {responses.map((r) => (
+                  <div key={r.responseId} className="flex items-center justify-between px-3 py-2 hover:bg-surface-1 transition-colors">
+                    <div className="min-w-0">
+                      <p className="font-mono text-xs text-ink truncate">{r.responseId}</p>
+                      {r.submittedAt ? (
+                        <p className="flex items-center gap-1 text-xxs text-status-success mt-0.5">
+                          <Check className="size-2.5" /> Submitted {new Date(r.submittedAt).toLocaleDateString()}
+                        </p>
+                      ) : (
+                        <p className="flex items-center gap-1 text-xxs text-ink-faint mt-0.5">
+                          <Clock className="size-2.5" /> In progress
+                        </p>
+                      )}
+                    </div>
+                    <a
+                      href={`/tasks/responses/${r.responseId}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 rounded hover:bg-surface-2 text-ink-muted hover:text-brand transition-colors"
+                      aria-label="Open response"
+                    >
+                      <ExternalLink className="size-3.5" />
+                    </a>
                   </div>
-                  <a
-                    href={`/tasks/responses/${r.responseId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-brand hover:text-brand-hover"
-                  >
-                    <ExternalLink className="size-3.5" />
-                  </a>
-                </div>
-              ))}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-border" />
+
+          {/* Edit form */}
+          <form onSubmit={handleSave} className="space-y-4">
+            <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider">Edit Task</div>
+
+            <Field label="Your Name">
+              <Input value={requestorName} onChange={(e) => setRequestorName(e.target.value)} />
+            </Field>
+
+            <Field label="Completion URL">
+              <Input value={completionURL} onChange={(e) => setCompletionURL(e.target.value)} type="url" placeholder="https://..." />
+            </Field>
+
+            <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+              <div>
+                <p className="text-sm font-medium text-ink">Experiment Mode</p>
+                <p className="text-xs text-ink-muted">Log commands for research</p>
+              </div>
+              <Switch checked={isExperiment} onCheckedChange={setIsExperiment} />
             </div>
-          )}
+
+            <Field label="Instructions">
+              <textarea
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                rows={5}
+                className="w-full rounded-md border border-border bg-surface-0 px-2.5 py-2 text-sm text-ink placeholder:text-ink-faint outline-none transition-colors hover:bg-surface-1 focus:border-brand focus:ring-1 focus:ring-brand resize-y"
+              />
+            </Field>
+
+            <div className="flex items-center gap-2 rounded-lg bg-surface-1 px-3 py-2.5 text-xs text-ink-muted">
+              <Send className="size-3.5 shrink-0" />
+              <span>Saving will update the starter model with the current editor content</span>
+            </div>
+
+            <Button type="submit" disabled={saving} className="w-full">
+              {saving ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : (
+                <Check className="size-3.5" />
+              )}
+              {saving ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </form>
         </div>
       </div>
     </>
@@ -433,10 +557,10 @@ function Field({ label, required, hint, children }: {
 }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-ink mb-1">
+      <label className="block text-xs font-medium text-ink mb-1">
         {label}{required && <span className="text-status-error ml-0.5">*</span>}
       </label>
-      {hint && <p className="text-xs text-ink-muted mb-1.5">{hint}</p>}
+      {hint && <p className="text-xxs text-ink-muted mb-1.5">{hint}</p>}
       {children}
     </div>
   )
