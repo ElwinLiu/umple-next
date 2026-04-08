@@ -14,8 +14,6 @@ import { Combobox } from '@/components/ui/combobox'
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import {
-  ChevronDown,
-  ChevronRight,
   ChevronsUpDown,
   Search,
   Code,
@@ -35,6 +33,7 @@ import {
   ListChecks,
 } from 'lucide-react'
 import { AiConfigSection } from '@/components/sidebar/AiConfigSection'
+import { SidebarSection, SidebarLabel } from '@/components/sidebar/SidebarSection'
 import { TaskSidebarSection } from '@/components/task/TaskSidebarSection'
 import { useTaskStore } from '@/stores/taskStore'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
@@ -47,44 +46,6 @@ import {
   DropdownMenuGroup,
 } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
-
-// ── Collapsible section wrapper ──
-
-function Section({
-  title,
-  icon: Icon,
-  open,
-  onToggle,
-  children,
-}: {
-  title: string
-  icon: React.ComponentType<{ className?: string }>
-  open: boolean
-  onToggle: () => void
-  children: React.ReactNode
-}) {
-  return (
-    <div>
-      <button
-        onClick={onToggle}
-        className="flex items-center gap-2 w-full px-4 pt-2.5 pb-1.5 text-[13px] font-medium text-ink hover:bg-surface-2/60 transition-colors cursor-pointer text-left"
-      >
-        <Icon className="size-4 text-ink-muted shrink-0" />
-        <span className="flex-1 text-left">{title}</span>
-        {open ? (
-          <ChevronDown className="size-3.5 text-ink-faint shrink-0" />
-        ) : (
-          <ChevronRight className="size-3.5 text-ink-faint shrink-0" />
-        )}
-      </button>
-      {open && (
-        <div className="px-4 pb-3 pt-0.5 ml-6">
-          {children}
-        </div>
-      )}
-    </div>
-  )
-}
 
 // ── Sidebar content (shared between pinned and floating) ──
 
@@ -339,11 +300,11 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
   }, [code, generatingCode, generate, targetId])
 
   return (
-    <Section title="Tools" icon={Wrench} open={open} onToggle={onToggle}>
+    <SidebarSection title="Tools" icon={Wrench} open={open} onToggle={onToggle}>
       <div className="space-y-4">
         {/* Examples */}
         <div data-tour="examples">
-          <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Examples</div>
+          <SidebarLabel>Examples</SidebarLabel>
           <div className="space-y-1.5">
             <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
               <SelectTrigger>
@@ -380,7 +341,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
 
         {/* Generate */}
         <div data-tour="generate">
-          <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Generate</div>
+          <SidebarLabel>Generate</SidebarLabel>
           <div className="space-y-2">
             <Combobox
               groups={generateGroups}
@@ -425,7 +386,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
         {/* Layout Algorithm */}
         {showLayout && (
           <div data-tour="layout-algorithm">
-            <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Layout Algorithm</div>
+            <SidebarLabel>Layout Algorithm</SidebarLabel>
             <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
               <SelectTrigger>
                 <SelectValue />
@@ -442,7 +403,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
         )}
 
       </div>
-    </Section>
+    </SidebarSection>
   )
 }
 
@@ -450,7 +411,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
 
 function TasksSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
-    <Section title="Tasks" icon={ListChecks} open={open} onToggle={onToggle}>
+    <SidebarSection title="Tasks" icon={ListChecks} open={open} onToggle={onToggle}>
       <div className="space-y-3">
         <p className="text-xs text-ink-muted leading-relaxed">
           Create assignments for students or manage existing ones.
@@ -482,7 +443,7 @@ function TasksSection({ open, onToggle }: { open: boolean; onToggle: () => void 
           </button>
         </div>
       </div>
-    </Section>
+    </SidebarSection>
   )
 }
 

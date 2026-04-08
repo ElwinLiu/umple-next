@@ -4,17 +4,8 @@ import { fetchModels, type ModelInfo } from '@/ai/models'
 import { Input } from '@/components/ui/input'
 import { Combobox, type ComboboxGroup } from '@/components/ui/combobox'
 import { Tip } from '@/components/ui/tooltip'
-import { ChevronDown, Eye, EyeOff, Info, Loader2, RefreshCw, Sparkles } from 'lucide-react'
-import {
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-} from '@/components/ui/sidebar/sidebar'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '@/components/ui/sidebar/collapsible'
+import { Eye, EyeOff, Info, Loader2, RefreshCw, Sparkles } from 'lucide-react'
+import { SidebarSection } from '@/components/sidebar/SidebarSection'
 
 const PROVIDER_GROUPS: ComboboxGroup[] = [
   {
@@ -112,108 +103,95 @@ export function AiConfigSection() {
     : null
 
   return (
-    <Collapsible className="group/collapsible" data-tour="ai-config">
-      <SidebarGroup>
-        <SidebarGroupLabel asChild>
-          <CollapsibleTrigger className="cursor-pointer text-ink hover:bg-surface-2/60">
-            <Sparkles />
-            Umple AI
-            <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-0 group-data-[state=closed]/collapsible:-rotate-90" />
-          </CollapsibleTrigger>
-        </SidebarGroupLabel>
-        <CollapsibleContent>
-          <SidebarGroupContent>
-            <div className="flex flex-col gap-2.5">
-              {/* Provider selector */}
-              <Combobox
-                groups={PROVIDER_GROUPS}
-                value={provider}
-                onSelect={(v) => setActiveProvider(v as AiProvider)}
-                placeholder="Select provider..."
-                searchPlaceholder="Search providers..."
-              />
+    <SidebarSection title="Umple AI" icon={Sparkles} data-tour="ai-config">
+      <div className="flex flex-col gap-2.5">
+        {/* Provider selector */}
+        <Combobox
+          groups={PROVIDER_GROUPS}
+          value={provider}
+          onSelect={(v) => setActiveProvider(v as AiProvider)}
+          placeholder="Select provider..."
+          searchPlaceholder="Search providers..."
+        />
 
-              {/* API Key */}
-              <div className="relative">
-                <Input
-                  id="ai-api-key-input"
-                  aria-label="API key"
-                  type={showKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder="API key"
-                  className="pr-12 font-mono"
+        {/* API Key */}
+        <div className="relative">
+          <Input
+            id="ai-api-key-input"
+            aria-label="API key"
+            type={showKey ? 'text' : 'password'}
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="API key"
+            className="pr-12 font-mono"
+          />
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+            <Tip content="Your key is proxied through our server but is never stored or logged." side="top">
+              <button
+                type="button"
+                className="p-0.5 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors cursor-pointer"
+                aria-label="Key security info"
+                tabIndex={-1}
+              >
+                <Info className="size-3" />
+              </button>
+            </Tip>
+            <button
+              type="button"
+              onClick={() => setShowKey((v) => !v)}
+              className="p-0.5 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors cursor-pointer"
+              aria-label={showKey ? 'Hide API key' : 'Show API key'}
+            >
+              {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Model */}
+        <div>
+          <div className="flex items-center gap-1">
+            <div className="flex-1 min-w-0">
+              {modelOptions.length > 0 ? (
+                <Combobox
+                  options={modelOptions}
+                  value={model}
+                  onSelect={setModel}
+                  placeholder="Select model..."
+                  searchPlaceholder="Search models..."
                 />
-                <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-                  <Tip content="Your key is proxied through our server but is never stored or logged." side="top">
-                    <button
-                      type="button"
-                      className="p-0.5 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors cursor-pointer"
-                      aria-label="Key security info"
-                      tabIndex={-1}
-                    >
-                      <Info className="size-3" />
-                    </button>
-                  </Tip>
-                  <button
-                    type="button"
-                    onClick={() => setShowKey((v) => !v)}
-                    className="p-0.5 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors cursor-pointer"
-                    aria-label={showKey ? 'Hide API key' : 'Show API key'}
-                  >
-                    {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
-                  </button>
-                </div>
-              </div>
-
-              {/* Model */}
-              <div>
-                <div className="flex items-center gap-1">
-                  <div className="flex-1 min-w-0">
-                    {modelOptions.length > 0 ? (
-                      <Combobox
-                        options={modelOptions}
-                        value={model}
-                        onSelect={setModel}
-                        placeholder="Select model..."
-                        searchPlaceholder="Search models..."
-                      />
-                    ) : (
-                      <Input
-                        value={model}
-                        onChange={(e) => setModel(e.target.value)}
-                        placeholder={loadingModels ? 'Loading models...' : 'Model ID'}
-                        disabled={loadingModels}
-                      />
-                    )}
-                  </div>
-                  {apiKey.trim() && (
-                    <button
-                      type="button"
-                      onClick={loadModels}
-                      disabled={loadingModels}
-                      className="shrink-0 p-1.5 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer disabled:opacity-50"
-                      aria-label="Refresh models"
-                    >
-                      {loadingModels ? (
-                        <Loader2 className="size-3 animate-spin" />
-                      ) : (
-                        <RefreshCw className="size-3" />
-                      )}
-                    </button>
-                  )}
-                </div>
-                {modelDetail && (
-                  <p className="mt-1 text-xxs text-sidebar-foreground/50">{modelDetail}</p>
-                )}
-                {modelError && (
-                  <p className="mt-1 text-xxs text-status-error">{modelError}</p>
-                )}
-              </div>
+              ) : (
+                <Input
+                  value={model}
+                  onChange={(e) => setModel(e.target.value)}
+                  placeholder={loadingModels ? 'Loading models...' : 'Model ID'}
+                  disabled={loadingModels}
+                />
+              )}
             </div>
-          </SidebarGroupContent>
-        </CollapsibleContent>
-      </SidebarGroup>
-    </Collapsible>
+            {apiKey.trim() && (
+              <button
+                type="button"
+                onClick={loadModels}
+                disabled={loadingModels}
+                className="shrink-0 p-1.5 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer disabled:opacity-50"
+                aria-label="Refresh models"
+              >
+                {loadingModels ? (
+                  <Loader2 className="size-3 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-3" />
+                )}
+              </button>
+            )}
+          </div>
+          {modelDetail && (
+            <p className="mt-1 text-xxs text-sidebar-foreground/50">{modelDetail}</p>
+          )}
+          {modelError && (
+            <p className="mt-1 text-xxs text-status-error">{modelError}</p>
+          )}
+        </div>
+      </div>
+    </SidebarSection>
   )
 }
