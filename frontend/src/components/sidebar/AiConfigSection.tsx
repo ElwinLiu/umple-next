@@ -33,7 +33,8 @@ const PROVIDER_GROUPS: ComboboxGroup[] = [
   },
 ]
 
-export function AiConfigSection() {
+/** Shared AI configuration form used by both the sidebar and the toolbar popover. */
+export function AiConfigForm() {
   const provider = usePreferencesStore((state) => state.activeProvider)
   const { model, apiKey } = usePreferencesStore((state) => state.configs[state.activeProvider] ?? { apiKey: '', model: '' })
   const setActiveProvider = usePreferencesStore((state) => state.setActiveProvider)
@@ -103,95 +104,97 @@ export function AiConfigSection() {
     : null
 
   return (
-    <SidebarSection title="Umple AI" icon={Sparkles} data-tour="ai-config">
-      <div className="flex flex-col gap-2.5">
-        {/* Provider selector */}
-        <Combobox
-          groups={PROVIDER_GROUPS}
-          value={provider}
-          onSelect={(v) => setActiveProvider(v as AiProvider)}
-          placeholder="Select provider..."
-          searchPlaceholder="Search providers..."
-        />
+    <div className="flex flex-col gap-2.5">
+      <Combobox
+        groups={PROVIDER_GROUPS}
+        value={provider}
+        onSelect={(v) => setActiveProvider(v as AiProvider)}
+        placeholder="Select provider..."
+        searchPlaceholder="Search providers..."
+      />
 
-        {/* API Key */}
-        <div className="relative">
-          <Input
-            id="ai-api-key-input"
-            aria-label="API key"
-            type={showKey ? 'text' : 'password'}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="API key"
-            className="pr-12 font-mono"
-          />
-          <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
-            <Tip content="Your key is proxied through our server but is never stored or logged." side="top">
-              <button
-                type="button"
-                className="p-0.5 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors cursor-pointer"
-                aria-label="Key security info"
-                tabIndex={-1}
-              >
-                <Info className="size-3" />
-              </button>
-            </Tip>
+      <div className="relative">
+        <Input
+          aria-label="API key"
+          type={showKey ? 'text' : 'password'}
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="API key"
+          className="pr-12 font-mono"
+        />
+        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex items-center gap-0.5">
+          <Tip content="Your key is proxied through our server but is never stored or logged." side="top">
             <button
               type="button"
-              onClick={() => setShowKey((v) => !v)}
-              className="p-0.5 text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors cursor-pointer"
-              aria-label={showKey ? 'Hide API key' : 'Show API key'}
+              className="p-0.5 text-ink-faint hover:text-ink transition-colors cursor-pointer"
+              aria-label="Key security info"
+              tabIndex={-1}
             >
-              {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+              <Info className="size-3" />
             </button>
-          </div>
-        </div>
-
-        {/* Model */}
-        <div>
-          <div className="flex items-center gap-1">
-            <div className="flex-1 min-w-0">
-              {modelOptions.length > 0 ? (
-                <Combobox
-                  options={modelOptions}
-                  value={model}
-                  onSelect={setModel}
-                  placeholder="Select model..."
-                  searchPlaceholder="Search models..."
-                />
-              ) : (
-                <Input
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  placeholder={loadingModels ? 'Loading models...' : 'Model ID'}
-                  disabled={loadingModels}
-                />
-              )}
-            </div>
-            {apiKey.trim() && (
-              <button
-                type="button"
-                onClick={loadModels}
-                disabled={loadingModels}
-                className="shrink-0 p-1.5 rounded-md text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-colors cursor-pointer disabled:opacity-50"
-                aria-label="Refresh models"
-              >
-                {loadingModels ? (
-                  <Loader2 className="size-3 animate-spin" />
-                ) : (
-                  <RefreshCw className="size-3" />
-                )}
-              </button>
-            )}
-          </div>
-          {modelDetail && (
-            <p className="mt-1 text-xxs text-sidebar-foreground/50">{modelDetail}</p>
-          )}
-          {modelError && (
-            <p className="mt-1 text-xxs text-status-error">{modelError}</p>
-          )}
+          </Tip>
+          <button
+            type="button"
+            onClick={() => setShowKey((v) => !v)}
+            className="p-0.5 text-ink-faint hover:text-ink transition-colors cursor-pointer"
+            aria-label={showKey ? 'Hide API key' : 'Show API key'}
+          >
+            {showKey ? <EyeOff className="size-3" /> : <Eye className="size-3" />}
+          </button>
         </div>
       </div>
+
+      <div>
+        <div className="flex items-center gap-1">
+          <div className="flex-1 min-w-0">
+            {modelOptions.length > 0 ? (
+              <Combobox
+                options={modelOptions}
+                value={model}
+                onSelect={setModel}
+                placeholder="Select model..."
+                searchPlaceholder="Search models..."
+              />
+            ) : (
+              <Input
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder={loadingModels ? 'Loading models...' : 'Model ID'}
+                disabled={loadingModels}
+              />
+            )}
+          </div>
+          {apiKey.trim() && (
+            <button
+              type="button"
+              onClick={loadModels}
+              disabled={loadingModels}
+              className="shrink-0 p-1.5 rounded-md text-ink-faint hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer disabled:opacity-50"
+              aria-label="Refresh models"
+            >
+              {loadingModels ? (
+                <Loader2 className="size-3 animate-spin" />
+              ) : (
+                <RefreshCw className="size-3" />
+              )}
+            </button>
+          )}
+        </div>
+        {modelDetail && (
+          <p className="mt-1 text-xxs text-ink-faint">{modelDetail}</p>
+        )}
+        {modelError && (
+          <p className="mt-1 text-xxs text-status-error">{modelError}</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function AiConfigSection() {
+  return (
+    <SidebarSection title="Umple AI" icon={Sparkles} data-tour="ai-config">
+      <AiConfigForm />
     </SidebarSection>
   )
 }

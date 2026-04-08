@@ -11,7 +11,17 @@ const rendererProps = vi.hoisted(() => ({
 }))
 
 vi.mock('../CanvasToolbar', () => ({
-  CanvasToolbar: () => <div data-testid="canvas-toolbar" />,
+  CanvasToolbar: ({ canToggleRenderer, renderMode, onRenderModeChange }: any) => (
+    <div data-testid="canvas-toolbar">
+      {canToggleRenderer && (
+        <button
+          role="switch"
+          aria-checked={renderMode === 'graphviz'}
+          onClick={() => onRenderModeChange(renderMode === 'graphviz' ? 'editable' : 'graphviz')}
+        />
+      )}
+    </div>
+  ),
 }))
 
 vi.mock('../UmpleDiagram', () => ({

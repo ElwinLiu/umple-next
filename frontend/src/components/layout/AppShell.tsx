@@ -1,4 +1,5 @@
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+import { AppToolbar } from './AppToolbar'
 import { Sidebar } from './Sidebar'
 import { EditorPanel } from '../editor/EditorPanel'
 import { OutputPanel, CompileStatusStrip } from '../editor/ExecutionPanel'
@@ -38,7 +39,8 @@ export function AppShell() {
 
       {/* Main content area */}
       <main id="main-content" className="flex-1 min-w-0 flex flex-col">
-        <div className="relative flex-1 min-h-0 px-2.5 pb-2.5 pt-1.5">
+        <AppToolbar />
+        <div className="relative flex-1 min-h-0 px-2.5 pb-2.5">
           <ErrorBoundary>
           <PanelGroup direction="horizontal" className="h-full" id="main-horizontal">
             {editorVisible && (

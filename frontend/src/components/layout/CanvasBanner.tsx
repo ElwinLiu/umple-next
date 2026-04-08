@@ -1,17 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
-import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
-import { useCompile } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
-import { GENERATE_TARGET_GROUPS } from '../../generation/targets'
-import { Hammer, Loader2, Check, ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
+import { GENERATE_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
+import { ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -19,45 +15,19 @@ import {
 import { Tip } from '@/components/ui/tooltip'
 import { lineTabClasses } from '@/components/ui/line-tab'
 import { cn } from '@/lib/utils'
-import { VIEW_MODE_GROUPS, ALL_VIEW_MODES, PINNED_VIEW_MODES } from '../../constants/diagram'
-import { getGenerateTarget } from '../../generation/targets'
 
 export function CanvasBanner() {
-  const {
-    diagramOnly, setDiagramOnly,
-    rightPanelView, setRightPanelView,
-    generatedTargetId, generatingCode,
-    generationRequested, executing,
-  } = useEphemeralStore()
-  const viewMode = useSessionStore((s) => s.viewMode)
-  const setViewMode = useSessionStore((s) => s.setViewMode)
-  const { compile } = useCompile()
-  const compiling = useEphemeralStore((s) => s.compiling)
-  const errorCount = useEphemeralStore((s) => s.outputErrorCount)
+  const diagramOnly = useEphemeralStore((s) => s.diagramOnly)
+  const setDiagramOnly = useEphemeralStore((s) => s.setDiagramOnly)
+  const rightPanelView = useEphemeralStore((s) => s.rightPanelView)
+  const setRightPanelView = useEphemeralStore((s) => s.setRightPanelView)
+  const generatedTargetId = useEphemeralStore((s) => s.generatedTargetId)
+  const generatingCode = useEphemeralStore((s) => s.generatingCode)
+  const generationRequested = useEphemeralStore((s) => s.generationRequested)
   const handleGenerate = useGenerate()
-
-  const canvasLabel = 'Diagram'
-
-  // Compile success micro-interaction
-  const prevCompilingRef = useRef(compiling)
-  const [justCompiled, setJustCompiled] = useState(false)
-
-  useEffect(() => {
-    if (prevCompilingRef.current && !compiling && errorCount === 0) {
-      setJustCompiled(true)
-      const timer = setTimeout(() => setJustCompiled(false), 1200)
-      return () => clearTimeout(timer)
-    }
-    prevCompilingRef.current = compiling
-  }, [compiling, errorCount])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-        e.preventDefault()
-        e.stopPropagation()
-        compile()
-      }
       if ((e.metaKey || e.ctrlKey) && e.key === '1') {
         e.preventDefault()
         e.stopPropagation()
@@ -81,66 +51,13 @@ export function CanvasBanner() {
     }
     window.addEventListener('keydown', handler, true)
     return () => window.removeEventListener('keydown', handler, true)
-  }, [compile])
+  }, [])
 
   return (
-    <div className="relative grid grid-cols-[minmax(0,auto)_minmax(0,1fr)_auto] items-center h-[var(--toolbar-h)] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
-      <div className="flex items-center gap-2 min-w-0 overflow-hidden">
-        <Tip content="Compile (Ctrl+Enter)" side="bottom">
-          <button
-            onClick={compile}
-            disabled={compiling}
-            aria-label={compiling ? 'Compiling' : 'Compile (Ctrl+Enter)'}
-            data-testid="compile-button"
-            className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium transition-colors cursor-pointer rounded-md text-ink-muted hover:text-ink hover:bg-surface-1 disabled:cursor-not-allowed disabled:opacity-70 min-w-0"
-          >
-            {compiling ? (
-              <Loader2 className="size-3.5 shrink-0 animate-spin" />
-            ) : justCompiled ? (
-              <Check className="size-3.5 shrink-0 text-status-success animate-fade-in" />
-            ) : (
-              <Hammer className="size-3.5 shrink-0" />
-            )}
-            <span className="truncate">{compiling ? 'Compiling...' : justCompiled ? <span className="text-status-success animate-fade-in">Compiled</span> : 'Compile'}</span>
-          </button>
-        </Tip>
-
-        <DropdownMenu>
-          <Tip content="Diagram view" side="bottom">
-            <DropdownMenuTrigger data-tour="diagram-view" className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-1 transition-colors cursor-pointer outline-none min-w-0" aria-label="Diagram view">
-              <span className="truncate">{ALL_VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}</span>
-              <ChevronDown className="size-3 shrink-0" />
-            </DropdownMenuTrigger>
-          </Tip>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuRadioGroup value={viewMode} onValueChange={(v) => setViewMode(v as DiagramView)}>
-              {PINNED_VIEW_MODES.map((pv) => {
-                const m = ALL_VIEW_MODES.find((v) => v.value === pv)
-                if (!m) return null
-                return (
-                  <DropdownMenuRadioItem key={m.value} value={m.value} data-testid={`diagram-view-${m.value}`}>
-                    {m.label}
-                  </DropdownMenuRadioItem>
-                )
-              })}
-              {VIEW_MODE_GROUPS.map((group, gi) => (
-                <DropdownMenuGroup key={group.label}>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-                  {group.modes.filter((m) => !PINNED_VIEW_MODES.includes(m.value)).map((m) => (
-                    <DropdownMenuRadioItem key={m.value} value={m.value} data-testid={`diagram-view-${m.value}`}>
-                      {m.label}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuGroup>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
+    <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center h-[var(--toolbar-h)] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
+      <div />
       <div className="flex items-center justify-center gap-0.5 min-w-0 overflow-hidden">
-        <Tip content={`${canvasLabel} (Ctrl+1)`} side="bottom">
+        <Tip content="Diagram (Ctrl+1)" side="bottom">
           <button
             onClick={() => {
               if (rightPanelView === 'generated') {
@@ -149,7 +66,7 @@ export function CanvasBanner() {
             }}
             className={cn(lineTabClasses({ active: rightPanelView === 'diagram' }), 'text-xs px-2.5 py-1 shrink-0')}
           >
-            {canvasLabel}
+            Diagram
           </button>
         </Tip>
         {generationRequested && (
@@ -194,7 +111,7 @@ export function CanvasBanner() {
         )}
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex items-center justify-end gap-1">
         <Tip content={diagramOnly ? 'Show editor' : 'Diagram only'} side="bottom">
           <button
             onClick={() => setDiagramOnly(!diagramOnly)}
@@ -208,12 +125,6 @@ export function CanvasBanner() {
           </button>
         </Tip>
       </div>
-      {/* Indeterminate progress bar */}
-      {(compiling || generatingCode || executing) && (
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden">
-          <div className="h-full w-1/4 bg-brand animate-progress-indeterminate" />
-        </div>
-      )}
     </div>
   )
 }
