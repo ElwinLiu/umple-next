@@ -31,6 +31,8 @@ import {
   Shield,
   ExternalLink,
   ClipboardList,
+  Wrench,
+  ListChecks,
 } from 'lucide-react'
 import { AiConfigSection } from '@/components/sidebar/AiConfigSection'
 import { TaskSidebarSection } from '@/components/task/TaskSidebarSection'
@@ -50,11 +52,13 @@ import { Tip } from '@/components/ui/tooltip'
 
 function Section({
   title,
+  icon: Icon,
   open,
   onToggle,
   children,
 }: {
   title: string
+  icon: React.ComponentType<{ className?: string }>
   open: boolean
   onToggle: () => void
   children: React.ReactNode
@@ -65,15 +69,16 @@ function Section({
         onClick={onToggle}
         className="flex items-center gap-2 w-full px-4 pt-2.5 pb-1.5 text-[13px] font-medium text-ink hover:bg-surface-2/60 transition-colors cursor-pointer text-left"
       >
+        <Icon className="size-4 text-ink-muted shrink-0" />
+        <span className="flex-1 text-left">{title}</span>
         {open ? (
           <ChevronDown className="size-3.5 text-ink-faint shrink-0" />
         ) : (
           <ChevronRight className="size-3.5 text-ink-faint shrink-0" />
         )}
-        {title}
       </button>
       {open && (
-        <div className="px-4 pb-3 pt-0.5 ml-5.5">
+        <div className="px-4 pb-3 pt-0.5 ml-6">
           {children}
         </div>
       )}
@@ -334,7 +339,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
   }, [code, generatingCode, generate, targetId])
 
   return (
-    <Section title="Tools" open={open} onToggle={onToggle}>
+    <Section title="Tools" icon={Wrench} open={open} onToggle={onToggle}>
       <div className="space-y-4">
         {/* Examples */}
         <div data-tour="examples">
@@ -445,7 +450,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
 
 function TasksSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   return (
-    <Section title="Tasks" open={open} onToggle={onToggle}>
+    <Section title="Tasks" icon={ListChecks} open={open} onToggle={onToggle}>
       <div className="space-y-3">
         <p className="text-xs text-ink-muted leading-relaxed">
           Create assignments for students or manage existing ones.

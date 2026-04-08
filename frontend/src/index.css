@@ -491,6 +491,29 @@ body {
   pointer-events: none;
 }
 
+/* ── Compile Success Checkmark Draw ── */
+
+@keyframes check-draw {
+  from { stroke-dashoffset: 20; }
+  to { stroke-dashoffset: 0; }
+}
+
+@keyframes success-glow {
+  0% { background-color: transparent; }
+  25% { background-color: color-mix(in srgb, var(--color-status-success) 10%, transparent); }
+  100% { background-color: transparent; }
+}
+
+.animate-check-draw {
+  stroke-dasharray: 20;
+  stroke-dashoffset: 20;
+  animation: check-draw 400ms cubic-bezier(0.25, 1, 0.5, 1) 100ms forwards;
+}
+
+.animate-success-glow {
+  animation: success-glow 800ms ease-out;
+}
+
 /* ── Reduced Motion ── */
 
 @media (prefers-reduced-motion: reduce) {
