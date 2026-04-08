@@ -468,7 +468,7 @@ function TasksSection({ open, onToggle }: { open: boolean; onToggle: () => void 
             onClick={() => useTaskStore.getState().openSheet('manage')}
             className="group flex items-center gap-2 rounded-md px-2.5 py-2 text-xs text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer w-full text-left"
           >
-            <div className="flex items-center justify-center size-6 rounded-md bg-surface-2 text-ink-muted group-hover:bg-surface-2/80 transition-colors">
+            <div className="flex items-center justify-center size-6 rounded-md bg-brand/8 text-brand group-hover:bg-brand/12 transition-colors">
               <Search className="size-3.5" />
             </div>
             <div>
