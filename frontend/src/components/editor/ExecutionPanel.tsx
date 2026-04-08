@@ -3,8 +3,26 @@ import { useEphemeralStore } from '../../stores/ephemeralStore'
 import type { ParsedIssue } from '../../stores/ephemeralStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
-import { ChevronDown, Check, AlertTriangle, X, XCircle, Sparkles, Loader2, Copy, ExternalLink } from 'lucide-react'
+import { ChevronDown, Check, AlertTriangle, X, XCircle, Sparkles, Loader2, Copy, ExternalLink, Terminal } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
+
+/** Animated checkmark that draws itself on mount */
+function AnimatedCheck({ className }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <polyline points="3.5 8.5 6.5 11.5 12.5 5" className="animate-check-draw" />
+    </svg>
+  )
+}
 
 function useIsAiConfigured() {
   return usePreferencesStore((s) => {
@@ -131,11 +149,11 @@ export function CompileStatusStrip() {
   if (outputView !== 'strip') return null
 
   return (
-    <div role="status" aria-live="polite" className="flex h-7 shrink-0 items-center justify-between border-t border-border px-3 text-xs animate-strip-in">
+    <div role="status" aria-live="polite" className={cn('flex h-7 shrink-0 items-center justify-between border-t border-border px-3 text-xs animate-strip-in', isSuccess && 'animate-success-glow')}>
       <div className="flex items-center gap-1.5">
         {isSuccess ? (
           <>
-            <Check className="size-3.5 text-status-success" />
+            <AnimatedCheck className="size-3.5 text-status-success" />
             <span className="text-ink-muted">Compiled successfully</span>
           </>
         ) : (
@@ -282,9 +300,12 @@ export function OutputPanel() {
           </pre>
         )}
         {!executionOutput && !parsedIssues.length && !rawErrorText && (
-          <span className="block px-2.5 pt-2.5 text-xs font-mono text-ink-faint">
-            Compile or generation messages will appear here.
-          </span>
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-4 animate-fade-in">
+            <Terminal className="size-5 text-ink-faint/50" strokeWidth={1.5} />
+            <p className="text-xs text-ink-faint max-w-48 leading-relaxed">
+              Output from compilation and code generation will appear here.
+            </p>
+          </div>
         )}
       </div>
     </div>

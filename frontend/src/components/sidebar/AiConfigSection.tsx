@@ -115,7 +115,7 @@ export function AiConfigSection() {
     <Collapsible className="group/collapsible" data-tour="ai-config">
       <SidebarGroup>
         <SidebarGroupLabel asChild>
-          <CollapsibleTrigger className="cursor-pointer">
+          <CollapsibleTrigger className="cursor-pointer text-ink hover:bg-surface-2/60">
             <Sparkles />
             Umple AI
             <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-0 group-data-[state=closed]/collapsible:-rotate-90" />
