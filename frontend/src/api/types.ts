@@ -247,3 +247,53 @@ export interface PromoteResponse {
   oldId: string
   newId: string
 }
+
+// ── Task types ──
+
+export interface TaskTab {
+  name: string
+  code: string
+}
+
+export interface TaskView {
+  taskName: string
+  requestorName: string
+  completionURL?: string
+  isExperiment: boolean
+  createdAt: string
+  instructions: string
+  modelCode: string
+  tabs?: TaskTab[]
+}
+
+export interface CreateTaskRequest {
+  taskName: string
+  requestorName: string
+  completionURL?: string
+  isExperiment: boolean
+  instructions: string
+  modelCode: string
+  tabs?: TaskTab[]
+}
+
+export interface UpdateTaskRequest {
+  requestorName: string
+  completionURL: string
+  isExperiment: boolean
+  instructions: string
+  modelCode: string
+  tabs?: TaskTab[]
+}
+
+export interface ResponseView {
+  taskName: string
+  responseId: string
+  submittedAt?: string
+  modelCode: string
+  tabs?: TaskTab[]
+}
+
+export interface ResponseSummary {
+  responseId: string
+  submittedAt?: string
+}

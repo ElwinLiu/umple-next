@@ -30,7 +30,7 @@ func newTestTaskHandler(t *testing.T) (*TaskHandler, *task.Store) {
 }
 
 // createTaskViaStore is a test helper that creates a task directly through the store.
-func createTaskViaStore(t *testing.T, store *task.Store, name string) *task.TaskOwnerView {
+func createTaskViaStore(t *testing.T, store *task.Store, name string) *task.TaskView {
 	t.Helper()
 	view, err := store.CreateTask(task.CreateTaskRequest{
 		TaskName:      name,
@@ -63,8 +63,8 @@ func TestTaskHandler_Create_Success(t *testing.T) {
 	}
 	var resp map[string]any
 	json.NewDecoder(rec.Body).Decode(&resp)
-	if resp["editKey"] == nil || resp["editKey"] == "" {
-		t.Error("editKey should be present")
+	if resp["editKey"] != nil {
+		t.Error("editKey should NOT be present")
 	}
 	if resp["taskName"] != "hw1" {
 		t.Errorf("taskName = %v", resp["taskName"])
@@ -102,7 +102,7 @@ func TestTaskHandler_Create_Duplicate(t *testing.T) {
 	}
 }
 
-func TestTaskHandler_Get_PublicView(t *testing.T) {
+func TestTaskHandler_Get_Success(t *testing.T) {
 	h, store := newTestTaskHandler(t)
 	createTaskViaStore(t, store, "hw1")
 
@@ -118,45 +118,10 @@ func TestTaskHandler_Get_PublicView(t *testing.T) {
 	var resp map[string]any
 	json.NewDecoder(rec.Body).Decode(&resp)
 	if resp["editKey"] != nil {
-		t.Error("editKey should NOT be in public view")
+		t.Error("editKey should NOT be present")
 	}
 	if resp["taskName"] != "hw1" {
 		t.Errorf("taskName = %v", resp["taskName"])
-	}
-}
-
-func TestTaskHandler_Get_OwnerView(t *testing.T) {
-	h, store := newTestTaskHandler(t)
-	created := createTaskViaStore(t, store, "hw1")
-
-	req := httptest.NewRequest(http.MethodGet, "/api/tasks/hw1?editKey="+created.EditKey, nil)
-	req = addChiParam(req, "name", "hw1")
-	rec := httptest.NewRecorder()
-
-	h.Get(rec, req)
-
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, want 200", rec.Code)
-	}
-	var resp map[string]any
-	json.NewDecoder(rec.Body).Decode(&resp)
-	if resp["editKey"] == nil || resp["editKey"] == "" {
-		t.Error("editKey should be in owner view")
-	}
-}
-
-func TestTaskHandler_Get_WrongKey(t *testing.T) {
-	h, store := newTestTaskHandler(t)
-	createTaskViaStore(t, store, "hw1")
-
-	req := httptest.NewRequest(http.MethodGet, "/api/tasks/hw1?editKey=wrongkey", nil)
-	req = addChiParam(req, "name", "hw1")
-	rec := httptest.NewRecorder()
-
-	h.Get(rec, req)
-
-	if rec.Code != http.StatusForbidden {
-		t.Errorf("status = %d, want 403", rec.Code)
 	}
 }
 
@@ -176,10 +141,9 @@ func TestTaskHandler_Get_NotFound(t *testing.T) {
 
 func TestTaskHandler_Update_Success(t *testing.T) {
 	h, store := newTestTaskHandler(t)
-	created := createTaskViaStore(t, store, "hw1")
+	createTaskViaStore(t, store, "hw1")
 
 	body, _ := json.Marshal(map[string]any{
-		"editKey":       created.EditKey,
 		"requestorName": "Prof",
 		"instructions":  "updated instructions",
 		"modelCode":     "class Test {}",
@@ -281,11 +245,11 @@ func TestTaskHandler_SubmitResponse_AlreadySubmitted(t *testing.T) {
 
 func TestTaskHandler_ListResponses_Success(t *testing.T) {
 	h, store := newTestTaskHandler(t)
-	created := createTaskViaStore(t, store, "hw1")
+	createTaskViaStore(t, store, "hw1")
 	store.CreateResponse("hw1")
 	store.CreateResponse("hw1")
 
-	req := httptest.NewRequest(http.MethodGet, "/api/tasks/hw1/responses?editKey="+created.EditKey, nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/tasks/hw1/responses", nil)
 	req = addChiParam(req, "name", "hw1")
 	rec := httptest.NewRecorder()
 
@@ -301,17 +265,3 @@ func TestTaskHandler_ListResponses_Success(t *testing.T) {
 	}
 }
 
-func TestTaskHandler_ListResponses_NoKey(t *testing.T) {
-	h, store := newTestTaskHandler(t)
-	createTaskViaStore(t, store, "hw1")
-
-	req := httptest.NewRequest(http.MethodGet, "/api/tasks/hw1/responses", nil)
-	req = addChiParam(req, "name", "hw1")
-	rec := httptest.NewRecorder()
-
-	h.ListResponses(rec, req)
-
-	if rec.Code != http.StatusForbidden {
-		t.Errorf("status = %d, want 403", rec.Code)
-	}
-}
