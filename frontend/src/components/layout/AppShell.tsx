@@ -1,10 +1,12 @@
+import { useCallback } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
-import { Sidebar } from './Sidebar'
+import { AppSidebar } from './Sidebar'
 import { EditorPanel } from '../editor/EditorPanel'
 import { OutputPanel, CompileStatusStrip } from '../editor/ExecutionPanel'
 import { DiagramPanel } from '../diagram/DiagramPanel'
 import { CommandPalette } from '../command/CommandPalette'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { usePreferencesStore } from '../../stores/preferencesStore'
 import { useCompiler } from '../../hooks/useCompiler'
 import { useModelFromURL } from '../../hooks/useModelFromURL'
 import { useCollab } from '../../hooks/useCollab'
@@ -14,30 +16,40 @@ import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog'
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { TaskSheet } from '@/components/task/TaskSheet'
+import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar/sidebar'
 
 export function AppShell() {
   const showEditor = useEphemeralStore((s) => s.showEditor)
   const diagramOnly = useEphemeralStore((s) => s.diagramOnly)
   const outputView = useEphemeralStore((s) => s.outputView)
+  const showSidebar = usePreferencesStore((s) => s.showSidebar)
   useCompiler()
   useModelFromURL()
   useCollab()
   useTaskRoute()
 
+  const handleOpenChange = useCallback((open: boolean) => {
+    const store = usePreferencesStore.getState()
+    if (open !== store.showSidebar) {
+      store.toggleSidebar()
+    }
+  }, [])
+
   const editorVisible = showEditor && !diagramOnly
 
   return (
     <TooltipProvider>
-    <div className="h-screen flex bg-surface-1" data-testid="app-shell">
+    <SidebarProvider open={showSidebar} onOpenChange={handleOpenChange}>
+    <div className="h-screen flex bg-surface-1 w-full" data-testid="app-shell">
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-brand focus:px-4 focus:py-2 focus:text-ink-inverse focus:text-sm focus:font-medium">
         Skip to editor
       </a>
 
       {/* Left sidebar */}
-      <Sidebar />
+      <AppSidebar />
 
       {/* Main content area */}
-      <main id="main-content" className="flex-1 min-w-0 flex flex-col">
+      <SidebarInset className="bg-surface-1">
         <div className="relative flex-1 min-h-0 px-2.5 pb-2.5 pt-1.5">
           <ErrorBoundary>
           <PanelGroup direction="horizontal" className="h-full" id="main-horizontal">
@@ -80,9 +92,10 @@ export function AppShell() {
         <CommandPalette />
         <WelcomeDialog />
         <OnboardingTour />
-      </main>
+      </SidebarInset>
     </div>
     <TaskSheet />
+    </SidebarProvider>
     </TooltipProvider>
   )
 }
