@@ -88,7 +88,6 @@ function SidebarContent() {
   const sidebarWidth = usePreferencesStore((s) => s.sidebarWidth)
   const [toolsOpen, setToolsOpen] = useState(true)
   const [tasksOpen, setTasksOpen] = useState(false)
-  const [aiOpen, setAiOpen] = useState(false)
   const isNarrow = sidebarWidth < 260
 
   return (
@@ -120,7 +119,7 @@ function SidebarContent() {
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin py-1 space-y-1">
         <ToolsSection open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
         <TasksSection open={tasksOpen} onToggle={() => setTasksOpen((v) => !v)} />
-        <AiConfigSection open={aiOpen} onToggle={() => setAiOpen((v) => !v)} />
+        <AiConfigSection />
       </div>
 
       {/* Footer */}
