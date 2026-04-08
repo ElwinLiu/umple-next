@@ -369,7 +369,7 @@ function ManageView() {
       <>
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
-            <Search className="size-4 text-ink-muted" />
+            <Search className="size-4 text-brand" />
             Manage Task
           </SheetTitle>
         </SheetHeader>
