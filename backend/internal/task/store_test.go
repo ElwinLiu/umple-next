@@ -105,9 +105,6 @@ func TestCreateTask_Success(t *testing.T) {
 	if view.RequestorName != "Prof Smith" {
 		t.Errorf("RequestorName = %q, want %q", view.RequestorName, "Prof Smith")
 	}
-	if view.EditKey == "" {
-		t.Error("EditKey should be non-empty")
-	}
 	if view.Instructions != "## Do this\nBuild a model." {
 		t.Errorf("Instructions mismatch: %q", view.Instructions)
 	}
@@ -140,7 +137,7 @@ func TestCreateTask_WritesFiles(t *testing.T) {
 
 	dir := filepath.Join(store.root, "hw2")
 
-	// Check taskdetails.json
+	// Check taskdetails.json exists and is valid
 	raw, err := os.ReadFile(filepath.Join(dir, "taskdetails.json"))
 	if err != nil {
 		t.Fatalf("read taskdetails.json: %v", err)
@@ -149,8 +146,8 @@ func TestCreateTask_WritesFiles(t *testing.T) {
 	if err := json.Unmarshal(raw, &details); err != nil {
 		t.Fatalf("unmarshal taskdetails.json: %v", err)
 	}
-	if details.EditKey != view.EditKey {
-		t.Errorf("editKey on disk = %q, want %q", details.EditKey, view.EditKey)
+	if details.TaskName != view.TaskName {
+		t.Errorf("taskName on disk = %q, want %q", details.TaskName, view.TaskName)
 	}
 
 	// Check instructions.md
@@ -345,56 +342,6 @@ func TestGetTask_MultiTab(t *testing.T) {
 	}
 }
 
-func TestGetTaskWithKey_Success(t *testing.T) {
-	store := newTestStore(t)
-
-	created, err := store.CreateTask(CreateTaskRequest{
-		TaskName:      "hw1",
-		RequestorName: "Prof",
-		Instructions:  "do it",
-		ModelCode:     "class A {}",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	view, err := store.GetTaskWithKey("hw1", created.EditKey)
-	if err != nil {
-		t.Fatalf("GetTaskWithKey: %v", err)
-	}
-	if view.EditKey != created.EditKey {
-		t.Errorf("EditKey = %q, want %q", view.EditKey, created.EditKey)
-	}
-	if view.TaskName != "hw1" {
-		t.Errorf("TaskName = %q", view.TaskName)
-	}
-}
-
-func TestGetTaskWithKey_WrongKey(t *testing.T) {
-	store := newTestStore(t)
-
-	_, err := store.CreateTask(CreateTaskRequest{
-		TaskName: "hw1", RequestorName: "Prof",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = store.GetTaskWithKey("hw1", "wrongkey")
-	if err != ErrForbidden {
-		t.Errorf("expected ErrForbidden, got %v", err)
-	}
-}
-
-func TestGetTaskWithKey_NotFound(t *testing.T) {
-	store := newTestStore(t)
-
-	_, err := store.GetTaskWithKey("nosuchtask", "anykey")
-	if err != ErrNotFound {
-		t.Errorf("expected ErrNotFound, got %v", err)
-	}
-}
-
 func TestUpdateTask_FullOverwrite(t *testing.T) {
 	store := newTestStore(t)
 
@@ -408,7 +355,7 @@ func TestUpdateTask_FullOverwrite(t *testing.T) {
 	}
 
 	// Full overwrite — all fields replaced.
-	view, err := store.UpdateTask("hw1", created.EditKey, UpdateTaskRequest{
+	view, err := store.UpdateTask("hw1", UpdateTaskRequest{
 		RequestorName: "New Name",
 		Instructions:  "new instructions",
 		ModelCode:     "class B {}",
@@ -445,7 +392,7 @@ func TestUpdateTask_FullOverwrite(t *testing.T) {
 func TestUpdateTask_CleansStaleTabFiles(t *testing.T) {
 	store := newTestStore(t)
 
-	created, err := store.CreateTask(CreateTaskRequest{
+	_, err := store.CreateTask(CreateTaskRequest{
 		TaskName: "hw1", RequestorName: "Prof",
 		Tabs: []TabFile{
 			{Name: "A.ump", Code: "class A {}"},
@@ -457,7 +404,7 @@ func TestUpdateTask_CleansStaleTabFiles(t *testing.T) {
 	}
 
 	// Update to different tabs — B.ump should be removed.
-	_, err = store.UpdateTask("hw1", created.EditKey, UpdateTaskRequest{
+	_, err = store.UpdateTask("hw1", UpdateTaskRequest{
 		RequestorName: "Prof",
 		Tabs: []TabFile{
 			{Name: "A.ump", Code: "class A { updated; }"},
@@ -480,7 +427,7 @@ func TestUpdateTask_CleansStaleTabFiles(t *testing.T) {
 func TestUpdateTask_SwitchTabsToSingleFile(t *testing.T) {
 	store := newTestStore(t)
 
-	created, err := store.CreateTask(CreateTaskRequest{
+	_, err := store.CreateTask(CreateTaskRequest{
 		TaskName: "hw1", RequestorName: "Prof",
 		Tabs: []TabFile{
 			{Name: "A.ump", Code: "class A {}"},
@@ -492,7 +439,7 @@ func TestUpdateTask_SwitchTabsToSingleFile(t *testing.T) {
 	}
 
 	// Switch to single-file — old tab files and tabs.json should be removed.
-	_, err = store.UpdateTask("hw1", created.EditKey, UpdateTaskRequest{
+	_, err = store.UpdateTask("hw1", UpdateTaskRequest{
 		RequestorName: "Prof",
 		ModelCode:     "class X {}",
 	})
@@ -514,7 +461,7 @@ func TestUpdateTask_SwitchTabsToSingleFile(t *testing.T) {
 func TestUpdateTask_CanClearCompletionURL(t *testing.T) {
 	store := newTestStore(t)
 
-	created, err := store.CreateTask(CreateTaskRequest{
+	_, err := store.CreateTask(CreateTaskRequest{
 		TaskName: "hw1", RequestorName: "Prof", CompletionURL: "https://old.com",
 	})
 	if err != nil {
@@ -522,7 +469,7 @@ func TestUpdateTask_CanClearCompletionURL(t *testing.T) {
 	}
 
 	// Update with empty CompletionURL — should clear it.
-	view, err := store.UpdateTask("hw1", created.EditKey, UpdateTaskRequest{
+	view, err := store.UpdateTask("hw1", UpdateTaskRequest{
 		RequestorName: "Prof",
 		CompletionURL: "",
 	})
@@ -531,24 +478,6 @@ func TestUpdateTask_CanClearCompletionURL(t *testing.T) {
 	}
 	if view.CompletionURL != "" {
 		t.Errorf("CompletionURL = %q, want empty", view.CompletionURL)
-	}
-}
-
-func TestUpdateTask_WrongKey(t *testing.T) {
-	store := newTestStore(t)
-
-	_, err := store.CreateTask(CreateTaskRequest{
-		TaskName: "hw1", RequestorName: "Prof",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	_, err = store.UpdateTask("hw1", "wrongkey", UpdateTaskRequest{
-		Instructions: "hacked",
-	})
-	if err != ErrForbidden {
-		t.Errorf("expected ErrForbidden, got %v", err)
 	}
 }
 
@@ -755,7 +684,7 @@ func TestSubmitResponse_NotFound(t *testing.T) {
 func TestListResponses_Success(t *testing.T) {
 	store := newTestStore(t)
 
-	created, err := store.CreateTask(CreateTaskRequest{
+	_, err := store.CreateTask(CreateTaskRequest{
 		TaskName: "hw1", RequestorName: "Prof",
 	})
 	if err != nil {
@@ -768,7 +697,7 @@ func TestListResponses_Success(t *testing.T) {
 	// Submit one
 	store.SubmitResponse(r3.ResponseID)
 
-	list, err := store.ListResponses("hw1", created.EditKey)
+	list, err := store.ListResponses("hw1")
 	if err != nil {
 		t.Fatalf("ListResponses: %v", err)
 	}
@@ -789,7 +718,7 @@ func TestListResponses_Success(t *testing.T) {
 	_ = r1
 }
 
-func TestListResponses_WrongKey(t *testing.T) {
+func TestListResponses_Empty(t *testing.T) {
 	store := newTestStore(t)
 
 	_, err := store.CreateTask(CreateTaskRequest{
@@ -799,23 +728,7 @@ func TestListResponses_WrongKey(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = store.ListResponses("hw1", "badkey")
-	if err != ErrForbidden {
-		t.Errorf("expected ErrForbidden, got %v", err)
-	}
-}
-
-func TestListResponses_Empty(t *testing.T) {
-	store := newTestStore(t)
-
-	created, err := store.CreateTask(CreateTaskRequest{
-		TaskName: "hw1", RequestorName: "Prof",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	list, err := store.ListResponses("hw1", created.EditKey)
+	list, err := store.ListResponses("hw1")
 	if err != nil {
 		t.Fatalf("ListResponses: %v", err)
 	}
@@ -830,7 +743,7 @@ func TestListResponses_Empty(t *testing.T) {
 func TestListResponses_FiltersByTask(t *testing.T) {
 	store := newTestStore(t)
 
-	createdA, _ := store.CreateTask(CreateTaskRequest{
+	store.CreateTask(CreateTaskRequest{
 		TaskName: "taskA", RequestorName: "Prof",
 	})
 	store.CreateTask(CreateTaskRequest{
@@ -841,7 +754,7 @@ func TestListResponses_FiltersByTask(t *testing.T) {
 	store.CreateResponse("taskA")
 	store.CreateResponse("taskB")
 
-	list, err := store.ListResponses("taskA", createdA.EditKey)
+	list, err := store.ListResponses("taskA")
 	if err != nil {
 		t.Fatal(err)
 	}

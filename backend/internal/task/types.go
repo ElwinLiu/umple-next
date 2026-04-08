@@ -10,7 +10,6 @@ var (
 	ErrNotFound         = errors.New("not found")
 	ErrInvalidName      = errors.New("invalid task name")
 	ErrAlreadyExists    = errors.New("task already exists")
-	ErrForbidden        = errors.New("invalid edit key")
 	ErrAlreadySubmitted = errors.New("response already submitted")
 )
 
@@ -18,7 +17,6 @@ var (
 type TaskDetails struct {
 	TaskName      string    `json:"taskName"`
 	RequestorName string    `json:"requestorName"`
-	EditKey       string    `json:"editKey,omitempty"`
 	CompletionURL string    `json:"completionURL,omitempty"`
 	IsExperiment  bool      `json:"isExperiment"`
 	CreatedAt     time.Time `json:"createdAt"`
@@ -51,12 +49,6 @@ type TaskView struct {
 	Instructions  string    `json:"instructions"`
 	ModelCode     string    `json:"modelCode"`
 	Tabs          []TabFile `json:"tabs,omitempty"`
-}
-
-// TaskOwnerView extends TaskView with the editKey.
-type TaskOwnerView struct {
-	TaskView
-	EditKey string `json:"editKey"`
 }
 
 // ResponseDetails is the metadata stored in taskdetails.json for a response.

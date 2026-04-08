@@ -2,7 +2,6 @@ package task
 
 import (
 	"crypto/rand"
-	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"math/big"
@@ -44,11 +43,6 @@ func sanitizeName(name string) (string, error) {
 	return name, nil
 }
 
-// Mitigates timing side-channels on editKey comparison.
-func constantTimeEqual(a, b string) bool {
-	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
-}
-
 func NewStore(root string) (*Store, error) {
 	if err := os.MkdirAll(root, 0755); err != nil {
 		return nil, fmt.Errorf("create task store root: %w", err)
@@ -59,8 +53,8 @@ func NewStore(root string) (*Store, error) {
 	return &Store{root: root}, nil
 }
 
-// CreateTask creates a new task definition on disk and returns the owner view.
-func (s *Store) CreateTask(req CreateTaskRequest) (view *TaskOwnerView, err error) {
+// CreateTask creates a new task definition on disk and returns the task view.
+func (s *Store) CreateTask(req CreateTaskRequest) (view *TaskView, err error) {
 	name, err := sanitizeName(req.TaskName)
 	if err != nil {
 		return nil, err
@@ -80,13 +74,11 @@ func (s *Store) CreateTask(req CreateTaskRequest) (view *TaskOwnerView, err erro
 		}
 	}()
 
-	editKey := randomID()
 	now := time.Now().UTC()
 
 	details := TaskDetails{
 		TaskName:      name,
 		RequestorName: req.RequestorName,
-		EditKey:       editKey,
 		CompletionURL: req.CompletionURL,
 		IsExperiment:  req.IsExperiment,
 		CreatedAt:     now,
@@ -108,7 +100,7 @@ func (s *Store) CreateTask(req CreateTaskRequest) (view *TaskOwnerView, err erro
 	}
 
 	tv := buildTaskView(&details, req.Instructions, req.ModelCode, req.Tabs)
-	return &TaskOwnerView{TaskView: tv, EditKey: editKey}, nil
+	return &tv, nil
 }
 
 // GetTask returns the public view of a task (no editKey).
@@ -126,27 +118,9 @@ func (s *Store) GetTask(name string) (*TaskView, error) {
 	return &tv, nil
 }
 
-// GetTaskWithKey returns the owner view of a task after verifying the editKey.
-func (s *Store) GetTaskWithKey(name, editKey string) (*TaskOwnerView, error) {
-	name, err := sanitizeName(name)
-	if err != nil {
-		return nil, ErrNotFound
-	}
-	dir := filepath.Join(s.root, name)
-	details, err := readJSON[TaskDetails](filepath.Join(dir, "taskdetails.json"))
-	if err != nil {
-		return nil, ErrNotFound
-	}
-	if !constantTimeEqual(details.EditKey, editKey) {
-		return nil, ErrForbidden
-	}
-	tv := loadTaskView(dir, details)
-	return &TaskOwnerView{TaskView: tv, EditKey: details.EditKey}, nil
-}
-
-// UpdateTask updates a task definition after verifying the editKey.
+// UpdateTask updates a task definition.
 // All fields are overwritten unconditionally (PUT semantics).
-func (s *Store) UpdateTask(name, editKey string, req UpdateTaskRequest) (*TaskOwnerView, error) {
+func (s *Store) UpdateTask(name string, req UpdateTaskRequest) (*TaskView, error) {
 	name, err := sanitizeName(name)
 	if err != nil {
 		return nil, ErrNotFound
@@ -155,9 +129,6 @@ func (s *Store) UpdateTask(name, editKey string, req UpdateTaskRequest) (*TaskOw
 	details, err := readJSON[TaskDetails](filepath.Join(dir, "taskdetails.json"))
 	if err != nil {
 		return nil, ErrNotFound
-	}
-	if !constantTimeEqual(details.EditKey, editKey) {
-		return nil, ErrForbidden
 	}
 
 	details.RequestorName = req.RequestorName
@@ -187,7 +158,7 @@ func (s *Store) UpdateTask(name, editKey string, req UpdateTaskRequest) (*TaskOw
 
 	// Return the data we just wrote — no need to re-read from disk.
 	tv := buildTaskView(details, req.Instructions, req.ModelCode, req.Tabs)
-	return &TaskOwnerView{TaskView: tv, EditKey: details.EditKey}, nil
+	return &tv, nil
 }
 
 // CreateResponse clones a task's model into a new response directory.
@@ -259,18 +230,15 @@ func (s *Store) SubmitResponse(id string) (*ResponseView, error) {
 	return buildResponseView(details, modelCode, tabs), nil
 }
 
-// ListResponses returns summaries of all responses for a task, after verifying the editKey.
-func (s *Store) ListResponses(taskName, editKey string) ([]ResponseSummary, error) {
+// ListResponses returns summaries of all responses for a task.
+func (s *Store) ListResponses(taskName string) ([]ResponseSummary, error) {
 	taskName, err := sanitizeName(taskName)
 	if err != nil {
 		return nil, ErrNotFound
 	}
-	details, err := readJSON[TaskDetails](filepath.Join(s.root, taskName, "taskdetails.json"))
-	if err != nil {
+	// Verify the task exists.
+	if _, err := readJSON[TaskDetails](filepath.Join(s.root, taskName, "taskdetails.json")); err != nil {
 		return nil, ErrNotFound
-	}
-	if !constantTimeEqual(details.EditKey, editKey) {
-		return nil, ErrForbidden
 	}
 
 	respDir := s.responsesDir()

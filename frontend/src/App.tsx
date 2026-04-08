@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { AppShell } from './components/layout/AppShell'
+import { Outlet } from 'react-router-dom'
 import { usePreferencesStore } from './stores/preferencesStore'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { Toaster } from '@/components/ui/sonner'
@@ -28,7 +28,7 @@ export default function App() {
   useThemeEffect()
   return (
     <TooltipProvider>
-      <AppShell />
+      <Outlet />
       <Toaster />
     </TooltipProvider>
   )

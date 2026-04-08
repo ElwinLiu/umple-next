@@ -30,8 +30,11 @@ import {
   GraduationCap,
   Shield,
   ExternalLink,
+  ClipboardList,
 } from 'lucide-react'
 import { AiConfigSection } from '@/components/sidebar/AiConfigSection'
+import { TaskSidebarSection } from '@/components/task/TaskSidebarSection'
+import { useTaskStore } from '@/stores/taskStore'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import {
   DropdownMenu,
@@ -108,6 +111,9 @@ function SidebarContent() {
           <LayoutToggle />
         </div>
       </div>
+
+      {/* Task section (shown when working on a task response) */}
+      <TaskSidebarSection />
 
       {/* Scrollable sections */}
       <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin py-1 space-y-1">
@@ -428,6 +434,27 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
             </Select>
           </div>
         )}
+
+        {/* Tasks */}
+        <div>
+          <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Tasks</div>
+          <div className="space-y-0.5">
+            <button
+              onClick={() => useTaskStore.getState().openSheet('create')}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer w-full text-left"
+            >
+              <ClipboardList className="size-3.5" />
+              Create a Task
+            </button>
+            <button
+              onClick={() => useTaskStore.getState().openSheet('manage')}
+              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer w-full text-left"
+            >
+              <ClipboardList className="size-3.5" />
+              Manage a Task
+            </button>
+          </div>
+        </div>
       </div>
     </Section>
   )

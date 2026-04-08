@@ -38,21 +38,9 @@ func (h *TaskHandler) Create(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(view)
 }
 
-// Get handles GET /api/tasks/{name} with optional ?editKey= query param.
+// Get handles GET /api/tasks/{name}.
 func (h *TaskHandler) Get(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
-	editKey := r.URL.Query().Get("editKey")
-
-	if editKey != "" {
-		view, err := h.store.GetTaskWithKey(name, editKey)
-		if err != nil {
-			writeTaskError(w, err)
-			return
-		}
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(view)
-		return
-	}
 
 	view, err := h.store.GetTask(name)
 	if err != nil {
@@ -63,23 +51,17 @@ func (h *TaskHandler) Get(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(view)
 }
 
-// updateRequest wraps UpdateTaskRequest with the editKey from the body.
-type updateRequest struct {
-	task.UpdateTaskRequest
-	EditKey string `json:"editKey"`
-}
-
 // Update handles PUT /api/tasks/{name}.
 func (h *TaskHandler) Update(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
 
-	var req updateRequest
+	var req task.UpdateTaskRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
 
-	view, err := h.store.UpdateTask(name, req.EditKey, req.UpdateTaskRequest)
+	view, err := h.store.UpdateTask(name, req)
 	if err != nil {
 		writeTaskError(w, err)
 		return
@@ -132,12 +114,11 @@ func (h *TaskHandler) SubmitResponse(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(view)
 }
 
-// ListResponses handles GET /api/tasks/{name}/responses?editKey=xxx.
+// ListResponses handles GET /api/tasks/{name}/responses.
 func (h *TaskHandler) ListResponses(w http.ResponseWriter, r *http.Request) {
 	name := chi.URLParam(r, "name")
-	editKey := r.URL.Query().Get("editKey")
 
-	list, err := h.store.ListResponses(name, editKey)
+	list, err := h.store.ListResponses(name)
 	if err != nil {
 		writeTaskError(w, err)
 		return
@@ -154,8 +135,6 @@ func writeTaskError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusBadRequest, err.Error())
 	case errors.Is(err, task.ErrNotFound):
 		writeError(w, http.StatusNotFound, err.Error())
-	case errors.Is(err, task.ErrForbidden):
-		writeError(w, http.StatusForbidden, err.Error())
 	case errors.Is(err, task.ErrAlreadyExists):
 		writeError(w, http.StatusConflict, err.Error())
 	case errors.Is(err, task.ErrAlreadySubmitted):
