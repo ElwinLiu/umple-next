@@ -85,7 +85,7 @@ const TOUR_STEPS: TourStep[] = [
 const FEATURE_HINTS = [
   { icon: Bot, label: 'Umple AI', hint: 'Configure an AI provider in the sidebar to get modeling assistance' },
   { icon: LayoutDashboard, label: 'Layout Algorithm', hint: 'Change how diagram nodes are arranged (dot, sfdp, circo, etc.)' },
-  { icon: Columns2, label: 'Toggle Sidebar', hint: 'Hide the sidebar for more space — hover the left edge to peek' },
+  { icon: Columns2, label: 'Toggle Sidebar', hint: 'Hide the sidebar for more space — press Ctrl+B or click the rail to toggle' },
   { icon: Command, label: 'Command Palette', hint: 'Press Ctrl+K to quickly search examples, diagrams, and generators' },
 ]
 
