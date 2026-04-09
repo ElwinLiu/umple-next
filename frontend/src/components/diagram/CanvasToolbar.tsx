@@ -3,7 +3,7 @@ import { useSessionStore } from '../../stores/sessionStore'
 import { usePreferencesStore, type DisplayPrefKey, type GvLayoutAlgorithm } from '../../stores/preferencesStore'
 import { DISPLAY_TOGGLES, LAYOUT_OPTIONS } from '../../constants/diagram'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu'
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu'
 import { Switch } from '@/components/ui/switch'
 import { Tip } from '@/components/ui/tooltip'
 
@@ -115,7 +115,7 @@ function LayoutGroup() {
 function ExportGroup({ onExport }: { onExport: (format: string) => void }) {
   return (
     <DropdownMenu>
-      <Tip content="Export diagram" side="bottom">
+      <Tip content="Export" side="bottom">
         <DropdownMenuTrigger asChild>
           <button className={btnBase}>
             <Download className="size-3" />
@@ -123,8 +123,12 @@ function ExportGroup({ onExport }: { onExport: (format: string) => void }) {
         </DropdownMenuTrigger>
       </Tip>
       <DropdownMenuContent align="center">
+        <DropdownMenuLabel>Diagram</DropdownMenuLabel>
         <DropdownMenuItem onClick={() => onExport('svg')}>SVG</DropdownMenuItem>
         <DropdownMenuItem onClick={() => onExport('png')}>PNG</DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuLabel>Model</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => onExport('ump')}>Umple Code (.ump)</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

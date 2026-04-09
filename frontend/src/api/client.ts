@@ -85,6 +85,7 @@ export const api = {
     })
   },
 
+
   execute(req: { code: string; language: string; modelId?: string; activeTabId?: string }): Promise<{ output: string; errors?: string }> {
     return request('/execute', {
       method: 'POST',
