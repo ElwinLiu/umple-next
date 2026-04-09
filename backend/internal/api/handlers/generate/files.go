@@ -51,6 +51,29 @@ func languageExtensions(lang string) []string {
 	}
 }
 
+// cleanGeneratedFiles removes stale files matching the language's extensions
+// from dir before a new generation run. This prevents readGeneratedFiles from
+// picking up leftover artifacts from previous generations.
+func cleanGeneratedFiles(dir, language, entryFile string) {
+	exts := languageExtensions(language)
+	if len(exts) == 0 {
+		return
+	}
+	extSet := make(map[string]bool, len(exts))
+	for _, ext := range exts {
+		extSet[ext] = true
+	}
+	filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		if extSet[filepath.Ext(path)] && filepath.Base(path) != entryFile {
+			os.Remove(path)
+		}
+		return nil
+	})
+}
+
 func readGeneratedFiles(dir, language, entryFile string) (string, []string, error) {
 	exts := languageExtensions(language)
 	if len(exts) == 0 {

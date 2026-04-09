@@ -24,6 +24,7 @@ export function useGenerate() {
     if (!code.trim()) return
 
     const requestLanguage = resolveGenerateRequestLanguage(target, viewMode)
+    useSessionStore.getState().setGenerateTargetId(target.id)
     setGeneratingCode(true, target.id)
     setGeneratedError(null)
     try {

@@ -260,7 +260,10 @@ function ToolsGroup() {
             <Combobox
               groups={generateGroups}
               value={targetId}
-              onSelect={setTargetId}
+              onSelect={(id) => {
+                setTargetId(id)
+                if (code.trim() && !generatingCode) generate(id)
+              }}
               placeholder="Select target..."
               searchPlaceholder="Search targets..."
             />
