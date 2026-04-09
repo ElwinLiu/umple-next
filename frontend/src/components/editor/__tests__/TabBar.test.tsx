@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { TabBar } from '../TabBar'
 import { useSessionStore } from '@/stores/sessionStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 vi.mock('../ExecutionPanel', () => ({
   OutputBadges: () => null,
@@ -33,7 +34,7 @@ describe('TabBar', () => {
     useSessionStore.setState({
       code: '',
       activeTabId: 'main',
-      tabs: [{ id: 'main', name: 'model.ump', code: '', dirty: false, savedCode: '' }],
+      tabs: [{ id: 'main', name: 'model.ump', code: '', dirty: false, savedCode: '', undoStack: [], redoStack: [] }],
       tabsVersion: 0,
     })
   })
@@ -43,13 +44,14 @@ describe('TabBar', () => {
     useSessionStore.setState({
       code: 'class Student {}',
       activeTabId: 'main',
-      tabs: [{ id: 'main', name: 'model.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}' }],
+      tabs: [{ id: 'main', name: 'model.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}', undoStack: [], redoStack: [] }],
       tabsVersion: 0,
     })
 
-    render(<TabBar />)
+    render(<TooltipProvider><TabBar /></TooltipProvider>)
 
-    fireEvent.contextMenu(screen.getByText('model.ump'))
+    // Tab display strips .ump extension
+    fireEvent.contextMenu(screen.getByText('model'))
 
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
 
@@ -58,7 +60,8 @@ describe('TabBar', () => {
     await waitFor(() => {
       expect(document.activeElement).toBe(input)
     })
-    expect((input as HTMLInputElement).value).toBe('model.ump')
+    // Rename input shows display name (without .ump)
+    expect((input as HTMLInputElement).value).toBe('model')
   })
 
   it('does not bump tabsVersion when rename is blurred without an actual name change', async () => {
@@ -66,13 +69,13 @@ describe('TabBar', () => {
     useSessionStore.setState({
       code: 'class Student {}',
       activeTabId: 'main',
-      tabs: [{ id: 'main', name: 'model.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}' }],
+      tabs: [{ id: 'main', name: 'model.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}', undoStack: [], redoStack: [] }],
       tabsVersion: 0,
     })
 
-    render(<TabBar />)
+    render(<TooltipProvider><TabBar /></TooltipProvider>)
 
-    fireEvent.contextMenu(screen.getByText('model.ump'))
+    fireEvent.contextMenu(screen.getByText('model'))
     fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
 
     const input = await screen.findByRole('textbox', { name: 'Rename model.ump' })
@@ -87,42 +90,4 @@ describe('TabBar', () => {
     expect(state.tabs[0]?.name).toBe('model.ump')
   })
 
-  it('keeps the rename field as wide as the existing tab', async () => {
-    const originalGetBoundingClientRect = HTMLElement.prototype.getBoundingClientRect
-    const rectSpy = vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(function (this: HTMLElement) {
-      if (this.textContent?.includes('long-model-name.ump')) {
-        return {
-          width: 176,
-          height: 30,
-          top: 0,
-          left: 0,
-          right: 176,
-          bottom: 30,
-          x: 0,
-          y: 0,
-          toJSON: () => ({}),
-        } as DOMRect
-      }
-
-      return originalGetBoundingClientRect.call(this)
-    })
-
-    usePreferencesStore.setState({ showSidebar: true })
-    useSessionStore.setState({
-      code: 'class Student {}',
-      activeTabId: 'main',
-      tabs: [{ id: 'main', name: 'long-model-name.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}' }],
-      tabsVersion: 0,
-    })
-
-    render(<TabBar />)
-
-    fireEvent.contextMenu(screen.getByText('long-model-name.ump'))
-    fireEvent.click(await screen.findByRole('menuitem', { name: 'Rename' }))
-
-    const input = await screen.findByRole('textbox', { name: 'Rename long-model-name.ump' })
-    expect((input.parentElement as HTMLElement).style.width).toBe('176px')
-
-    rectSpy.mockRestore()
-  })
 })

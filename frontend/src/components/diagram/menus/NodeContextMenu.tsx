@@ -6,6 +6,7 @@ import { useDiagramSync } from '@/hooks/useDiagramSync'
 import { useMenuClose } from '@/hooks/useMenuClose'
 import { extractClassName, isAssociationClass } from '@/lib/diagramHelpers'
 import { MenuItem } from './MenuItem'
+import { ContextMenuShell } from './ContextMenuShell'
 
 interface NodeContextMenuProps {
   position: { x: number; y: number } | null
@@ -57,13 +58,7 @@ export function NodeContextMenu({ position, nodeId, onClose }: NodeContextMenuPr
   if (!position || !nodeId) return null
 
   return (
-    <div
-      ref={menuRef}
-      className="fixed z-50 min-w-[10rem] rounded-md border border-surface-2 bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
-      style={{ left: position.x, top: position.y }}
-      role="menu"
-      aria-label={`Context menu for ${className}`}
-    >
+    <ContextMenuShell menuRef={menuRef} position={position} ariaLabel={`Context menu for ${className}`}>
       <MenuItem onClick={handleRename} icon={<Type className="size-3.5" />}>
         Rename
       </MenuItem>
@@ -77,6 +72,6 @@ export function NodeContextMenu({ position, nodeId, onClose }: NodeContextMenuPr
       <MenuItem onClick={handleDelete} icon={<Trash2 className="size-3.5" />} variant="destructive">
         Delete Class
       </MenuItem>
-    </div>
+    </ContextMenuShell>
   )
 }

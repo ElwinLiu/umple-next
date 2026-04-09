@@ -15,6 +15,7 @@ import {
 } from 'lucide-react'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
+import { prefersReducedMotion } from '@/hooks/useReducedMotion'
 import { useAgent } from '@/ai/useAgent'
 import { useDiffPreviewSync } from '@/ai/useDiffPreviewSync'
 import { useResizablePanel } from './useResizablePanel'
@@ -39,7 +40,7 @@ function AgentPanel() {
   const code = useSessionStore((s) => s.code)
   const selection = useEphemeralStore((s) => s.selection)
   const clearSelection = useEphemeralStore((s) => s.setSelection)
-  const activeTabName = useSessionStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.name ?? 'model.ump')
+  const activeTabName = useSessionStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.name) ?? 'Model.ump'
   const expanded = showAgentPanel
   const [focusExpandedInput, setFocusExpandedInput] = useState(false)
 
@@ -123,7 +124,7 @@ function AgentPanel() {
       send(msg)
       userScrolledUp.current = false
       requestAnimationFrame(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+        messagesEndRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
       })
     }
   }, [pendingAgentMessage, consumeAgentMessage, send])
@@ -166,7 +167,7 @@ function AgentPanel() {
     setInput('')
     userScrolledUp.current = false
     requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+      messagesEndRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'instant' : 'smooth' })
     })
   }
 
@@ -210,7 +211,7 @@ function AgentPanel() {
         onClick={handleCollapsedClick}
       >
         <InputBar
-          className="cursor-text shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.4),0_6px_12px_rgba(0,0,0,0.2)]"
+          className="cursor-text shadow-[var(--shadow-elevated)]"
           input={input}
           onInputChange={setInput}
           onSend={handleSend}
@@ -239,7 +240,7 @@ function AgentPanel() {
   return (
     <div
       ref={panelRef}
-      className="absolute bottom-2 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 flex-col rounded-t-3xl rounded-b-4xl border border-border bg-surface-0 shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.4),0_6px_12px_rgba(0,0,0,0.2)] data-[dragging]:!transition-none"
+      className="absolute bottom-2 left-1/2 z-20 flex w-[calc(100%-2rem)] max-w-3xl -translate-x-1/2 flex-col rounded-t-3xl rounded-b-4xl border border-border bg-surface-0 shadow-[var(--shadow-elevated)] data-[dragging]:!transition-none"
       style={{ height }}
       data-testid="agent-panel"
     >

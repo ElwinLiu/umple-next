@@ -53,6 +53,7 @@ func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	entryFile := resolveEntryFile(h.store, req.ModelID, req.ActiveTabID)
 	modelID, dir, err := h.resolveModelDir(req.ModelID, req.Code)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -62,12 +63,12 @@ func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	h.pool.LockModel(dir)
 	defer h.pool.UnlockModel(dir)
 
-	if err := h.writeModelFile(dir, req.Code); err != nil {
+	if err := h.writeModelFile(dir, req.Code, entryFile); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 
-	resp, err := h.service.Generate(baseLanguage, dir, modelID, suboptions)
+	resp, err := h.service.Generate(baseLanguage, dir, modelID, entryFile, suboptions)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -93,6 +94,6 @@ func (h *GenerateHandler) resolveModelDir(modelID, code string) (string, string,
 	return modelID, dir, nil
 }
 
-func (h *GenerateHandler) writeModelFile(dir, code string) error {
-	return os.WriteFile(filepath.Join(dir, "model.ump"), []byte(code), 0o644)
+func (h *GenerateHandler) writeModelFile(dir, code, entryFile string) error {
+	return os.WriteFile(filepath.Join(dir, entryFile), []byte(code), 0o644)
 }

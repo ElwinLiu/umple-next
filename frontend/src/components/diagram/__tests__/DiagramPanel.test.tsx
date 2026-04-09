@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { DiagramPanel } from '../DiagramPanel'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { useSessionStore } from '@/stores/sessionStore'
@@ -11,7 +11,21 @@ const rendererProps = vi.hoisted(() => ({
 }))
 
 vi.mock('../CanvasToolbar', () => ({
-  CanvasToolbar: () => <div data-testid="canvas-toolbar" />,
+  CanvasToolbar: ({ hasDiagram, canToggleRenderer, renderMode, onRenderModeChange }: any) => {
+    if (!hasDiagram) return null
+
+    return (
+      <div data-testid="canvas-toolbar">
+        {canToggleRenderer && (
+          <button
+            role="switch"
+            aria-checked={renderMode === 'graphviz'}
+            onClick={() => onRenderModeChange(renderMode === 'graphviz' ? 'editable' : 'graphviz')}
+          />
+        )}
+      </div>
+    )
+  },
 }))
 
 vi.mock('../UmpleDiagram', () => ({
@@ -45,6 +59,7 @@ afterEach(() => {
     code: '',
     modelId: null,
     viewMode: 'class',
+    diagramData: {},
     svgCache: {},
     htmlCache: {},
     umpleModel: null,
@@ -115,14 +130,61 @@ describe('DiagramPanel', () => {
     expect(screen.queryByText('Loading diagram...')).toBeNull()
   })
 
-  it('shows the class loading state while compiling without an editable model', () => {
-    useEphemeralStore.setState({ compiling: true })
+  it('hides the toolbar when the active view has no rendered diagram', () => {
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.queryByTestId('canvas-toolbar')).toBeNull()
+  })
+
+  it('shows the toolbar for graphviz-only views with SVG output', () => {
+    useSessionStore.setState({
+      viewMode: 'state',
+      svgCache: {
+        state: '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" /></svg>',
+      },
+    })
 
     render(
       <TooltipProvider>
         <DiagramPanel />
       </TooltipProvider>
     )
+
+    expect(screen.getByTestId('canvas-toolbar')).toBeDefined()
+  })
+
+  it('shows the toolbar for html views with rendered output', () => {
+    useSessionStore.setState({
+      viewMode: 'structure',
+      htmlCache: {
+        structure: '<div>diagram</div>',
+      },
+    })
+
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.getByTestId('canvas-toolbar')).toBeDefined()
+  })
+
+  it('shows the class loading state while compiling without an editable model', () => {
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    // Simulate: user was in editable mode, then a recompile starts
+    act(() => {
+      useEphemeralStore.setState({ renderMode: 'editable', compiling: true })
+    })
 
     expect(screen.getByText('Loading diagram...')).toBeDefined()
   })

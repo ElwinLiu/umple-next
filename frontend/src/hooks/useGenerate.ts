@@ -20,16 +20,15 @@ export function useGenerate() {
       return
     }
 
-    const { code } = useSessionStore.getState()
-    const { modelId } = useSessionStore.getState()
-    const { viewMode } = useSessionStore.getState()
+    const { code, modelId, activeTabId, viewMode } = useSessionStore.getState()
     if (!code.trim()) return
 
     const requestLanguage = resolveGenerateRequestLanguage(target, viewMode)
+    useSessionStore.getState().setGenerateTargetId(target.id)
     setGeneratingCode(true, target.id)
     setGeneratedError(null)
     try {
-      const res = await api.generate({ code, language: requestLanguage, modelId: modelId ?? undefined })
+      const res = await api.generate({ code, language: requestLanguage, modelId: modelId ?? undefined, activeTabId })
       setGeneratedOutput(res, target.id)
     } catch (err: unknown) {
       setGeneratedError(err instanceof Error ? err.message : 'Generation failed')

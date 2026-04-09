@@ -160,6 +160,7 @@ export interface DiagramResponse {
 
 export interface ExampleEntry {
   name: string
+  label: string
   filename: string
 }
 
@@ -172,6 +173,7 @@ export interface GenerateRequest {
   code: string
   language: string
   modelId?: string
+  activeTabId?: string
 }
 
 export interface GeneratedArtifact {
@@ -189,4 +191,109 @@ export interface GenerateResponse {
   html?: string
   iframeUrl?: string
   downloads?: GeneratedArtifact[]
+}
+
+// CRUD schema types (from POST /api/crud/schema)
+
+export interface CrudSchemaResponse {
+  schema: CrudSchema
+  errors?: string
+  modelId: string
+}
+
+export interface CrudSchema {
+  classes: CrudClass[]
+  enums: CrudEnum[]
+}
+
+export interface CrudClass {
+  name: string
+  isAbstract: boolean
+  extendsClass?: string
+  attributes: CrudAttribute[]
+  associations: CrudAssociation[]
+}
+
+export interface CrudAttribute {
+  name: string
+  type: string
+  typeKind: 'primitive' | 'enum' | 'class'
+  isInherited: boolean
+  inheritedFrom?: string
+}
+
+export interface CrudAssociation {
+  targetClass: string
+  roleName: string
+  reverseRoleName: string
+  multiplicity: CrudMultiplicity
+  isNavigable: boolean
+  isComposition: boolean
+  isReflexive?: boolean
+}
+
+export interface CrudMultiplicity {
+  min: number
+  max: number // -1 means unbounded
+  raw: string
+}
+
+export interface CrudEnum {
+  name: string
+  values: string[]
+}
+
+export interface PromoteResponse {
+  oldId: string
+  newId: string
+}
+
+// ── Task types ──
+
+export interface TaskTab {
+  name: string
+  code: string
+}
+
+export interface TaskView {
+  taskName: string
+  requestorName: string
+  completionURL?: string
+  isExperiment: boolean
+  createdAt: string
+  instructions: string
+  modelCode: string
+  tabs?: TaskTab[]
+}
+
+export interface CreateTaskRequest {
+  taskName: string
+  requestorName: string
+  completionURL?: string
+  isExperiment: boolean
+  instructions: string
+  modelCode: string
+  tabs?: TaskTab[]
+}
+
+export interface UpdateTaskRequest {
+  requestorName: string
+  completionURL: string
+  isExperiment: boolean
+  instructions: string
+  modelCode: string
+  tabs?: TaskTab[]
+}
+
+export interface ResponseView {
+  taskName: string
+  responseId: string
+  submittedAt?: string
+  modelCode: string
+  tabs?: TaskTab[]
+}
+
+export interface ResponseSummary {
+  responseId: string
+  submittedAt?: string
 }

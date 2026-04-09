@@ -2,6 +2,8 @@ import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useSessionStore, type DiagramView } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
+import { useCollabStore } from '../stores/collabStore'
+import { getYDoc } from './useCollab'
 import { urlModelResolved } from './useModelFromURL'
 import {
   usePreferencesStore,
@@ -60,8 +62,6 @@ export async function compileAndRefresh(
 
   setCompiling(true)
   setExecutionOutput('')
-  clearSvgCache()
-  clearHtmlCache()
 
   let success = false
   let model: UmpleModel | null = null
@@ -69,14 +69,35 @@ export async function compileAndRefresh(
   try {
     const diagramParams = getDiagramRequestParams(viewMode, isDark)
 
+    // In collab mode, read tab content from Y.Text (authoritative) instead
+    // of the possibly-stale sessionStore cache for non-active tabs.
+    const doc = useCollabStore.getState().isCollaborating ? getYDoc() : null
+    const compileTabs = tabs.map(({ id, name, code: localCode }) => ({
+      id,
+      name,
+      code: doc ? doc.getText(`tab:${id}`).toString() : localCode,
+    }))
+
     // Single request: compile + diagram generation
     const res = await api.compile({
       code,
       modelId: modelId ?? undefined,
       ...diagramParams,
-      tabs: tabs.map(({ id, name, code }) => ({ id, name, code })),
+      tabs: compileTabs,
       activeTabId,
     }, signal)
+
+    // If the user switched tabs while the request was in flight, discard the
+    // results — they belong to the old tab, not the current one.
+    if (useSessionStore.getState().activeTabId !== activeTabId) {
+      return { success: false, model: null }
+    }
+
+    // Clear old caches only after the response arrives (not eagerly at the
+    // start) so that if the user switches tabs mid-compile, setActiveTab
+    // snapshots the previous diagram — not empty caches.
+    clearSvgCache()
+    clearHtmlCache()
 
     // Read current modelId from the store (not the stale closure value) to
     // avoid overwriting a modelId that was set by useModelFromURL while the
@@ -207,6 +228,7 @@ export function useCompiler() {
   // When viewMode, display preferences, or dark theme change, re-fetch diagram only
   useEffect(() => {
     if (!mountedRef.current) return
+    if (viewModeRef.current === 'crud') return // CRUD UI is a local component, no backend diagram
     const currentCode = codeRef.current
     const currentModelId = modelIdRef.current
     if (!currentCode?.trim() || !currentModelId) return
@@ -223,6 +245,7 @@ export function useCompiler() {
       const res = await api.diagram({
         code: umpleCode,
         modelId: mid,
+        activeTabId: useSessionStore.getState().activeTabId,
         ...getDiagramRequestParams(view, isDarkRef.current),
       })
       if (res.svg) {

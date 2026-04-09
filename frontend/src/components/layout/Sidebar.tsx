@@ -1,20 +1,35 @@
-import { useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { usePreferencesStore, type GvLayoutAlgorithm } from '../../stores/preferencesStore'
-import { api } from '../../api/client'
+import { useExamples } from '../../hooks/useExamples'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
-import type { ExampleCategory } from '../../api/types'
 import { GENERATE_TARGETS, GENERATE_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
 import { LAYOUT_OPTIONS, ALL_VIEW_MODES, PINNED_VIEW_MODES, getViewForExampleCategory } from '../../constants/diagram'
 import { Combobox } from '@/components/ui/combobox'
 import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import {
-  ChevronDown,
-  ChevronRight,
+  Sidebar,
+  SidebarHeader,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent,
+  SidebarRail,
+  useSidebar,
+} from '@/components/ui/sidebar/sidebar'
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from '@/components/ui/sidebar/collapsible'
+import {
   ChevronsUpDown,
+  ChevronRight,
   Search,
   Code,
   Play,
@@ -22,14 +37,20 @@ import {
   Columns2,
   BookOpen,
   MessageCircleQuestion,
-  Github,
+  GitFork,
   Bug,
   Globe,
   GraduationCap,
   Shield,
   ExternalLink,
+  ClipboardList,
+  Wrench,
+  ListChecks,
+  Sparkles,
 } from 'lucide-react'
-import { AiConfigSection } from '@/components/sidebar/AiConfigSection'
+import { AiConfigForm } from '@/components/sidebar/AiConfigForm'
+import { TaskSidebarSection } from '@/components/task/TaskSidebarSection'
+import { useTaskStore } from '@/stores/taskStore'
 import { ThemeToggle } from '@/components/layout/ThemeToggle'
 import {
   DropdownMenu,
@@ -41,225 +62,117 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Tip } from '@/components/ui/tooltip'
 
-// ── Collapsible section wrapper ──
+// ── Main sidebar component ──
 
-function Section({
+export function AppSidebar() {
+  return (
+    <Sidebar collapsible="offcanvas" data-testid="sidebar">
+      <SidebarHeader className="flex-row items-center justify-between px-4 pt-4 pb-3 border-b border-border/60">
+        <div className="flex items-center gap-2.5 text-ink min-w-0">
+          <img src="/umple-logo.svg" alt="" className="h-6 w-auto shrink-0" />
+          <span className="text-lg font-semibold tracking-tight truncate">UmpleOnline</span>
+        </div>
+        <HeaderActions />
+      </SidebarHeader>
+
+      <TaskSidebarSection />
+
+      <SidebarContent className="scrollbar-thin py-1">
+        <ToolsGroup />
+        <TasksGroup />
+        <AiGroup />
+      </SidebarContent>
+
+      <AppSidebarFooter />
+      <SidebarRail />
+    </Sidebar>
+  )
+}
+
+// ── Header action buttons ──
+
+function HeaderActions() {
+  const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette)
+  const { toggleSidebar } = useSidebar()
+
+  return (
+    <div className="flex items-center gap-0.5 shrink-0">
+      <Tip content="Search (Ctrl K)" side="bottom">
+        <button
+          onClick={openCommandPalette}
+          className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
+          aria-label="Command palette"
+        >
+          <Search className="size-4" />
+        </button>
+      </Tip>
+      <Tip content="Toggle sidebar (Ctrl B)" side="bottom">
+        <button
+          onClick={toggleSidebar}
+          data-tour="sidebar-toggle"
+          className="p-1.5 transition-colors cursor-pointer rounded-lg text-ink-muted hover:text-ink hover:bg-surface-2"
+          aria-label="Toggle sidebar"
+        >
+          <Columns2 className="size-4" />
+        </button>
+      </Tip>
+    </div>
+  )
+}
+
+// ── Collapsible group wrapper (shared pattern) ──
+
+function CollapsibleGroup({
   title,
-  open,
-  onToggle,
+  icon: Icon,
+  defaultOpen = false,
+  'data-tour': dataTour,
   children,
 }: {
   title: string
-  open: boolean
-  onToggle: () => void
+  icon: React.ComponentType<{ className?: string }>
+  defaultOpen?: boolean
+  'data-tour'?: string
   children: React.ReactNode
 }) {
   return (
-    <div>
-      <button
-        onClick={onToggle}
-        className="flex items-center gap-2 w-full px-4 pt-2.5 pb-1.5 text-[13px] font-medium text-ink hover:bg-surface-2/60 transition-colors cursor-pointer text-left"
-      >
-        {open ? (
-          <ChevronDown className="size-3.5 text-ink-faint shrink-0" />
-        ) : (
-          <ChevronRight className="size-3.5 text-ink-faint shrink-0" />
-        )}
-        {title}
-      </button>
-      {open && (
-        <div className="px-4 pb-3 pt-0.5 ml-5.5">
-          {children}
-        </div>
-      )}
+    <Collapsible defaultOpen={defaultOpen} className="group/collapsible">
+      <SidebarGroup data-tour={dataTour}>
+        <SidebarGroupLabel asChild>
+          <CollapsibleTrigger className="cursor-pointer">
+            <Icon className="size-4" />
+            {title}
+            <ChevronRight className="ml-auto size-3.5 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-90" />
+          </CollapsibleTrigger>
+        </SidebarGroupLabel>
+        <CollapsibleContent className="overflow-hidden data-[state=open]:animate-collapsible-down data-[state=closed]:animate-collapsible-up">
+          <SidebarGroupContent>
+            <div className="relative px-2 pb-2 pt-1 ml-4">
+              <div className="absolute left-2 top-0 bottom-1 w-px bg-border/50" />
+              <div className="pl-3">
+                {children}
+              </div>
+            </div>
+          </SidebarGroupContent>
+        </CollapsibleContent>
+      </SidebarGroup>
+    </Collapsible>
+  )
+}
+
+// ── Sub-label (Examples, Generate, etc.) ──
+
+function SubLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-xxs font-semibold text-ink-faint uppercase tracking-wider mb-1.5">
+      {children}
     </div>
   )
 }
 
-// ── Sidebar content (shared between pinned and floating) ──
+// ── GROUP: Tools (Examples + Generate Code + Layout) ──
 
-function SidebarContent() {
-  const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette)
-  const sidebarWidth = usePreferencesStore((s) => s.sidebarWidth)
-  const [toolsOpen, setToolsOpen] = useState(true)
-  const [aiOpen, setAiOpen] = useState(false)
-  const isNarrow = sidebarWidth < 260
-
-  return (
-    <>
-      {/* Header: logo + title left, search + layout right */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 shrink-0 border-b border-border/60">
-        <a href="/" className="flex items-center gap-2.5 no-underline text-ink min-w-0" aria-label="UmpleOnline home">
-          <img src="/umple-logo.svg" alt="" className="h-6 w-auto shrink-0" />
-          {!isNarrow && <span className="text-lg font-semibold tracking-tight truncate">UmpleOnline</span>}
-        </a>
-        <div className="flex items-center gap-0.5 shrink-0">
-          <Tip content="Search (Ctrl K)" side="bottom">
-            <button
-              onClick={openCommandPalette}
-              className="p-1.5 text-ink-muted hover:text-ink hover:bg-surface-2 rounded-lg transition-colors cursor-pointer"
-              aria-label="Command palette"
-            >
-              <Search className="size-4" />
-            </button>
-          </Tip>
-          <LayoutToggle />
-        </div>
-      </div>
-
-      {/* Scrollable sections */}
-      <div className="flex-1 min-h-0 overflow-y-auto scrollbar-thin py-1 space-y-1">
-        <ToolsSection open={toolsOpen} onToggle={() => setToolsOpen((v) => !v)} />
-        <AiConfigSection open={aiOpen} onToggle={() => setAiOpen((v) => !v)} />
-      </div>
-
-      {/* Footer */}
-      <SidebarFooter />
-    </>
-  )
-}
-
-// ── Main Sidebar ──
-
-export function Sidebar() {
-  const { showSidebar, sidebarWidth } = usePreferencesStore()
-  const [peekState, setPeekState] = useState<'hidden' | 'open' | 'closing'>('hidden')
-  const peekTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  const clearPeekTimeout = useCallback(() => {
-    if (peekTimeoutRef.current) { clearTimeout(peekTimeoutRef.current); peekTimeoutRef.current = null }
-  }, [])
-
-  const handlePeekEnter = useCallback(() => {
-    clearPeekTimeout()
-    setPeekState('open')
-  }, [clearPeekTimeout])
-
-  const handlePeekLeave = useCallback(() => {
-    peekTimeoutRef.current = setTimeout(() => setPeekState('closing'), 300)
-  }, [])
-
-  const handlePeekStay = useCallback(() => {
-    clearPeekTimeout()
-    // If we were closing, reopen
-    setPeekState((s) => s === 'hidden' ? s : 'open')
-  }, [clearPeekTimeout])
-
-  const handleAnimationEnd = useCallback(() => {
-    setPeekState((s) => s === 'closing' ? 'hidden' : s)
-  }, [])
-
-  useEffect(() => {
-    return clearPeekTimeout
-  }, [clearPeekTimeout])
-
-  // Close peek when sidebar is toggled open
-  useEffect(() => {
-    if (showSidebar) setPeekState('hidden')
-  }, [showSidebar])
-
-  // ── Pinned sidebar (open) ──
-  if (showSidebar) {
-    return (
-      <div
-        className="relative flex flex-col h-full shrink-0 overflow-hidden"
-        style={{ width: sidebarWidth }}
-        data-testid="sidebar"
-      >
-        <SidebarContent />
-        <ResizeHandle />
-      </div>
-    )
-  }
-
-  // ── Collapsed: hover zone + floating peek ──
-  return (
-    <>
-      {/* Invisible hover trigger zone on left edge */}
-      <button
-        type="button"
-        aria-label="Open sidebar"
-        className="h-full w-2 shrink-0 cursor-pointer focus-visible:w-6 focus-visible:bg-brand/10 transition-all"
-        onMouseEnter={handlePeekEnter}
-        onFocus={handlePeekEnter}
-        onBlur={handlePeekLeave}
-      />
-
-      {/* Floating sidebar overlay with slide animation */}
-      {peekState !== 'hidden' && (
-        <div
-          className={`fixed top-0 left-0 h-full z-40 flex ${
-            peekState === 'closing' ? 'animate-sidebar-peek-out' : 'animate-sidebar-peek-in'
-          }`}
-          onMouseLeave={handlePeekLeave}
-          onMouseEnter={handlePeekStay}
-          onAnimationEnd={handleAnimationEnd}
-        >
-          <div
-            className="flex flex-col h-full bg-surface-1 shadow-2xl border-r border-border"
-            style={{ width: sidebarWidth }}
-            data-testid="sidebar-peek"
-          >
-            <SidebarContent />
-          </div>
-        </div>
-      )}
-    </>
-  )
-}
-
-// ── Resize handle (right edge of sidebar) ──
-
-// Below this, the sidebar collapses (must drag well past the min width)
-const SIDEBAR_COLLAPSE_THRESHOLD = 120
-
-function ResizeHandle() {
-  const setSidebarWidth = usePreferencesStore((s) => s.setSidebarWidth)
-  const toggleSidebar = usePreferencesStore((s) => s.toggleSidebar)
-
-  const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault()
-    const startX = e.clientX
-    const startWidth = usePreferencesStore.getState().sidebarWidth
-
-    const handleMouseMove = (e: MouseEvent) => {
-      // Store clamps to [200, 480]; passing smaller values just freezes at 200
-      setSidebarWidth(startWidth + (e.clientX - startX))
-    }
-
-    const handleMouseUp = (e: MouseEvent) => {
-      const finalWidth = startWidth + (e.clientX - startX)
-      if (finalWidth < SIDEBAR_COLLAPSE_THRESHOLD) {
-        toggleSidebar()
-      }
-      document.removeEventListener('mousemove', handleMouseMove)
-      document.removeEventListener('mouseup', handleMouseUp)
-      document.body.style.cursor = ''
-      document.body.style.userSelect = ''
-    }
-
-    document.body.style.cursor = 'col-resize'
-    document.body.style.userSelect = 'none'
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
-  }, [setSidebarWidth, toggleSidebar])
-
-  return (
-    <div
-      onMouseDown={handleMouseDown}
-      className="group absolute right-0 top-0 bottom-0 w-2.5 -mr-1 cursor-col-resize z-10"
-    >
-      {/* Full-height line (visible on hover/active) */}
-      <div className="absolute left-1/2 top-0 bottom-0 w-[2px] -translate-x-1/2 rounded-full bg-transparent group-hover:bg-brand group-active:bg-brand transition-colors pointer-events-none" />
-      {/* Grip indicator (always visible) */}
-      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[2px] h-8 rounded-full bg-border group-hover:bg-brand group-active:bg-brand transition-colors pointer-events-none" />
-    </div>
-  )
-}
-
-// ── SECTION: Tools (Examples + Generate Code + Layout) ──
-
-function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+function ToolsGroup() {
   const { viewMode, setViewMode } = useSessionStore()
   const { layoutAlgorithm, setLayoutAlgorithm } = usePreferencesStore()
   const code = useSessionStore((s) => s.code)
@@ -267,15 +180,11 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
   const { execute } = useExecute()
   const running = useEphemeralStore((s) => s.executing)
   const generate = useGenerate()
-  const loadExample = useSessionStore((s) => s.loadExample)
-
-  const [allCategories, setAllCategories] = useState<ExampleCategory[]>([])
-  const [loaded, setLoaded] = useState(false)
+  const { categories: allCategories, loadExample } = useExamples()
   const targetId = useSessionStore((s) => s.generateTargetId)
   const setTargetId = useSessionStore((s) => s.setGenerateTargetId)
   const selectedExample = useSessionStore((s) => s.selectedExample)
 
-  const viewLabel = ALL_VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'
   const showLayout = VIEW_OUTPUT_KIND[viewMode] !== 'html'
 
   const selectedTarget = useMemo(
@@ -291,40 +200,25 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
     []
   )
 
-  useEffect(() => {
-    if (!loaded) {
-      setLoaded(true)
-      api.listExamples().then(setAllCategories).catch(() => {})
-    }
-  }, [loaded])
-
   const exampleOptions = useMemo(
     () => allCategories
       .filter((cat) => (getViewForExampleCategory(cat.name) ?? 'class') === viewMode)
       .flatMap((cat) => cat.examples)
-      .map((ex) => ({ value: ex.name, label: ex.name })),
+      .map((ex) => ({ value: ex.name, label: ex.label })),
     [allCategories, viewMode]
   )
 
-  const handleLoadExample = useCallback(async (name: string) => {
-    try {
-      const res = await api.getExample(name)
-      loadExample(res.name, res.code, res.modelId)
-      useEphemeralStore.getState().setRightPanelView('diagram')
-    } catch { /* ignore */ }
-  }, [loadExample])
-
-  const handleGenerate = useCallback(async () => {
+  function handleGenerate() {
     if (!code.trim() || generatingCode) return
     generate(targetId)
-  }, [code, generatingCode, generate, targetId])
+  }
 
   return (
-    <Section title="Tools" open={open} onToggle={onToggle}>
+    <CollapsibleGroup title="Tools" icon={Wrench} defaultOpen>
       <div className="space-y-4">
         {/* Examples */}
         <div data-tour="examples">
-          <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Examples</div>
+          <SubLabel>Examples</SubLabel>
           <div className="space-y-1.5">
             <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
               <SelectTrigger>
@@ -352,7 +246,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
               key={viewMode}
               options={exampleOptions}
               value={selectedExample ?? undefined}
-              onSelect={handleLoadExample}
+              onSelect={loadExample}
               placeholder={exampleOptions.length > 0 ? 'Load an example...' : 'No examples'}
               searchPlaceholder="Search examples..."
             />
@@ -361,12 +255,15 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
 
         {/* Generate */}
         <div data-tour="generate">
-          <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Generate</div>
+          <SubLabel>Generate</SubLabel>
           <div className="space-y-2">
             <Combobox
               groups={generateGroups}
               value={targetId}
-              onSelect={setTargetId}
+              onSelect={(id) => {
+                setTargetId(id)
+                if (code.trim() && !generatingCode) generate(id)
+              }}
               placeholder="Select target..."
               searchPlaceholder="Search targets..."
             />
@@ -406,7 +303,7 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
         {/* Layout Algorithm */}
         {showLayout && (
           <div data-tour="layout-algorithm">
-            <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-1.5">Layout Algorithm</div>
+            <SubLabel>Layout Algorithm</SubLabel>
             <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
               <SelectTrigger>
                 <SelectValue />
@@ -422,7 +319,53 @@ function ToolsSection({ open, onToggle }: { open: boolean; onToggle: () => void 
           </div>
         )}
       </div>
-    </Section>
+    </CollapsibleGroup>
+  )
+}
+
+// ── GROUP: Tasks (Create + Manage) ──
+
+const TASK_ACTIONS = [
+  { action: 'create' as const, icon: ClipboardList, label: 'Create Task', desc: 'New assignment from current model' },
+  { action: 'manage' as const, icon: Search, label: 'Manage Task', desc: 'Edit, view responses, share' },
+]
+
+function TasksGroup() {
+  return (
+    <CollapsibleGroup title="Tasks" icon={ListChecks}>
+      <div className="space-y-3">
+        <p className="text-xs text-ink-muted leading-relaxed">
+          Create assignments for students or manage existing ones.
+        </p>
+        <div className="space-y-1">
+          {TASK_ACTIONS.map(({ action, icon: Icon, label, desc }) => (
+            <button
+              key={action}
+              onClick={() => useTaskStore.getState().openSheet(action)}
+              className="group flex items-center gap-2 rounded-md px-2.5 py-2 text-xs text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer w-full text-left"
+            >
+              <div className="flex items-center justify-center size-6 rounded-md bg-brand/8 text-brand group-hover:bg-brand/12 transition-colors">
+                <Icon className="size-3.5" />
+              </div>
+              <div>
+                <span className="font-medium text-ink block leading-tight">{label}</span>
+                <span className="text-xxs text-ink-faint">{desc}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </CollapsibleGroup>
+  )
+}
+
+// ── GROUP: Umple AI ──
+
+function AiGroup() {
+  return (
+    <CollapsibleGroup title="Umple AI" icon={Sparkles} data-tour="ai-config">
+      <AiConfigForm />
+    </CollapsibleGroup>
   )
 }
 
@@ -437,7 +380,7 @@ const FOOTER_LINKS = [
   },
   {
     items: [
-      { label: 'GitHub Repository', href: 'https://github.com/umple/umple', icon: Github },
+      { label: 'GitHub Repository', href: 'https://github.com/umple/umple', icon: GitFork },
       { label: 'Report an Issue', href: 'https://github.com/umple/umple/issues/new', icon: Bug },
       { label: 'Umple Website', href: 'https://umple.org', icon: Globe },
     ],
@@ -452,57 +395,42 @@ const FOOTER_LINKS = [
 
 // ── Sidebar footer ──
 
-function SidebarFooter() {
+function AppSidebarFooter() {
   return (
-    <div className="shrink-0 border-t border-border/60 px-3 py-2 flex items-center justify-between gap-2" data-testid="sidebar-footer">
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className="flex items-center gap-1.5 rounded-lg p-1.5 transition-colors cursor-pointer hover:bg-surface-2 data-[state=open]:bg-surface-2"
-          aria-label="University of Ottawa resources"
-          data-testid="sidebar-footer-menu"
-        >
-          <img src="/uottawa-logo.svg" alt="University of Ottawa" className="h-8 w-auto shrink-0 dark:invert" />
-          <span className="text-xs font-medium text-ink-muted">About</span>
-          <ChevronsUpDown className="size-3.5 text-ink-faint shrink-0" />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="start" className="w-56">
-          {FOOTER_LINKS.map((group, gi) => (
-            <DropdownMenuGroup key={gi}>
-              {gi > 0 && <DropdownMenuSeparator />}
-              {group.items.map((item) => (
-                <DropdownMenuItem
-                  key={item.href}
-                  onSelect={() => window.open(item.href, '_blank', 'noopener,noreferrer')}
-                >
-                  <item.icon className="size-3.5" />
-                  <span>{item.label}<span className="sr-only"> (opens in new window)</span></span>
-                  <ExternalLink className="ml-auto size-3 text-ink-faint" />
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+    <SidebarFooter className="flex-row items-center gap-2 h-12 px-4 border-t border-border/60" data-testid="sidebar-footer">
+      <div className="min-w-0 flex-1">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="inline-flex h-9 max-w-full min-w-0 items-center gap-1.5 pl-1 pr-1.5 cursor-pointer rounded-full hover:bg-surface-2 data-[state=open]:bg-surface-2 transition-colors group"
+            aria-label="University of Ottawa resources"
+            data-testid="sidebar-footer-menu"
+          >
+            <div className="rounded-full shrink-0 flex items-center justify-center size-7 bg-surface-2 overflow-hidden">
+              <img src="/umple-logo.svg" alt="UmpleOnline" className="size-4 shrink-0" />
+            </div>
+            <span className="min-w-0 flex-1 text-sm text-ink truncate">Umple</span>
+            <ChevronsUpDown className="size-3.5 text-ink-faint shrink-0 group-hover:text-ink transition-colors" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent side="top" align="start" className="w-56">
+            {FOOTER_LINKS.map((group, gi) => (
+              <DropdownMenuGroup key={gi}>
+                {gi > 0 && <DropdownMenuSeparator />}
+                {group.items.map((item) => (
+                  <DropdownMenuItem
+                    key={item.href}
+                    onSelect={() => window.open(item.href, '_blank', 'noopener,noreferrer')}
+                  >
+                    <item.icon className="size-3.5" />
+                    <span>{item.label}<span className="sr-only"> (opens in new window)</span></span>
+                    <ExternalLink className="ml-auto size-3 text-ink-faint" />
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
       <ThemeToggle />
-    </div>
-  )
-}
-
-// ── Layout toggle button (toggles sidebar) ──
-
-function LayoutToggle({ side = 'bottom' }: { side?: 'bottom' | 'right' }) {
-  const toggleSidebar = usePreferencesStore((s) => s.toggleSidebar)
-
-  return (
-    <Tip content="Toggle sidebar" side={side}>
-      <button
-        onClick={toggleSidebar}
-        data-tour="sidebar-toggle"
-        className="p-1.5 transition-colors cursor-pointer rounded-lg text-ink-muted hover:text-ink hover:bg-surface-2"
-        aria-label="Toggle sidebar"
-      >
-        <Columns2 className="size-4" />
-      </button>
-    </Tip>
+    </SidebarFooter>
   )
 }

@@ -4,6 +4,8 @@ import { useSessionStore } from '@/stores/sessionStore'
 import { useDiagramSync } from '@/hooks/useDiagramSync'
 import { useMenuClose } from '@/hooks/useMenuClose'
 import { edgeDeletionParams } from '@/lib/diagramHelpers'
+import { MenuItem } from './MenuItem'
+import { ContextMenuShell } from './ContextMenuShell'
 
 interface EdgeContextMenuProps {
   position: { x: number; y: number } | null
@@ -33,21 +35,10 @@ export function EdgeContextMenu({ position, edgeId, onClose }: EdgeContextMenuPr
   if (!position || !edgeId) return null
 
   return (
-    <div
-      ref={menuRef}
-      className="fixed z-50 min-w-[8rem] rounded-md border border-surface-2 bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
-      style={{ left: position.x, top: position.y }}
-      role="menu"
-      aria-label="Edge context menu"
-    >
-      <button
-        onClick={handleDelete}
-        role="menuitem"
-        className="relative flex w-full cursor-default items-center gap-1.5 rounded-sm px-2 py-1 text-xs outline-hidden select-none text-destructive hover:bg-destructive/10 focus:bg-destructive/10"
-      >
-        <Trash2 className="size-3.5" />
+    <ContextMenuShell menuRef={menuRef} position={position} ariaLabel="Edge context menu" minWidth="8rem">
+      <MenuItem onClick={handleDelete} icon={<Trash2 className="size-3.5" />} variant="destructive">
         Delete
-      </button>
-    </div>
+      </MenuItem>
+    </ContextMenuShell>
   )
 }

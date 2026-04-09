@@ -21,9 +21,10 @@ func NewExecuteHandler(pool *compiler.Pool, store *model.Store, proxy *execution
 }
 
 type ExecuteRequest struct {
-	Code     string `json:"code"`
-	Language string `json:"language"`
-	ModelID  string `json:"modelId,omitempty"`
+	Code      string `json:"code"`
+	Language  string `json:"language"`
+	ModelID   string `json:"modelId,omitempty"`
+	ActiveTabID string `json:"activeTabId,omitempty"`
 }
 
 type ExecuteResponse struct {
@@ -49,14 +50,15 @@ func (h *ExecuteHandler) Execute(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure model directory exists
-	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code)
+	entryFile := resolveEntryFile(h.store, req.ModelID, req.ActiveTabID)
+	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code, entryFile)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
 		return
 	}
 
 	// First: compile/generate the target language
-	command := fmt.Sprintf("-generate %s %s/model.ump -cx", req.Language, dir)
+	command := fmt.Sprintf("-generate %s %s/%s -cx", req.Language, dir, entryFile)
 	compileResult, err := h.pool.Execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: dir,

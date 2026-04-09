@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
+import { useCollabStore } from '../../stores/collabStore'
+import { collabLoadExample } from '../../hooks/useCollabTabs'
 import { useGenerate } from '../../hooks/useGenerate'
 import { api } from '../../api/client'
 import type { ExampleCategory } from '../../api/types'
@@ -44,10 +46,12 @@ export function CommandPalette() {
     setRenderMode, renderMode, commandPaletteInitialPage,
   } = useEphemeralStore()
   const { setViewMode } = useSessionStore()
-  const loadExample = useSessionStore((s) => s.loadExample)
+  const localLoadExample = useSessionStore((s) => s.loadExample)
+  const isCollaborating = useCollabStore((s) => s.isCollaborating)
   const generate = useGenerate()
 
   const [categories, setCategories] = useState<ExampleCategory[]>([])
+  const [loadingExamples, setLoadingExamples] = useState(false)
   const [pages, setPages] = useState<string[]>([])
   const [search, setSearch] = useState('')
 
@@ -56,7 +60,8 @@ export function CommandPalette() {
   // Load categories on first open
   useEffect(() => {
     if (commandPaletteOpen && categories.length === 0) {
-      api.listExamples().then(setCategories).catch(() => {})
+      setLoadingExamples(true)
+      api.listExamples().then(setCategories).catch(() => {}).finally(() => setLoadingExamples(false))
     }
   }, [commandPaletteOpen, categories.length])
 
@@ -120,14 +125,18 @@ export function CommandPalette() {
     closeCommandPalette()
     try {
       const res = await api.getExample(name)
-      loadExample(res.name, res.code, res.modelId)
+      if (isCollaborating) {
+        collabLoadExample(res.name, res.code, res.modelId)
+      } else {
+        localLoadExample(res.name, res.code, res.modelId)
+      }
       const view = getViewForExampleCategory(category)
       if (view) {
         setViewMode(view)
       }
       useEphemeralStore.getState().setRightPanelView('diagram')
     } catch { /* ignore */ }
-  }, [closeCommandPalette, loadExample, setViewMode])
+  }, [closeCommandPalette, localLoadExample, isCollaborating, setViewMode])
 
   const currentCategory = useMemo(
     () => page && page !== 'examples' ? categories.find((c) => c.name === page) : undefined,
@@ -240,21 +249,21 @@ export function CommandPalette() {
               </CommandItem>
             </CommandGroup>
 
-            {categories.length > 0 && (
-              <>
-                <CommandSeparator />
-                <CommandGroup heading="Examples">
-                  <CommandItem
-                    onSelect={() => pushPage('examples')}
-                    data-testid="command-item-examples-browse"
-                  >
-                    <BookOpen />
-                    Browse Examples...
-                    <ChevronRight className="ml-auto size-4 text-muted-foreground" />
-                  </CommandItem>
-                </CommandGroup>
-              </>
-            )}
+            <CommandSeparator />
+            <CommandGroup heading="Examples">
+              {loadingExamples ? (
+                <div className="py-2 text-center text-xs text-muted-foreground">Loading examples...</div>
+              ) : categories.length > 0 ? (
+                <CommandItem
+                  onSelect={() => pushPage('examples')}
+                  data-testid="command-item-examples-browse"
+                >
+                  <BookOpen />
+                  Browse Examples...
+                  <ChevronRight className="ml-auto size-4 text-muted-foreground" />
+                </CommandItem>
+              ) : null}
+            </CommandGroup>
           </>
         )}
 
@@ -287,7 +296,7 @@ export function CommandPalette() {
                   data-testid={`command-item-example-${ex.name}`}
                 >
                   <FileCode />
-                  {ex.name}
+                  {ex.label}
                 </CommandItem>
               ))}
           </CommandGroup>

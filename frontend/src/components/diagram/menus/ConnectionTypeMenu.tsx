@@ -1,6 +1,8 @@
 import { useRef } from 'react'
 import { ArrowRight, Triangle } from 'lucide-react'
 import { useMenuClose } from '@/hooks/useMenuClose'
+import { MenuItem } from './MenuItem'
+import { ContextMenuShell } from './ContextMenuShell'
 
 export type ConnectionChoice = 'association' | 'generalization'
 
@@ -18,29 +20,13 @@ export function ConnectionTypeMenu({ position, onSelect, onClose }: ConnectionTy
   if (!position) return null
 
   return (
-    <div
-      ref={menuRef}
-      className="fixed z-50 min-w-[10rem] rounded-md border border-surface-2 bg-popover p-1 text-popover-foreground shadow-md animate-in fade-in-0 zoom-in-95"
-      style={{ left: position.x, top: position.y }}
-      role="menu"
-      aria-label="Choose relationship type"
-    >
-      <button
-        onClick={() => onSelect('association')}
-        role="menuitem"
-        className="relative flex w-full cursor-default items-center gap-1.5 rounded-sm px-2 py-1 text-xs outline-hidden select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-      >
-        <ArrowRight className="size-3.5 text-muted-foreground" />
+    <ContextMenuShell menuRef={menuRef} position={position} ariaLabel="Choose relationship type">
+      <MenuItem onClick={() => onSelect('association')} icon={<ArrowRight className="size-3.5" />}>
         Association
-      </button>
-      <button
-        onClick={() => onSelect('generalization')}
-        role="menuitem"
-        className="relative flex w-full cursor-default items-center gap-1.5 rounded-sm px-2 py-1 text-xs outline-hidden select-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-      >
-        <Triangle className="size-3.5 text-muted-foreground" />
+      </MenuItem>
+      <MenuItem onClick={() => onSelect('generalization')} icon={<Triangle className="size-3.5" />}>
         Generalization
-      </button>
-    </div>
+      </MenuItem>
+    </ContextMenuShell>
   )
 }

@@ -2,6 +2,8 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { Users, Copy, Check, LogOut } from 'lucide-react'
 import { useCollabStore } from '../../stores/collabStore'
 import { useSessionStore } from '../../stores/sessionStore'
+import { isTemporaryModel } from '../../lib/modelId'
+import { api } from '../../api/client'
 import {
   Popover,
   PopoverTrigger,
@@ -24,23 +26,37 @@ export function CollabButton() {
   useEffect(() => () => clearTimeout(copyTimerRef.current), [])
 
   const copyUrl = useCallback(async () => {
-    const roomId = useCollabStore.getState().roomId
-    if (!roomId) return
-    const url = new URL(window.location.href)
-    url.searchParams.set('collab', roomId)
-    await navigator.clipboard.writeText(url.toString())
+    await navigator.clipboard.writeText(window.location.href)
     setCopied(true)
     clearTimeout(copyTimerRef.current)
     copyTimerRef.current = setTimeout(() => setCopied(false), 2000)
   }, [])
 
   const handleStartCollab = useCallback(async () => {
-    const modelId = useSessionStore.getState().modelId
+    let modelId = useSessionStore.getState().modelId
+
+    // Promote tmp model to permanent so the URL is shareable
+    if (isTemporaryModel(modelId)) {
+      try {
+        const res = await api.promoteModel(modelId!)
+        modelId = res.newId
+        useSessionStore.getState().setModelId(res.newId)
+      } catch {
+        // Promotion failed — fall back to the tmp ID
+      }
+    }
+
     const roomId = modelId ?? crypto.randomUUID()
-    const url = new URL(window.location.href)
-    url.searchParams.delete('model')
-    url.searchParams.set('collab', roomId)
-    window.history.replaceState({}, '', url.toString())
+
+    // Update the URL immediately so copyUrl captures the permanent model ID.
+    // The React useEffect in useModelFromURL would also do this, but it runs
+    // after render — too late for the clipboard copy below.
+    if (roomId) {
+      const url = new URL(window.location.href)
+      url.searchParams.set('model', roomId)
+      window.history.replaceState({}, '', url.toString())
+    }
+
     startCollab(roomId)
     setPopoverOpen(true)
     try { await copyUrl() } catch { /* clipboard may be unavailable */ }
@@ -48,7 +64,6 @@ export function CollabButton() {
 
   const handleStopCollab = useCallback(() => {
     stopCollab()
-    // URL cleanup is handled by useCollabFromURL
   }, [stopCollab])
 
   if (!isCollaborating) {
@@ -96,7 +111,10 @@ export function CollabButton() {
               'size-1.5 rounded-full',
               connected && ready ? 'bg-status-success' : 'bg-status-warning'
             )}
+            role="status"
+            aria-label={connected && ready ? 'Connected' : 'Connecting'}
           />
+          <span className="sr-only">{connected && ready ? 'Connected' : 'Connecting'}</span>
           </button>
         </PopoverTrigger>
       </Tip>

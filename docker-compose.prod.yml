@@ -62,11 +62,34 @@ services:
         condition: service_healthy
       collab:
         condition: service_healthy
+      lsp-proxy:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:80/"]
       interval: 30s
       timeout: 5s
       retries: 3
+
+  lsp-proxy:
+    image: ${LSP_PROXY_IMAGE:-ghcr.io/umple/umpleonline/lsp-proxy:latest}
+    restart: unless-stopped
+    cpus: 1
+    mem_limit: 512m
+    pids_limit: 128
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ./data/models:/data/models
+    environment:
+      - UMP_BASE_DIR=/data/models
+      - UMPLESYNC_JAR_PATH=/jars/umplesync.jar
+      - LSP_PORT=9999
+    healthcheck:
+      test: ["CMD", "node", "-e", "const W=require('ws'),c=new W('ws://127.0.0.1:9999');c.on('open',()=>{c.close();process.exit(0)});c.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),4000)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   code-exec:
     image: ${CODE_EXEC_IMAGE:-ghcr.io/umple/umpleonline/code-exec:latest}

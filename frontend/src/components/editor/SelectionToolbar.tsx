@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, type KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { ArrowUp, Lightbulb } from 'lucide-react'
-import { useSessionStore } from '@/stores/sessionStore'
+import { useSessionStore, getActiveTabName } from '@/stores/sessionStore'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { cn } from '@/lib/utils'
 
@@ -36,8 +36,7 @@ export function SelectionToolbar() {
   function buildMessage(prompt: string) {
     const sel = useEphemeralStore.getState().selection
     if (!sel) return null
-    const { tabs, activeTabId } = useSessionStore.getState()
-    const tabName = tabs.find((t) => t.id === activeTabId)?.name ?? 'model.ump'
+    const tabName = getActiveTabName()
     const label =
       sel.fromLine === sel.toLine
         ? `${tabName} (${sel.fromLine})`
@@ -77,7 +76,7 @@ export function SelectionToolbar() {
 
   return createPortal(
     <div
-      className="fixed z-50 w-[260px] rounded-2xl border border-border bg-surface-0 p-1 pb-0.5 shadow-[0_14px_32px_rgba(15,23,42,0.16),0_6px_12px_rgba(15,23,42,0.08)] dark:shadow-[0_14px_32px_rgba(0,0,0,0.4),0_6px_12px_rgba(0,0,0,0.2)] animate-in fade-in-0 zoom-in-95 duration-100"
+      className="fixed z-50 w-[260px] rounded-2xl border border-border bg-surface-0 p-1 pb-0.5 shadow-[var(--shadow-elevated)] animate-in fade-in-0 zoom-in-95 duration-100"
       style={{ top, left }}
     >
       {/* Input row */}

@@ -1,19 +1,18 @@
 import { type ReactNode, useCallback, useEffect } from 'react'
 import { BookOpen, Download } from 'lucide-react'
 import { toSvg, toPng } from 'html-to-image'
+import JSZip from 'jszip'
 import { UmpleDiagram } from './UmpleDiagram'
 import { SmartSvgView } from './SmartSvgView'
 import { HtmlDiagramView } from './HtmlDiagramView'
 import { CanvasToolbar } from './CanvasToolbar'
 import { GeneratedOutputView } from '../generation/GeneratedOutputView'
+import { ObjectExplorer } from '../crud/ObjectExplorer'
 import { CanvasBanner } from '../layout/CanvasBanner'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
 import { Button } from '@/components/ui/button'
-import { Tip } from '@/components/ui/tooltip'
 import { ErrorBanner } from '@/components/ui/error-banner'
-import { Switch } from '@/components/ui/switch'
 import { cn } from '@/lib/utils'
 import { api } from '@/api/client'
 
@@ -64,11 +63,28 @@ export function DiagramPanel() {
   }, [viewMode, setRenderMode])
   const showHtml = !showEditable && !editableLoading && outputKind === 'html' && !!currentHtml
   const showGv = !showEditable && !editableLoading && !showHtml && !!currentSvg
+  const hasDiagram = showEditable || showHtml || showGv
   const mountEditable = canToggleRenderer
   const mountHtml = outputKind === 'html' && !!currentHtml
   const mountGv = outputKind === 'gv' && !!currentSvg
 
   const handleExport = useCallback(async (format: string) => {
+    // Umple source code — zip all tabs client-side
+    if (format === 'ump') {
+      const { tabs, activeTabId } = useSessionStore.getState()
+      const zip = new JSZip()
+      for (const tab of tabs) {
+        const content = tab.id === activeTabId ? code : tab.code
+        zip.file(tab.name, content)
+      }
+      const blob = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(blob)
+      triggerDownload(url, 'umple-model.zip')
+      URL.revokeObjectURL(url)
+      return
+    }
+
+    // Diagram image exports (SVG, PNG)
     const filename = `umple-${viewMode}-diagram.${format}`
 
     // When showing ReactFlow, capture the canvas client-side
@@ -85,7 +101,8 @@ export function DiagramPanel() {
     }
 
     // GV mode or fallback: use backend export
-    const blob = await api.export({ code, format, modelId: modelId ?? undefined })
+    const activeTabId = useSessionStore.getState().activeTabId
+    const blob = await api.export({ code, format, modelId: modelId ?? undefined, activeTabId })
     const url = URL.createObjectURL(blob)
     triggerDownload(url, filename)
     URL.revokeObjectURL(url)
@@ -96,40 +113,15 @@ export function DiagramPanel() {
       <CanvasBanner />
       <div className="flex-1 relative" data-testid="diagram-canvas">
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
-          <div className="absolute top-2 left-2 right-2 z-10 flex items-start gap-2 pointer-events-none flex-wrap">
-          {!showHtml && <CanvasToolbar />}
-          <div className="ml-auto pointer-events-auto flex items-center gap-0.5 bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1.5 py-1 shadow-sm">
-              <DropdownMenu>
-                <Tip content="Export diagram" side="bottom">
-                  <DropdownMenuTrigger asChild>
-                    <button className={`${toolbarBtnBase} text-ink-muted hover:text-ink hover:bg-surface-2 flex items-center gap-1`}>
-                      <Download className="size-3" />
-                      Export
-                    </button>
-                  </DropdownMenuTrigger>
-                </Tip>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => handleExport('svg')}>SVG</DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleExport('png')}>PNG</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {canToggleRenderer && (
-                <>
-                  <div className="w-px h-3.5 bg-border mx-0.5" />
-                  <Tip content={`Renderer: ${renderMode === 'editable' ? 'Editable' : 'Graphviz'}`} side="bottom">
-                    <label className="flex items-center gap-1.5 cursor-pointer">
-                      <span className={`text-xs ${renderMode === 'editable' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>Edit</span>
-                      <Switch
-                        size="sm"
-                        checked={renderMode === 'graphviz'}
-                        onCheckedChange={(checked) => setRenderMode(checked ? 'graphviz' : 'editable')}
-                      />
-                      <span className={`text-xs ${renderMode === 'graphviz' ? 'text-ink font-semibold' : 'text-ink-muted'}`}>GV</span>
-                    </label>
-                  </Tip>
-                </>
-              )}
-            </div>
+          <div className="absolute top-2 left-0 right-0 z-10 flex justify-center pointer-events-none">
+            <CanvasToolbar
+              hasDiagram={hasDiagram}
+              onExport={handleExport}
+              canToggleRenderer={canToggleRenderer}
+              renderMode={renderMode}
+              onRenderModeChange={setRenderMode}
+              showDisplayOptions={!showHtml}
+            />
           </div>
           {mountEditable && (
             <DiagramLayer active={showEditable}>
@@ -175,7 +167,7 @@ export function DiagramPanel() {
         </div>
 
         {generationRequested && (
-          <div className={cn('absolute inset-0 bg-surface-0 flex flex-col', rightPanelView !== 'generated' && 'invisible')}>
+          <div className={cn('absolute inset-0 bg-surface-0 flex flex-col z-20', rightPanelView !== 'generated' && 'invisible')}>
             {generatedError && (
               <ErrorBanner className="py-1.5 rounded-none border-0 border-b border-border shrink-0">
                 {generatedError}
@@ -209,12 +201,16 @@ export function DiagramPanel() {
             )}
           </div>
         )}
+
+        {viewMode === 'crud' && rightPanelView === 'diagram' && (
+          <div className="absolute inset-0 bg-surface-0 z-20">
+            <ObjectExplorer />
+          </div>
+        )}
       </div>
     </div>
   )
 }
-
-const toolbarBtnBase = 'px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1'
 
 function DiagramLayer({ active, children }: { active: boolean; children: ReactNode }) {
   return (

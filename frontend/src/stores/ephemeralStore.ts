@@ -87,6 +87,7 @@ interface EphemeralState {
   commandPaletteOpen: boolean
   commandPaletteInitialPage: string[] | null
   diagramOnly: boolean
+  readOnly: boolean
   rightPanelView: 'diagram' | 'generated'
 
   // Execution
@@ -122,6 +123,9 @@ interface EphemeralState {
   diffPreview: DiffPreviewState | null
   selection: { fromLine: number; toLine: number; text: string; coords?: { x: number; yTop: number; yBottom: number } } | null
 
+  // LSP
+  lspConnected: boolean
+
   // Agent message queue
   pendingAgentMessage: string | null
 
@@ -138,6 +142,7 @@ interface EphemeralState {
   openCommandPalette: (initialPage?: string[]) => void
   closeCommandPalette: () => void
   setDiagramOnly: (v: boolean) => void
+  setReadOnly: (v: boolean) => void
   setRightPanelView: (view: 'diagram' | 'generated') => void
 
   // Execution actions
@@ -158,6 +163,9 @@ interface EphemeralState {
   setCompiling: (compiling: boolean) => void
 
 
+  // LSP actions
+  setLspConnected: (connected: boolean) => void
+
   // Editor ephemeral actions
   showDiffPreview: (preview: DiffPreviewState) => void
   clearDiffPreview: (toolCallId?: string) => void
@@ -175,6 +183,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   commandPaletteOpen: false,
   commandPaletteInitialPage: null,
   diagramOnly: false,
+  readOnly: false,
   rightPanelView: 'diagram',
 
   // Execution
@@ -210,6 +219,9 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   diffPreview: null,
   selection: null,
 
+  // LSP
+  lspConnected: false,
+
   // Agent message queue
   pendingAgentMessage: null,
 
@@ -235,6 +247,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
     commandPaletteInitialPage: null,
   }),
   setDiagramOnly: (diagramOnly) => set({ diagramOnly, showEditor: !diagramOnly }),
+  setReadOnly: (readOnly) => set({ readOnly }),
   setRightPanelView: (rightPanelView) => set({ rightPanelView }),
 
   // Execution actions
@@ -289,6 +302,9 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   setEditing: (editingNodeId, editingField) => set({ editingNodeId, editingField }),
   setCompiling: (compiling) => set({ compiling }),
 
+
+  // LSP actions
+  setLspConnected: (lspConnected) => set((s) => s.lspConnected === lspConnected ? s : { lspConnected }),
 
   // Editor ephemeral actions
   showDiffPreview: (diffPreview) => set({ diffPreview }),

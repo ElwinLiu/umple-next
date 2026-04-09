@@ -18,10 +18,10 @@ export function useExecute() {
     setExecutionOutput('')
     setExecuting(true)
 
-    const code = useSessionStore.getState().code
+    const { code, modelId, activeTabId } = useSessionStore.getState()
     const language = languageOverride || useEphemeralStore.getState().generatedLanguage
     try {
-      const result = await api.execute({ code, language })
+      const result = await api.execute({ code, language, activeTabId, modelId: modelId ?? undefined })
       setExecutionOutput(result.output || '', result.errors || null)
     } catch (err: unknown) {
       setExecutionOutput('', err instanceof Error ? err.message : 'Execution failed')

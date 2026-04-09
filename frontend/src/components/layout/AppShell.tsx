@@ -1,49 +1,64 @@
+import { useCallback } from 'react'
 import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
-import { Sidebar } from './Sidebar'
+import { AppToolbar } from './AppToolbar'
+import { AppSidebar } from './Sidebar'
 import { EditorPanel } from '../editor/EditorPanel'
 import { OutputPanel, CompileStatusStrip } from '../editor/ExecutionPanel'
 import { DiagramPanel } from '../diagram/DiagramPanel'
 import { CommandPalette } from '../command/CommandPalette'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { usePreferencesStore } from '../../stores/preferencesStore'
 import { useCompiler } from '../../hooks/useCompiler'
 import { useModelFromURL } from '../../hooks/useModelFromURL'
 import { useCollab } from '../../hooks/useCollab'
-import { useCollabFromURL } from '../../hooks/useCollabFromURL'
-import { TooltipProvider } from '@/components/ui/tooltip'
+import { useTaskRoute } from '../../hooks/useTaskRoute'
 import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog'
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
+import { TaskSheet } from '@/components/task/TaskSheet'
+import { SidebarProvider } from '@/components/ui/sidebar/sidebar'
 
 export function AppShell() {
   const showEditor = useEphemeralStore((s) => s.showEditor)
   const diagramOnly = useEphemeralStore((s) => s.diagramOnly)
   const outputView = useEphemeralStore((s) => s.outputView)
+  const showSidebar = usePreferencesStore((s) => s.showSidebar)
+  const handleOpenChange = useCallback(
+    (open: boolean) => usePreferencesStore.setState({ showSidebar: open }),
+    [],
+  )
   useCompiler()
   useModelFromURL()
   useCollab()
-  useCollabFromURL()
+  useTaskRoute()
 
   const editorVisible = showEditor && !diagramOnly
 
   return (
-    <TooltipProvider>
-    <div className="h-screen flex bg-surface-1" data-testid="app-shell">
+    <SidebarProvider
+      open={showSidebar}
+      onOpenChange={handleOpenChange}
+      className="bg-surface-1"
+    >
       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded-md focus:bg-brand focus:px-4 focus:py-2 focus:text-ink-inverse focus:text-sm focus:font-medium">
         Skip to editor
       </a>
 
-      {/* Left sidebar */}
-      <Sidebar />
+      {/* Left sidebar (shadcn Sidebar framework) */}
+      <AppSidebar />
 
       {/* Main content area */}
-      <main id="main-content" className="flex-1 min-w-0 flex flex-col">
-        <div className="relative flex-1 min-h-0 px-2.5 pb-2.5 pt-1.5">
-          <PanelGroup direction="horizontal" className="h-full">
+      <main id="main-content" className="flex-1 min-w-0 flex flex-col" data-testid="app-shell">
+        <AppToolbar />
+        <div className="relative flex-1 min-h-0 px-2.5 pb-2.5">
+          <ErrorBoundary>
+          <PanelGroup direction="horizontal" className="h-full" id="main-horizontal">
             {editorVisible && (
               <>
-                <Panel defaultSize={50} minSize={20}>
-                  <PanelGroup direction="vertical" className="h-full">
-                    <Panel defaultSize={outputView === 'panel' ? 65 : 100} minSize={20}>
-                      <div className="h-full rounded-lg overflow-hidden bg-surface-0 flex flex-col">
+                <Panel id="editor-col" order={1} defaultSize={50} minSize={20}>
+                  <PanelGroup direction="vertical" className="h-full" id="editor-vertical">
+                    <Panel id="editor" order={1} defaultSize={outputView === 'panel' ? 65 : 100} minSize={20}>
+                      <div className="h-full rounded-xl overflow-hidden bg-surface-0 flex flex-col">
                         <div className="flex-1 min-h-0">
                           <EditorPanel />
                         </div>
@@ -53,8 +68,8 @@ export function AppShell() {
                     {outputView === 'panel' && (
                       <>
                         <PanelResizeHandle className="h-2.5 cursor-row-resize" />
-                        <Panel defaultSize={35} minSize={10}>
-                          <div className="h-full rounded-lg overflow-hidden bg-surface-0">
+                        <Panel id="output" order={2} defaultSize={35} minSize={10}>
+                          <div className="h-full rounded-xl overflow-hidden bg-surface-0">
                             <OutputPanel />
                           </div>
                         </Panel>
@@ -65,20 +80,20 @@ export function AppShell() {
                 <PanelResizeHandle className="w-2.5 cursor-col-resize" />
               </>
             )}
-            <Panel defaultSize={editorVisible ? 50 : 100} minSize={30}>
-              <div className="h-full rounded-lg overflow-hidden bg-surface-0">
+            <Panel id="diagram" order={2} defaultSize={editorVisible ? 50 : 100} minSize={30}>
+              <div className="h-full rounded-xl overflow-hidden bg-surface-0">
                 <DiagramPanel />
               </div>
             </Panel>
           </PanelGroup>
-
+          </ErrorBoundary>
         </div>
 
         <CommandPalette />
         <WelcomeDialog />
         <OnboardingTour />
       </main>
-    </div>
-    </TooltipProvider>
+      <TaskSheet />
+    </SidebarProvider>
   )
 }

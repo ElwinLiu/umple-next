@@ -3,7 +3,10 @@ import { toast } from 'sonner'
 import { api } from '../api/client'
 import { useSessionStore } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
+import { useCollabStore } from '../stores/collabStore'
 import { usePreferencesStore } from '../stores/preferencesStore'
+import { getYDoc } from './useCollab'
+import { replaceYText } from './useCollabTabs'
 import { compileAndRefresh } from './useCompiler'
 
 interface SyncResult {
@@ -91,6 +94,16 @@ export function useDiagramSync() {
       // warnings/errors.
       if (response.code) {
         useSessionStore.getState().setCodeFromSync(response.code)
+
+        // In collab mode, also write to Y.Text so the change propagates
+        // to other collaborators. The editor effect no longer does this.
+        if (useCollabStore.getState().isCollaborating) {
+          const doc = getYDoc()
+          if (doc) {
+            const { activeTabId } = useSessionStore.getState()
+            replaceYText(doc.getText(`tab:${activeTabId}`), response.code!)
+          }
+        }
       }
 
       if (response.errors) {

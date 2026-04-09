@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func prepareJavadocSources(javaDir string) (string, error) {
+func prepareJavadocSources(javaDir, entryFile string) (string, error) {
 	javadocSrcDir, err := prepareGeneratedWorkspace(filepath.Dir(javaDir), "javadoc-src")
 	if err != nil {
 		return "", err
@@ -37,7 +37,7 @@ func prepareJavadocSources(javaDir string) (string, error) {
 			return err
 		}
 
-		sanitized := sanitizeJavaContentForJavadoc(string(data))
+		sanitized := sanitizeJavaContentForJavadoc(string(data), entryFile)
 		return os.WriteFile(dst, []byte(sanitized), 0o644)
 	})
 	if err != nil {
@@ -47,7 +47,7 @@ func prepareJavadocSources(javaDir string) (string, error) {
 	return javadocSrcDir, nil
 }
 
-func sanitizeJavaContentForJavadoc(content string) string {
+func sanitizeJavaContentForJavadoc(content, entryFile string) string {
 	lines := strings.Split(content, "\n")
 	out := make([]string, 0, len(lines))
 	for _, line := range lines {
@@ -57,7 +57,7 @@ func sanitizeJavaContentForJavadoc(content string) string {
 		out = append(out, line)
 	}
 	sanitized := strings.Join(out, "\n")
-	return strings.ReplaceAll(sanitized, ".generate-java.ump", "model.ump")
+	return strings.ReplaceAll(sanitized, ".generate-java.ump", entryFile)
 }
 
 func summarizeJavadocOutput(output string) string {

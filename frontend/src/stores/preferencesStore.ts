@@ -53,9 +53,7 @@ interface PreferencesState {
 
   // Sidebar
   showSidebar: boolean
-  sidebarWidth: number
   toggleSidebar: () => void
-  setSidebarWidth: (width: number) => void
 
   // Diagram display preferences
   showAttributes: boolean
@@ -92,9 +90,7 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       // Sidebar
       showSidebar: true,
-      sidebarWidth: 300,
       toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
-      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.min(480, Math.max(200, sidebarWidth)) }),
 
       // Diagram display preferences (match Umple compiler defaults)
       showAttributes: true,
@@ -135,9 +131,26 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     {
       name: 'umple-preferences-v1',
+      version: 1,
       storage: createJSONStorage(() => localStorage),
+      migrate: (persisted) => persisted as any,
       merge: (persisted, current) => {
-        const merged = { ...current, ...(persisted as object) }
+        const p = (persisted ?? {}) as Record<string, unknown>
+        // Only restore keys that partialize stores — stale keys from older
+        // schemas (e.g. serialized action names stored as null) would
+        // otherwise shadow the real store actions after the spread.
+        const DATA_KEYS = [
+          'theme', 'hasSeenWelcome', 'showSidebar',
+          'showAttributes', 'showMethods', 'showTraits',
+          'showActions', 'showTransitionLabels', 'showGuards', 'showGuardLabels', 'showNaturalLanguage',
+          'showFeatureDependency', 'layoutAlgorithm',
+          'activeProvider', 'configs',
+        ] as const
+        const safe: Record<string, unknown> = {}
+        for (const k of DATA_KEYS) {
+          if (k in p) safe[k] = p[k]
+        }
+        const merged = { ...current, ...safe }
         // Backfill any new providers missing from persisted localStorage
         const defaults = createDefaultProviderConfigs()
         const configs = { ...defaults, ...(merged as any).configs }
@@ -147,7 +160,6 @@ export const usePreferencesStore = create<PreferencesState>()(
         theme: state.theme,
         hasSeenWelcome: state.hasSeenWelcome,
         showSidebar: state.showSidebar,
-        sidebarWidth: state.sidebarWidth,
         showAttributes: state.showAttributes,
         showMethods: state.showMethods,
         showTraits: state.showTraits,

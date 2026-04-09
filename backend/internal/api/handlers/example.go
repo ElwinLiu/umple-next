@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -23,6 +24,7 @@ func NewExampleHandler(examplePath string, store *model.Store) *ExampleHandler {
 
 type ExampleEntry struct {
 	Name     string `json:"name"`
+	Label    string `json:"label"`
 	Filename string `json:"filename"`
 }
 
@@ -76,6 +78,110 @@ var categoryMembers = map[string][]string{
 	},
 }
 
+// displayLabels maps example names to human-readable labels.
+// Derived from legacy UmpleOnline (umple.php). Examples not listed here
+// fall back to the auto-generated label from humanize().
+var displayLabels = map[string]string{
+	// Class Diagrams
+	"2DShapes":                      "2DShapes",
+	"AccessControl":                 "Access Control",
+	"AccessControl2":                "Access Control 2",
+	"Accidents":                     "Accidents",
+	"Accommodations":                "Accommodations",
+	"AfghanRainDesign":              "Afghan Rain Design",
+	"AirlineExample":                "Airline",
+	"Auction":                       "Auction",
+	"BankingSystemA":                "Banking System A",
+	"BankingSystemB":                "Banking System B",
+	"CanalSystem":                   "Canal",
+	"Claim":                         "Claim (Insurance)",
+	"CommunityAssociation":          "Community Association",
+	"Compositions":                  "Compositions",
+	"CoOpSystem":                    "Co-Op System",
+	"DMMExtensionCTF":               "DMM CTF",
+	"DMMOverview":                   "DMM Overview",
+	"DMMRelationshipHierarchy":      "DMM Relationship Hierarchy",
+	"DMMSourceObjectHierarchy":      "DMM Source Object Hierarchy",
+	"Decisions":                     "Decisions",
+	"ElectionSystem":                "Election System",
+	"ElevatorSystemA":               "Elevator System A",
+	"ElevatorSystemB":               "Elevator System B",
+	"GenealogyA":                    "Genealogy A",
+	"GenealogyB":                    "Genealogy B",
+	"GenealogyC":                    "Genealogy C",
+	"GeographicalInformationSystem": "Geographical Information System",
+	"GeometricSystem":               "Geometric System",
+	"Hospital":                      "Hospital",
+	"Hotel":                         "Hotel",
+	"Insurance":                     "Insurance",
+	"InventoryManagement":           "Inventory Management",
+	"Library":                       "Library",
+	"MailOrderSystemClientOrder":    "Mail Order System - Client Order",
+	"ManufacturingPlantController":  "Manufacturing Plant Controller",
+	"OhHellWhist":                   "Card Games",
+	"Pizza":                         "Pizza System",
+	"PoliceSystem":                  "Police System",
+	"PoliticalEntities":             "Political Entities",
+	"realestate":                    "Real Estate",
+	"RoutesAndLocations":            "Routes And Locations",
+	"School":                        "School",
+	"TelephoneSystem":               "Telephone System",
+	"UniversitySystem":              "University System",
+	"VendingMachineClassDiagram":    "Vending Machine",
+	"WarehouseSystem":               "Warehouse System",
+	// State Machines
+	"AgentsCommunication":       "Agents Communicating",
+	"ApplicationProcessing":     "Application for a Grant",
+	"Booking":                   "Booking (Airline)",
+	"CanalLockStateMachine":     "Canal Lock",
+	"CarTransmission":           "Car Transmission",
+	"CollisionAvoidance":        "Collision Avoidance With And-Cross Transition",
+	"CollisionAvoidanceA1":      "Collision Avoidance - Alternative 1",
+	"CollisionAvoidanceA2":      "Collision Avoidance - Alternative 2",
+	"CollisionAvoidanceA3":      "Collision Avoidance - Alternative 3",
+	"ComplexStateMachine":       "Complex Symbolic",
+	"CourseSectionFlat":         "Course Section",
+	"CourseSectionNested":       "Course Section (Nested)",
+	"DigitalWatchFlat":          "Digital Watch (Flat)",
+	"DigitalWatchNested":        "Digital Watch Nested",
+	"Dishwasher":                "Dishwasher",
+	"Elevator_State_Machine":    "Elevator",
+	"GarageDoor":                "Garage Door",
+	"HomeHeater":                "Home Heating System",
+	"LibraryLoanStateMachine":   "Library Loan",
+	"Lights":                    "Light (3 alternatives)",
+	"MicrowaveOven2":            "Microwave Oven",
+	"Ovens":                     "Oven (3 alternatives)",
+	"ParliamentBill":            "Parliament Bill",
+	"Phone":                     "Phone and Lines",
+	"Runway":                    "Runway",
+	"SecurityLight":             "Security Light",
+	"SpecificFlight":            "Specific Flight (Airline)",
+	"SpecificFlightFlat":        "Specific Flight (Airline - Flat)",
+	"TcpIpSimulation":           "TCP/IP Simulation",
+	"TelephoneSystem2":          "Telephone Set Modes",
+	"TicTacToe":                 "Tic Tac Toe or Noughts and Crosses",
+	"TimedCommands":             "Timed Commands",
+	"TollBooth":                 "Toll Booth",
+	"TrafficLightsA":            "Traffic Lights A",
+	"TrafficLightsB":            "Traffic Lights B",
+	// Composite Structure
+	"PingPong":     "Ping Pong",
+	"OBDCarSystem": "OBD Car System",
+	// Feature Diagrams
+	"BerkeleyDB_SPL":              "BerkeleyDB SPL",
+	"BerkeleyDB_SP_featureDepend": "Feature Dependencies of BerkeleyDB SPL",
+	"HelloWorld_SPL":               "HelloWorld SPL",
+}
+
+// labelFor returns the human-readable label for an example name.
+func labelFor(name string) string {
+	if l, ok := displayLabels[name]; ok {
+		return l
+	}
+	return name
+}
+
 func (h *ExampleHandler) List(w http.ResponseWriter, r *http.Request) {
 	entries, err := os.ReadDir(h.examplePath)
 	if err != nil {
@@ -105,6 +211,7 @@ func (h *ExampleHandler) List(w http.ResponseWriter, r *http.Request) {
 			if available[name] {
 				exs = append(exs, ExampleEntry{
 					Name:     name,
+					Label:    labelFor(name),
 					Filename: name + ".ump",
 				})
 				claimed[name] = true
@@ -124,6 +231,7 @@ func (h *ExampleHandler) List(w http.ResponseWriter, r *http.Request) {
 		if !claimed[name] {
 			other = append(other, ExampleEntry{
 				Name:     name,
+				Label:    labelFor(name),
 				Filename: name + ".ump",
 			})
 		}
@@ -140,6 +248,17 @@ func (h *ExampleHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(categories)
+}
+
+// categoryForExample returns the category name for the given example (without
+// .ump extension), or empty string if uncategorized.
+func categoryForExample(name string) string {
+	for cat, members := range categoryMembers {
+		if slices.Contains(members, name) {
+			return cat
+		}
+	}
+	return ""
 }
 
 func (h *ExampleHandler) Get(w http.ResponseWriter, r *http.Request) {
@@ -159,9 +278,14 @@ func (h *ExampleHandler) Get(w http.ResponseWriter, r *http.Request) {
 	raw := string(data)
 	userCode, _, hasDelimiter := splitModelSections(raw)
 
+	baseName := strings.TrimSuffix(name, ".ump")
 	resp := map[string]string{
-		"name": strings.TrimSuffix(name, ".ump"),
+		"name": baseName,
 		"code": userCode,
+	}
+
+	if cat := categoryForExample(baseName); cat != "" {
+		resp["category"] = cat
 	}
 
 	// If the example has a layout section, pre-create a model on disk with the

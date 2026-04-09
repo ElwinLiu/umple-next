@@ -67,7 +67,7 @@ export function InputBar({
   return (
     <div
       className={cn(
-        'flex items-center gap-2 rounded-[2rem] border border-border bg-surface-0 py-1.5 pl-4 pr-1.5',
+        'flex items-center gap-2 rounded-[2rem] border border-border bg-surface-0 py-1.5 pl-4 pr-1.5 focus-within:border-brand focus-within:ring-1 focus-within:ring-brand',
         className,
       )}
     >
@@ -95,7 +95,7 @@ export function InputBar({
         placeholder="Ask anything..."
         rows={1}
         style={{ maxHeight: textareaMaxHeight }}
-        className="min-h-[36px] flex-1 resize-none bg-transparent py-2 text-sm text-ink outline-none placeholder:text-ink-faint"
+        className="min-h-[36px] flex-1 resize-none bg-transparent py-2 text-sm text-ink outline-none focus-visible:ring-0 placeholder:text-ink-faint"
       />
       <div className="flex shrink-0 items-center gap-1">
         {children}

@@ -1,6 +1,13 @@
 import { useState, useRef, useEffect, useCallback, useLayoutEffect } from 'react'
 import { useSessionStore, type Tab } from '../../stores/sessionStore'
 import { usePreferencesStore } from '../../stores/preferencesStore'
+import { useCollabStore } from '../../stores/collabStore'
+import {
+  collabAddNewTab,
+  collabRemoveTab,
+  collabRenameTab,
+  collabCloseOtherTabs,
+} from '../../hooks/useCollabTabs'
 import { Plus, X, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 import { OutputBadges } from './ExecutionPanel'
@@ -13,6 +20,7 @@ import {
   ContextMenuItem,
 } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
+import { stripUmpExt } from '@/lib/umpFile'
 
 // ── TabBar ────────────────────────────────────────────────────────────
 
@@ -20,10 +28,24 @@ export function TabBar() {
   const tabs = useSessionStore((s) => s.tabs)
   const activeTabId = useSessionStore((s) => s.activeTabId)
   const setActiveTab = useSessionStore((s) => s.setActiveTab)
-  const removeTab = useSessionStore((s) => s.removeTab)
-  const addNewTab = useSessionStore((s) => s.addNewTab)
-  const renameTab = useSessionStore((s) => s.renameTab)
-  const closeOtherTabs = useSessionStore((s) => s.closeOtherTabs)
+  const isCollaborating = useCollabStore((s) => s.isCollaborating)
+
+  const removeTab = useCallback(
+    (id: string) => isCollaborating ? collabRemoveTab(id) : useSessionStore.getState().removeTab(id),
+    [isCollaborating],
+  )
+  const addNewTab = useCallback(
+    () => isCollaborating ? collabAddNewTab() : useSessionStore.getState().addNewTab(),
+    [isCollaborating],
+  )
+  const renameTab = useCallback(
+    (id: string, name: string) => isCollaborating ? collabRenameTab(id, name) : useSessionStore.getState().renameTab(id, name),
+    [isCollaborating],
+  )
+  const closeOtherTabs = useCallback(
+    (id: string) => isCollaborating ? collabCloseOtherTabs(id) : useSessionStore.getState().closeOtherTabs(id),
+    [isCollaborating],
+  )
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const [canScrollLeft, setCanScrollLeft] = useState(false)
@@ -84,7 +106,7 @@ export function TabBar() {
 
   return (
     <Tabs value={activeTabId} onValueChange={setActiveTab} className="shrink-0">
-      <div className="flex items-center h-[38px] shrink-0 border-b border-border">
+      <div className="flex items-center h-[var(--toolbar-h)] shrink-0 border-b border-border">
         {/* Sidebar toggle (visible when sidebar is closed) */}
         {!showSidebar && (
           <Tip content="Show sidebar" side="bottom">
@@ -237,10 +259,12 @@ function EditorTab({
     setEditing(false)
   }
 
+  const displayName = stripUmpExt(tab.name)
+
   const beginRename = () => {
     const width = tabShellRef.current?.getBoundingClientRect().width ?? 0
     editingWidthRef.current = width > 0 ? Math.ceil(width) : null
-    setEditValue(tab.name)
+    setEditValue(displayName)
     setEditing(true)
   }
 
@@ -309,16 +333,17 @@ function EditorTab({
                 <span className="absolute right-0 top-[22%] bottom-[22%] w-px bg-border" />
               )}
 
-              <span className="truncate max-w-[120px]">{tab.name}</span>
+              <span className="truncate max-w-[120px]">{displayName}</span>
 
               {/* Close / dirty indicator — fixed-width to prevent layout shift */}
               <div className="w-5 h-5 shrink-0 flex items-center justify-center">
                 {showDirtyDot ? (
-                  <span className="w-1.5 h-1.5 rounded-full bg-brand opacity-70" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-brand opacity-70" role="status" aria-label="Unsaved changes" title="Unsaved changes" />
                 ) : showClose ? (
                   <button
                     tabIndex={-1}
                     onClick={(e) => { e.stopPropagation(); onClose() }}
+                    onPointerDown={(e) => e.stopPropagation()}
                     className={cn(
                       'flex items-center justify-center w-5 h-5 rounded transition-colors cursor-pointer',
                       isActive

@@ -1,11 +1,11 @@
 import type {
   CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse,
-  DiagramResponse, GetModelResponse,
+  DiagramResponse, GetModelResponse, CrudSchemaResponse, PromoteResponse,
 } from './types'
 
 const API_BASE = '/api'
 
-async function request<T>(path: string, options?: RequestInit): Promise<T> {
+export async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json' },
     ...options,
@@ -46,7 +46,7 @@ export const api = {
     return request(`/models/${encodeURIComponent(id)}`, { signal })
   },
 
-  getExample(name: string): Promise<{ name: string; code: string; modelId?: string }> {
+  getExample(name: string): Promise<{ name: string; code: string; modelId?: string; category?: string }> {
     return request(`/examples/${encodeURIComponent(name)}`)
   },
 
@@ -71,24 +71,43 @@ export const api = {
     return res.json()
   },
 
-  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[]; needsLayout?: boolean }): Promise<DiagramResponse> {
+  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[]; needsLayout?: boolean; activeTabId?: string }): Promise<DiagramResponse> {
     return request('/diagram', {
       method: 'POST',
       body: JSON.stringify(req),
     })
   },
 
-  export(req: { code: string; format: string; modelId?: string }): Promise<Blob> {
+  export(req: { code: string; format: string; modelId?: string; activeTabId?: string }): Promise<Blob> {
     return requestBlob('/export', {
       method: 'POST',
       body: JSON.stringify(req),
     })
   },
 
-  execute(req: { code: string; language: string; modelId?: string }): Promise<{ output: string; errors?: string }> {
+
+  execute(req: { code: string; language: string; modelId?: string; activeTabId?: string }): Promise<{ output: string; errors?: string }> {
     return request('/execute', {
       method: 'POST',
       body: JSON.stringify(req),
     })
+  },
+
+  crudSchema(req: { code: string; modelId?: string; activeTabId?: string }): Promise<CrudSchemaResponse> {
+    return request('/crud/schema', {
+      method: 'POST',
+      body: JSON.stringify(req),
+    })
+  },
+
+  crudDiagram(dot: string): Promise<{ svg: string; error?: string }> {
+    return request('/crud/diagram', {
+      method: 'POST',
+      body: JSON.stringify({ dot }),
+    })
+  },
+
+  promoteModel(id: string): Promise<PromoteResponse> {
+    return request(`/models/${encodeURIComponent(id)}/promote`, { method: 'POST' })
   },
 }

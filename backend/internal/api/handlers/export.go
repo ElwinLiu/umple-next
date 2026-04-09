@@ -24,9 +24,10 @@ func NewExportHandler(pool *compiler.Pool, store *model.Store) *ExportHandler {
 }
 
 type ExportRequest struct {
-	Code    string `json:"code"`
-	Format  string `json:"format"`
-	ModelID string `json:"modelId,omitempty"`
+	Code      string `json:"code"`
+	Format    string `json:"format"`
+	ModelID   string `json:"modelId,omitempty"`
+	ActiveTabID string `json:"activeTabId,omitempty"`
 }
 
 // validExportFormats lists the supported export formats.
@@ -58,7 +59,8 @@ func (h *ExportHandler) Export(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Ensure model directory exists
-	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code)
+	entryFile := resolveEntryFile(h.store, req.ModelID, req.ActiveTabID)
+	modelID, dir, err := resolveModel(h.store, req.ModelID, req.Code, entryFile)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to resolve model: %v", err))
 		return
@@ -66,20 +68,20 @@ func (h *ExportHandler) Export(w http.ResponseWriter, r *http.Request) {
 
 	switch req.Format {
 	case "svg":
-		h.exportGraphviz(w, dir, modelID, "svg")
+		h.exportGraphviz(w, dir, modelID, "svg", entryFile)
 	case "png":
-		h.exportGraphviz(w, dir, modelID, "png")
+		h.exportGraphviz(w, dir, modelID, "png", entryFile)
 	case "yuml":
-		h.exportUmple(w, dir, modelID, "Yuml")
+		h.exportUmple(w, dir, modelID, "Yuml", entryFile)
 	case "mermaid":
-		h.exportUmple(w, dir, modelID, "Mermaid")
+		h.exportUmple(w, dir, modelID, "Mermaid", entryFile)
 	}
 }
 
 // exportGraphviz generates a GvClassDiagram .gv file, then converts via dot.
-func (h *ExportHandler) exportGraphviz(w http.ResponseWriter, dir, modelID, format string) {
+func (h *ExportHandler) exportGraphviz(w http.ResponseWriter, dir, modelID, format, entryFile string) {
 	// Generate .gv via umple
-	command := fmt.Sprintf("-generate GvClassDiagram %s/model.ump", dir)
+	command := fmt.Sprintf("-generate GvClassDiagram %s/%s", dir, entryFile)
 	result, err := h.pool.Execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: dir,
@@ -135,8 +137,8 @@ func (h *ExportHandler) exportGraphviz(w http.ResponseWriter, dir, modelID, form
 }
 
 // exportUmple generates output via umplesync.jar (Yuml, Mermaid, etc.).
-func (h *ExportHandler) exportUmple(w http.ResponseWriter, dir, modelID, generator string) {
-	command := fmt.Sprintf("-generate %s %s/model.ump", generator, dir)
+func (h *ExportHandler) exportUmple(w http.ResponseWriter, dir, modelID, generator, entryFile string) {
+	command := fmt.Sprintf("-generate %s %s/%s", generator, dir, entryFile)
 	result, err := h.pool.Execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: dir,
