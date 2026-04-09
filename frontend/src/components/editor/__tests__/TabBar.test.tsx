@@ -34,7 +34,7 @@ describe('TabBar', () => {
     useSessionStore.setState({
       code: '',
       activeTabId: 'main',
-      tabs: [{ id: 'main', name: 'model.ump', code: '', dirty: false, savedCode: '' }],
+      tabs: [{ id: 'main', name: 'model.ump', code: '', dirty: false, savedCode: '', undoStack: [], redoStack: [] }],
       tabsVersion: 0,
     })
   })
@@ -44,7 +44,7 @@ describe('TabBar', () => {
     useSessionStore.setState({
       code: 'class Student {}',
       activeTabId: 'main',
-      tabs: [{ id: 'main', name: 'model.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}' }],
+      tabs: [{ id: 'main', name: 'model.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}', undoStack: [], redoStack: [] }],
       tabsVersion: 0,
     })
 
@@ -69,7 +69,7 @@ describe('TabBar', () => {
     useSessionStore.setState({
       code: 'class Student {}',
       activeTabId: 'main',
-      tabs: [{ id: 'main', name: 'model.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}' }],
+      tabs: [{ id: 'main', name: 'model.ump', code: 'class Student {}', dirty: false, savedCode: 'class Student {}', undoStack: [], redoStack: [] }],
       tabsVersion: 0,
     })
 

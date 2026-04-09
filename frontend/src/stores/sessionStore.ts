@@ -14,6 +14,8 @@ export interface Tab {
   dirty: boolean
   /** Snapshot of code when tab was created or last saved */
   savedCode: string
+  undoStack: string[]
+  redoStack: string[]
 }
 
 // ── Diagram types ──
@@ -70,8 +72,6 @@ interface SessionState {
   modelId: string | null
   tabs: Tab[]
   activeTabId: string
-  undoStack: string[]
-  redoStack: string[]
   selectedExample: string | null
   generateTargetId: string
   /** Set by setCodeFromSync so useCompiler can skip the debounce */
@@ -146,10 +146,8 @@ export const useSessionStore = create<SessionState>()(
       // ── Editor state ──
       code: DEFAULT_CODE,
       modelId: null,
-      tabs: [{ id: 'main', name: 'Model.ump', code: DEFAULT_CODE, dirty: false, savedCode: DEFAULT_CODE }],
+      tabs: [{ id: 'main', name: 'Model.ump', code: DEFAULT_CODE, dirty: false, savedCode: DEFAULT_CODE, undoStack: [], redoStack: [] }],
       activeTabId: 'main',
-      undoStack: [],
-      redoStack: [],
       selectedExample: null,
       generateTargetId: 'Java',
       syncPending: false,
@@ -184,11 +182,15 @@ export const useSessionStore = create<SessionState>()(
         return {
           code,
           syncPending: true,
-          undoStack: [...s.undoStack.slice(-(MAX_UNDO - 1)), s.code],
-          redoStack: [],
           tabs: s.tabs.map((t) =>
             t.id === s.activeTabId
-              ? { ...t, code, dirty: code !== t.savedCode }
+              ? {
+                  ...t,
+                  code,
+                  dirty: code !== t.savedCode,
+                  undoStack: [...t.undoStack.slice(-(MAX_UNDO - 1)), s.code],
+                  redoStack: [],
+                }
               : t
           ),
         }
@@ -197,30 +199,40 @@ export const useSessionStore = create<SessionState>()(
       clearSyncPending: () => set({ syncPending: false }),
 
       undo: () => set((s) => {
-        if (s.undoStack.length === 0) return s
-        const prev = s.undoStack[s.undoStack.length - 1]
+        const activeTab = s.tabs.find((t) => t.id === s.activeTabId)
+        if (!activeTab || activeTab.undoStack.length === 0) return s
+        const prev = activeTab.undoStack[activeTab.undoStack.length - 1]
         return {
           code: prev,
-          undoStack: s.undoStack.slice(0, -1),
-          redoStack: [...s.redoStack, s.code],
           tabs: s.tabs.map((t) =>
             t.id === s.activeTabId
-              ? { ...t, code: prev, dirty: prev !== t.savedCode }
+              ? {
+                  ...t,
+                  code: prev,
+                  dirty: prev !== t.savedCode,
+                  undoStack: t.undoStack.slice(0, -1),
+                  redoStack: [...t.redoStack, s.code],
+                }
               : t
           ),
         }
       }),
 
       redo: () => set((s) => {
-        if (s.redoStack.length === 0) return s
-        const next = s.redoStack[s.redoStack.length - 1]
+        const activeTab = s.tabs.find((t) => t.id === s.activeTabId)
+        if (!activeTab || activeTab.redoStack.length === 0) return s
+        const next = activeTab.redoStack[activeTab.redoStack.length - 1]
         return {
           code: next,
-          undoStack: [...s.undoStack, s.code],
-          redoStack: s.redoStack.slice(0, -1),
           tabs: s.tabs.map((t) =>
             t.id === s.activeTabId
-              ? { ...t, code: next, dirty: next !== t.savedCode }
+              ? {
+                  ...t,
+                  code: next,
+                  dirty: next !== t.savedCode,
+                  undoStack: [...t.undoStack, s.code],
+                  redoStack: t.redoStack.slice(0, -1),
+                }
               : t
           ),
         }
@@ -238,7 +250,7 @@ export const useSessionStore = create<SessionState>()(
       }),
 
       addTab: (tab) => set((s) => ({
-        tabs: [...s.tabs, { ...tab, dirty: false, savedCode: tab.code }],
+        tabs: [...s.tabs, { ...tab, dirty: false, savedCode: tab.code, undoStack: [], redoStack: [] }],
         activeTabId: tab.id,
         code: tab.code,
       })),
@@ -247,7 +259,7 @@ export const useSessionStore = create<SessionState>()(
         const id = `tab-${Date.now()}`
         const name = `untitled-${nextTabNumber(s.tabs)}.ump`
         return {
-          tabs: [...s.tabs, { id, name, code: '', dirty: false, savedCode: '' }],
+          tabs: [...s.tabs, { id, name, code: '', dirty: false, savedCode: '', undoStack: [], redoStack: [] }],
           activeTabId: id,
           code: '',
         }
@@ -312,7 +324,7 @@ export const useSessionStore = create<SessionState>()(
         ...(modelId ? { modelId } : {}),
         tabs: s.tabs.map((t) =>
           t.id === s.activeTabId
-            ? { ...t, name: ensureUmpExt(name), code, dirty: false, savedCode: code }
+            ? { ...t, name: ensureUmpExt(name), code, dirty: false, savedCode: code, undoStack: [], redoStack: [] }
             : t
         ),
       })),
@@ -333,14 +345,14 @@ export const useSessionStore = create<SessionState>()(
           ...t,
           dirty: false,
           savedCode: t.code,
+          undoStack: [] as string[],
+          redoStack: [] as string[],
         }))
         const active = restored.find((t) => t.id === activeTabId) ?? restored[0]
         return {
           tabs: restored,
           activeTabId: active.id,
           code: active.code,
-          undoStack: [],
-          redoStack: [],
           selectedExample: null,
         }
       }),

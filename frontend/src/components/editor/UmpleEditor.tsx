@@ -8,6 +8,7 @@ import { umple } from '../../codemirror/lang-umple'
 import { getEditorTheme } from '../../codemirror/theme'
 import { useIsDark } from '../../hooks/useIsDark'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { useSessionStore } from '../../stores/sessionStore'
 import { yCollab } from 'y-codemirror.next'
 import * as Y from 'yjs'
 import type { CollabConfig } from '../../hooks/useCollabEditor'
@@ -18,13 +19,22 @@ export interface UmpleEditorHandle {
 
 interface UmpleEditorProps {
   code: string
+  activeTabId: string
   onChange: (code: string) => void
   readOnly?: boolean
   collabConfig?: CollabConfig | null
   onViewReady?: (view: EditorView) => void
 }
 
-export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(function UmpleEditor({ code, onChange, readOnly = false, collabConfig, onViewReady }, ref) {
+/** Per-tab cached editor state with its compartment instances */
+interface TabStateCache {
+  state: EditorState
+  theme: Compartment
+  readOnly: Compartment
+  collab: Compartment
+}
+
+export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(function UmpleEditor({ code, activeTabId, onChange, readOnly = false, collabConfig, onViewReady }, ref) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
   const onChangeRef = useRef(onChange)
@@ -36,6 +46,16 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
   const collabCompartment = useRef(new Compartment())
   const isDark = useIsDark()
 
+  // Per-tab EditorState cache (preserves undo history across tab switches)
+  const stateCacheRef = useRef(new Map<string, TabStateCache>())
+  const prevTabIdRef = useRef(activeTabId)
+  const isTabSwitchRef = useRef(false)
+  // Keep current values accessible to stable callbacks via refs
+  const isDarkRef = useRef(isDark)
+  isDarkRef.current = isDark
+  const readOnlyRef = useRef(readOnly)
+  readOnlyRef.current = readOnly
+
   useImperativeHandle(ref, () => ({
     get view() { return viewRef.current },
   }), [])
@@ -43,10 +63,9 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
   // Track whether the last change was external (from props) to avoid echo
   const isExternalUpdate = useRef(false)
 
-  useEffect(() => {
-    if (!containerRef.current) return
-
-    const updateListener = EditorView.updateListener.of((update: ViewUpdate) => {
+  // Stable update listener — uses refs so it can be shared across EditorState instances
+  const updateListenerRef = useRef(
+    EditorView.updateListener.of((update: ViewUpdate) => {
       if (update.docChanged && !isExternalUpdate.current) {
         onChangeRef.current(update.state.doc.toString())
       }
@@ -69,27 +88,44 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
         }
       }
     })
+  )
 
+  /** Create a fresh EditorState with current settings (for new tabs) */
+  const createEditorState = useRef((doc: string): TabStateCache => {
+    const theme = new Compartment()
+    const ro = new Compartment()
+    const col = new Compartment()
     const state = EditorState.create({
-      doc: code,
+      doc,
       extensions: [
         basicSetup,
         keymap.of([indentWithTab]),
-        themeCompartment.current.of(getEditorTheme(isDark)),
-        collabCompartment.current.of([]),
+        theme.of(getEditorTheme(isDarkRef.current)),
+        col.of([]),
         umple(),
-        updateListener,
+        updateListenerRef.current,
         EditorView.theme({
           '&': { height: '100%' },
           '.cm-scroller': { overflow: 'auto' },
         }),
         scrollPastEnd(),
-        readOnlyCompartment.current.of(EditorState.readOnly.of(readOnly)),
+        ro.of(EditorState.readOnly.of(readOnlyRef.current)),
       ],
     })
+    return { state, theme, readOnly: ro, collab: col }
+  })
+
+  useEffect(() => {
+    if (!containerRef.current) return
+
+    const cached = createEditorState.current(code)
+    themeCompartment.current = cached.theme
+    readOnlyCompartment.current = cached.readOnly
+    collabCompartment.current = cached.collab
+    stateCacheRef.current.set(activeTabId, cached)
 
     const view = new EditorView({
-      state,
+      state: cached.state,
       parent: containerRef.current,
     })
 
@@ -97,12 +133,81 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
     onViewReadyRef.current?.(view)
 
     return () => {
+      // Save final state before unmount
+      if (viewRef.current) {
+        stateCacheRef.current.set(prevTabIdRef.current, {
+          state: viewRef.current.state,
+          theme: themeCompartment.current,
+          readOnly: readOnlyCompartment.current,
+          collab: collabCompartment.current,
+        })
+      }
       view.destroy()
       viewRef.current = null
     }
     // Only run on mount
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Handle tab switches — save/restore EditorState to preserve undo history
+  useEffect(() => {
+    const view = viewRef.current
+    if (!view || prevTabIdRef.current === activeTabId) return
+
+    // Save current state for the outgoing tab
+    stateCacheRef.current.set(prevTabIdRef.current, {
+      state: view.state,
+      theme: themeCompartment.current,
+      readOnly: readOnlyCompartment.current,
+      collab: collabCompartment.current,
+    })
+
+    prevTabIdRef.current = activeTabId
+    // Flag consumed by the code-sync effect (declared later in this file)
+    // to skip redundant content replacement. Relies on React firing effects
+    // in declaration order within the same render cycle.
+    isTabSwitchRef.current = true
+
+    // Restore cached state or create fresh for the incoming tab
+    const cached = stateCacheRef.current.get(activeTabId)
+    if (cached) {
+      themeCompartment.current = cached.theme
+      readOnlyCompartment.current = cached.readOnly
+      collabCompartment.current = cached.collab
+      view.setState(cached.state)
+      // Sync theme/readOnly in case they changed while on another tab
+      view.dispatch({
+        effects: [
+          themeCompartment.current.reconfigure(getEditorTheme(isDark)),
+          readOnlyCompartment.current.reconfigure(EditorState.readOnly.of(readOnly)),
+        ],
+      })
+    } else {
+      const fresh = createEditorState.current(code)
+      themeCompartment.current = fresh.theme
+      readOnlyCompartment.current = fresh.readOnly
+      collabCompartment.current = fresh.collab
+      view.setState(fresh.state)
+      stateCacheRef.current.set(activeTabId, { ...fresh, state: view.state })
+    }
+
+    // If the cached doc drifted from the store (e.g. external sync while away), patch it
+    const restoredDoc = view.state.doc.toString()
+    if (restoredDoc !== code) {
+      isExternalUpdate.current = true
+      view.dispatch({
+        changes: { from: 0, to: restoredDoc.length, insert: code },
+        annotations: [Transaction.addToHistory.of(false)],
+      })
+    }
+
+    // Prune cache entries for deleted tabs to prevent memory leaks
+    const liveIds = new Set(useSessionStore.getState().tabs.map((t) => t.id))
+    for (const key of stateCacheRef.current.keys()) {
+      if (!liveIds.has(key)) stateCacheRef.current.delete(key)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTabId])
 
   // Reconfigure theme when dark mode changes
   useEffect(() => {
@@ -177,6 +282,12 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
   // yCollab propagates them to the editor. So this effect is a no-op.
   useEffect(() => {
     if (collabConfig) return
+
+    // Skip if the tab switch effect already handled the content swap
+    if (isTabSwitchRef.current) {
+      isTabSwitchRef.current = false
+      return
+    }
 
     const view = viewRef.current
     if (!view) return
