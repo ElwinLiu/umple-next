@@ -4,8 +4,7 @@ import { fetchModels, type ModelInfo } from '@/ai/models'
 import { Input } from '@/components/ui/input'
 import { Combobox, type ComboboxGroup } from '@/components/ui/combobox'
 import { Tip } from '@/components/ui/tooltip'
-import { Eye, EyeOff, Info, Loader2, RefreshCw, Sparkles } from 'lucide-react'
-import { SidebarSection } from '@/components/sidebar/SidebarSection'
+import { Eye, EyeOff, Info, Loader2, RefreshCw } from 'lucide-react'
 
 const PROVIDER_GROUPS: ComboboxGroup[] = [
   {
@@ -191,10 +190,3 @@ export function AiConfigForm() {
   )
 }
 
-export function AiConfigSection() {
-  return (
-    <SidebarSection title="Umple AI" icon={Sparkles} data-tour="ai-config">
-      <AiConfigForm />
-    </SidebarSection>
-  )
-}

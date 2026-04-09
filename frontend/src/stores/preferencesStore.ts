@@ -53,9 +53,7 @@ interface PreferencesState {
 
   // Sidebar
   showSidebar: boolean
-  sidebarWidth: number
   toggleSidebar: () => void
-  setSidebarWidth: (width: number) => void
 
   // Diagram display preferences
   showAttributes: boolean
@@ -92,9 +90,7 @@ export const usePreferencesStore = create<PreferencesState>()(
 
       // Sidebar
       showSidebar: true,
-      sidebarWidth: 300,
       toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
-      setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: Math.min(480, Math.max(200, sidebarWidth)) }),
 
       // Diagram display preferences (match Umple compiler defaults)
       showAttributes: true,
@@ -147,7 +143,6 @@ export const usePreferencesStore = create<PreferencesState>()(
         theme: state.theme,
         hasSeenWelcome: state.hasSeenWelcome,
         showSidebar: state.showSidebar,
-        sidebarWidth: state.sidebarWidth,
         showAttributes: state.showAttributes,
         showMethods: state.showMethods,
         showTraits: state.showTraits,

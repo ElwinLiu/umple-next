@@ -63,6 +63,10 @@
   /* Layout */
   --toolbar-h: 38px;
 
+  /* Collapsible section animations */
+  --animate-collapsible-down: collapsible-down 200ms ease-out;
+  --animate-collapsible-up: collapsible-up 200ms ease-out forwards;
+
   /* Typography */
   --font-sans: 'DM Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
@@ -76,7 +80,7 @@
    * Z-index scale:
    *   canvas (5-10): controls, toolbars within diagram
    *   panel  (20):   overlays within panels (generated output, agent)
-   *   sidebar(40):   floating sidebar peek
+   *   sidebar(10):   sidebar rail and container (shadcn)
    *   tour   (45):   onboarding spotlight overlay & ring
    *   tour-card(46): onboarding card (above spotlight)
    *   popover(50):   context menus, tooltips, dialogs, sheets
@@ -512,6 +516,18 @@ body {
 
 .animate-success-glow {
   animation: success-glow 800ms ease-out;
+}
+
+/* ── Collapsible (Radix) ── */
+
+@keyframes collapsible-down {
+  from { height: 0; }
+  to { height: var(--radix-collapsible-content-height); }
+}
+
+@keyframes collapsible-up {
+  from { height: var(--radix-collapsible-content-height); }
+  to { height: 0; }
 }
 
 /* ── Reduced Motion ── */
