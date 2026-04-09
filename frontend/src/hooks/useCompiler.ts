@@ -62,8 +62,6 @@ export async function compileAndRefresh(
 
   setCompiling(true)
   setExecutionOutput('')
-  clearSvgCache()
-  clearHtmlCache()
 
   let success = false
   let model: UmpleModel | null = null
@@ -88,6 +86,18 @@ export async function compileAndRefresh(
       tabs: compileTabs,
       activeTabId,
     }, signal)
+
+    // If the user switched tabs while the request was in flight, discard the
+    // results — they belong to the old tab, not the current one.
+    if (useSessionStore.getState().activeTabId !== activeTabId) {
+      return { success: false, model: null }
+    }
+
+    // Clear old caches only after the response arrives (not eagerly at the
+    // start) so that if the user switches tabs mid-compile, setActiveTab
+    // snapshots the previous diagram — not empty caches.
+    clearSvgCache()
+    clearHtmlCache()
 
     // Read current modelId from the store (not the stale closure value) to
     // avoid overwriting a modelId that was set by useModelFromURL while the

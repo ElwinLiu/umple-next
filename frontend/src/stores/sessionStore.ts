@@ -5,19 +5,6 @@ import type { UmpleModel, GvLayout, StoredLayoutMetadata, ApiTab } from '../api/
 import { useEphemeralStore } from './ephemeralStore'
 import { ensureUmpExt } from '../lib/umpFile'
 
-// ── Editor types ──
-
-export interface Tab {
-  id: string
-  name: string
-  code: string
-  dirty: boolean
-  /** Snapshot of code when tab was created or last saved */
-  savedCode: string
-  undoStack: string[]
-  redoStack: string[]
-}
-
 // ── Diagram types ──
 
 export type DiagramView = 'class' | 'state' | 'feature' | 'structure' | 'erd' | 'instance' | 'eventSequence' | 'stateTables' | 'crud'
@@ -36,6 +23,26 @@ interface DiagramElements {
 }
 
 const EMPTY_DIAGRAM_ELEMENTS: DiagramElements = { nodes: [], edges: [] }
+
+// ── Editor types ──
+
+export interface Tab {
+  id: string
+  name: string
+  code: string
+  dirty: boolean
+  /** Snapshot of code when tab was created or last saved */
+  savedCode: string
+  undoStack: string[]
+  redoStack: string[]
+  /** Per-tab diagram caches (saved/restored on tab switch) */
+  svgCache?: Partial<Record<DiagramView, string>>
+  htmlCache?: Partial<Record<DiagramView, string>>
+  diagramData?: Partial<Record<DiagramView, DiagramElements>>
+  umpleModel?: UmpleModel | null
+  classLayout?: GvLayout | null
+  storedLayout?: StoredLayoutMetadata | null
+}
 
 // ── Chat types ──
 
@@ -249,51 +256,114 @@ export const useSessionStore = create<SessionState>()(
         }
       }),
 
-      addTab: (tab) => set((s) => ({
-        tabs: [...s.tabs, { ...tab, dirty: false, savedCode: tab.code, undoStack: [], redoStack: [] }],
-        activeTabId: tab.id,
-        code: tab.code,
-      })),
+      addTab: (tab) => {
+        set((s) => ({
+          // Save outgoing tab's diagram caches and model before switching
+          tabs: [
+            ...s.tabs.map((t) =>
+              t.id === s.activeTabId
+                ? { ...t, svgCache: s.svgCache, htmlCache: s.htmlCache, diagramData: s.diagramData, umpleModel: s.umpleModel, classLayout: s.classLayout, storedLayout: s.storedLayout }
+                : t
+            ),
+            { ...tab, dirty: false, savedCode: tab.code, undoStack: [], redoStack: [] },
+          ],
+          activeTabId: tab.id,
+          code: tab.code,
+          // New tab starts with empty state
+          svgCache: {},
+          htmlCache: {},
+          diagramData: {},
+          umpleModel: null,
+          classLayout: null,
+          storedLayout: null,
+        }))
+        useEphemeralStore.setState({ selectedNodeId: null, selectedEdgeId: null, editingNodeId: null, editingField: null, renderMode: 'graphviz' as const })
+      },
 
-      addNewTab: () => set((s) => {
-        const id = `tab-${Date.now()}`
-        const name = `untitled-${nextTabNumber(s.tabs)}.ump`
-        return {
-          tabs: [...s.tabs, { id, name, code: '', dirty: false, savedCode: '', undoStack: [], redoStack: [] }],
-          activeTabId: id,
-          code: '',
-        }
-      }),
-
-      removeTab: (id) => set((s) => {
-        const remaining = s.tabs.filter((t) => t.id !== id)
-        if (remaining.length === 0) return s
-
-        if (s.activeTabId === id) {
-          const removedIndex = s.tabs.findIndex((t) => t.id === id)
-          const nextTab = remaining[Math.min(removedIndex, remaining.length - 1)]
+      addNewTab: () => {
+        set((s) => {
+          const id = `tab-${Date.now()}`
+          const name = `untitled-${nextTabNumber(s.tabs)}.ump`
           return {
-            tabs: remaining,
-            activeTabId: nextTab.id,
-            code: nextTab.code,
-            tabsVersion: s.tabsVersion + 1,
+            // Save outgoing tab's diagram caches and model before switching
+            tabs: [
+              ...s.tabs.map((t) =>
+                t.id === s.activeTabId
+                  ? { ...t, svgCache: s.svgCache, htmlCache: s.htmlCache, diagramData: s.diagramData, umpleModel: s.umpleModel, classLayout: s.classLayout, storedLayout: s.storedLayout }
+                  : t
+              ),
+              { id, name, code: '', dirty: false, savedCode: '', undoStack: [], redoStack: [] },
+            ],
+            activeTabId: id,
+            code: '',
+            // New tab starts with empty state
+            svgCache: {},
+            htmlCache: {},
+            diagramData: {},
+            umpleModel: null,
+            classLayout: null,
+            storedLayout: null,
           }
-        }
-        return { tabs: remaining, tabsVersion: s.tabsVersion + 1 }
-      }),
+        })
+        useEphemeralStore.setState({ selectedNodeId: null, selectedEdgeId: null, editingNodeId: null, editingField: null, renderMode: 'graphviz' as const })
+      },
 
-      setActiveTab: (activeTabId) => set((s) => {
-        const updatedTabs = s.tabs.map((t) =>
-          t.id === s.activeTabId ? { ...t, code: s.code } : t
-        )
-        const nextTab = updatedTabs.find((t) => t.id === activeTabId)
-        if (!nextTab) return s
-        return {
-          tabs: updatedTabs,
-          activeTabId,
-          code: nextTab.code,
+      removeTab: (id) => {
+        const wasActive = get().activeTabId === id
+        set((s) => {
+          const remaining = s.tabs.filter((t) => t.id !== id)
+          if (remaining.length === 0) return s
+
+          if (s.activeTabId === id) {
+            const removedIndex = s.tabs.findIndex((t) => t.id === id)
+            const nextTab = remaining[Math.min(removedIndex, remaining.length - 1)]
+            return {
+              tabs: remaining,
+              activeTabId: nextTab.id,
+              code: nextTab.code,
+              // Restore the next tab's diagram state
+              svgCache: nextTab.svgCache ?? {},
+              htmlCache: nextTab.htmlCache ?? {},
+              diagramData: nextTab.diagramData ?? {},
+              umpleModel: nextTab.umpleModel ?? null,
+              classLayout: nextTab.classLayout ?? null,
+              storedLayout: nextTab.storedLayout ?? null,
+              tabsVersion: s.tabsVersion + 1,
+            }
+          }
+          return { tabs: remaining, tabsVersion: s.tabsVersion + 1 }
+        })
+        if (wasActive) {
+          useEphemeralStore.setState({ selectedNodeId: null, selectedEdgeId: null, editingNodeId: null, editingField: null, renderMode: 'graphviz' as const })
         }
-      }),
+      },
+
+      setActiveTab: (activeTabId) => {
+        if (activeTabId === get().activeTabId) return
+        set((s) => {
+          // Save outgoing tab's code, diagram caches, and model
+          const updatedTabs = s.tabs.map((t) =>
+            t.id === s.activeTabId
+              ? { ...t, code: s.code, svgCache: s.svgCache, htmlCache: s.htmlCache, diagramData: s.diagramData, umpleModel: s.umpleModel, classLayout: s.classLayout, storedLayout: s.storedLayout }
+              : t
+          )
+          const nextTab = updatedTabs.find((t) => t.id === activeTabId)
+          if (!nextTab) return s
+          return {
+            tabs: updatedTabs,
+            activeTabId,
+            code: nextTab.code,
+            // Restore incoming tab's diagram state (empty/null for new tabs)
+            svgCache: nextTab.svgCache ?? {},
+            htmlCache: nextTab.htmlCache ?? {},
+            diagramData: nextTab.diagramData ?? {},
+            umpleModel: nextTab.umpleModel ?? null,
+            classLayout: nextTab.classLayout ?? null,
+            storedLayout: nextTab.storedLayout ?? null,
+          }
+        })
+        useEphemeralStore.setState({ selectedNodeId: null, selectedEdgeId: null, editingNodeId: null, editingField: null, renderMode: 'graphviz' as const })
+      },
 
       renameTab: (id, rawName) => set((s) => {
         const name = ensureUmpExt(rawName)
@@ -318,44 +388,81 @@ export const useSessionStore = create<SessionState>()(
       setSelectedExample: (selectedExample) => set({ selectedExample }),
       setGenerateTargetId: (generateTargetId) => set({ generateTargetId }),
 
-      loadExample: (name, code, modelId) => set((s) => ({
-        code,
-        selectedExample: name,
-        ...(modelId ? { modelId } : {}),
-        tabs: s.tabs.map((t) =>
-          t.id === s.activeTabId
-            ? { ...t, name: ensureUmpExt(name), code, dirty: false, savedCode: code, undoStack: [], redoStack: [] }
-            : t
-        ),
-      })),
-
-      closeOtherTabs: (id) => set((s) => {
-        const tab = s.tabs.find((t) => t.id === id)
-        if (!tab) return s
-        return {
-          tabs: [tab],
-          activeTabId: id,
-          code: tab.code,
-          tabsVersion: s.tabsVersion + 1,
-        }
-      }),
-
-      restoreTabs: (tabs, activeTabId) => set(() => {
-        const restored = tabs.map((t) => ({
-          ...t,
-          dirty: false,
-          savedCode: t.code,
-          undoStack: [] as string[],
-          redoStack: [] as string[],
+      loadExample: (name, code, modelId) => {
+        set((s) => ({
+          code,
+          selectedExample: name,
+          ...(modelId ? { modelId } : {}),
+          tabs: s.tabs.map((t) =>
+            t.id === s.activeTabId
+              ? { ...t, name: ensureUmpExt(name), code, dirty: false, savedCode: code, undoStack: [], redoStack: [] }
+              : t
+          ),
+          // New example code — clear stale diagram and model state
+          svgCache: {},
+          htmlCache: {},
+          diagramData: {},
+          umpleModel: null,
+          classLayout: null,
+          storedLayout: null,
         }))
-        const active = restored.find((t) => t.id === activeTabId) ?? restored[0]
-        return {
-          tabs: restored,
-          activeTabId: active.id,
-          code: active.code,
-          selectedExample: null,
+        useEphemeralStore.setState({ selectedNodeId: null, selectedEdgeId: null, editingNodeId: null, editingField: null })
+      },
+
+      closeOtherTabs: (id) => {
+        const switchingTab = get().activeTabId !== id
+        set((s) => {
+          const tab = s.tabs.find((t) => t.id === id)
+          if (!tab) return s
+          // If keeping the active tab, caches are already correct in top-level fields.
+          // If keeping a different tab, restore its cached diagram state.
+          const keepingActive = id === s.activeTabId
+          return {
+            tabs: [keepingActive ? tab : { ...tab, svgCache: s.svgCache, htmlCache: s.htmlCache, diagramData: s.diagramData, umpleModel: s.umpleModel, classLayout: s.classLayout, storedLayout: s.storedLayout }],
+            activeTabId: id,
+            code: tab.code,
+            ...(keepingActive ? {} : {
+              svgCache: tab.svgCache ?? {},
+              htmlCache: tab.htmlCache ?? {},
+              diagramData: tab.diagramData ?? {},
+              umpleModel: tab.umpleModel ?? null,
+              classLayout: tab.classLayout ?? null,
+              storedLayout: tab.storedLayout ?? null,
+            }),
+            tabsVersion: s.tabsVersion + 1,
+          }
+        })
+        if (switchingTab) {
+          useEphemeralStore.setState({ selectedNodeId: null, selectedEdgeId: null, editingNodeId: null, editingField: null, renderMode: 'graphviz' as const })
         }
-      }),
+      },
+
+      restoreTabs: (tabs, activeTabId) => {
+        set(() => {
+          const restored = tabs.map((t) => ({
+            ...t,
+            dirty: false,
+            savedCode: t.code,
+            undoStack: [] as string[],
+            redoStack: [] as string[],
+          }))
+          const active = restored.find((t) => t.id === activeTabId) ?? restored[0]
+          return {
+            tabs: restored,
+            activeTabId: active.id,
+            code: active.code,
+            selectedExample: null,
+            // Fresh restore — no cached diagram or model state
+            svgCache: {},
+            htmlCache: {},
+            diagramData: {},
+            umpleModel: null,
+            classLayout: null,
+            storedLayout: null,
+          }
+        })
+        useEphemeralStore.setState({ selectedNodeId: null, selectedEdgeId: null, editingNodeId: null, editingField: null, renderMode: 'graphviz' as const })
+      },
 
       // ── Diagram actions ──
 
