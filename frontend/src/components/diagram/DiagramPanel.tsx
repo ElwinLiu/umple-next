@@ -1,5 +1,6 @@
 import { type ReactNode, useCallback, useEffect } from 'react'
 import { toSvg, toPng } from 'html-to-image'
+import JSZip from 'jszip'
 import { UmpleDiagram } from './UmpleDiagram'
 import { SmartSvgView } from './SmartSvgView'
 import { HtmlDiagramView } from './HtmlDiagramView'
@@ -63,6 +64,22 @@ export function DiagramPanel() {
   const mountGv = outputKind === 'gv' && !!currentSvg
 
   const handleExport = useCallback(async (format: string) => {
+    // Umple source code — zip all tabs client-side
+    if (format === 'ump') {
+      const { tabs, activeTabId } = useSessionStore.getState()
+      const zip = new JSZip()
+      for (const tab of tabs) {
+        const content = tab.id === activeTabId ? code : tab.code
+        zip.file(tab.name, content)
+      }
+      const blob = await zip.generateAsync({ type: 'blob' })
+      const url = URL.createObjectURL(blob)
+      triggerDownload(url, 'umple-model.zip')
+      URL.revokeObjectURL(url)
+      return
+    }
+
+    // Diagram image exports (SVG, PNG)
     const filename = `umple-${viewMode}-diagram.${format}`
 
     // When showing ReactFlow, capture the canvas client-side
