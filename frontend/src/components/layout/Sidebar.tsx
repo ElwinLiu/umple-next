@@ -68,10 +68,10 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="offcanvas" data-testid="sidebar">
       <SidebarHeader className="flex-row items-center justify-between px-4 pt-4 pb-3 border-b border-border/60">
-        <a href="/" className="flex items-center gap-2.5 no-underline text-ink min-w-0" aria-label="UmpleOnline home">
+        <div className="flex items-center gap-2.5 text-ink min-w-0">
           <img src="/umple-logo.svg" alt="" className="h-6 w-auto shrink-0" />
           <span className="text-lg font-semibold tracking-tight truncate">UmpleOnline</span>
-        </a>
+        </div>
         <HeaderActions />
       </SidebarHeader>
 
