@@ -11,6 +11,7 @@ const btnBase =
   'px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 text-ink-muted hover:text-ink hover:bg-surface-2 flex items-center gap-1'
 
 interface CanvasToolbarProps {
+  hasDiagram: boolean
   onExport: (format: string) => void
   canToggleRenderer: boolean
   renderMode: 'editable' | 'graphviz'
@@ -19,6 +20,7 @@ interface CanvasToolbarProps {
 }
 
 export function CanvasToolbar({
+  hasDiagram,
   onExport,
   canToggleRenderer,
   renderMode,
@@ -28,6 +30,8 @@ export function CanvasToolbar({
   const viewMode = useSessionStore((s) => s.viewMode)
   const toggles = DISPLAY_TOGGLES[viewMode]
   const hasToggles = showDisplayOptions && toggles.length > 0
+
+  if (!hasDiagram) return null
 
   return (
     <div
