@@ -1,4 +1,5 @@
 import { type ReactNode, useCallback, useEffect } from 'react'
+import { BookOpen, Download } from 'lucide-react'
 import { toSvg, toPng } from 'html-to-image'
 import JSZip from 'jszip'
 import { UmpleDiagram } from './UmpleDiagram'
@@ -10,6 +11,7 @@ import { ObjectExplorer } from '../crud/ObjectExplorer'
 import { CanvasBanner } from '../layout/CanvasBanner'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { Button } from '@/components/ui/button'
 import { ErrorBanner } from '@/components/ui/error-banner'
 import { cn } from '@/lib/utils'
 import { api } from '@/api/client'
@@ -43,6 +45,7 @@ export function DiagramPanel() {
   const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const generatedError = useEphemeralStore((s) => s.generatedError)
   const generationRequested = useEphemeralStore((s) => s.generationRequested)
+  const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette)
 
 
   const currentSvg = svgCache[viewMode] ?? ''
@@ -51,7 +54,8 @@ export function DiagramPanel() {
   const hasEditableModel = !!umpleModel?.umpleClasses?.length
   const canToggleRenderer = viewMode === 'class' && hasEditableModel
   const showEditable = canToggleRenderer && renderMode === 'editable'
-  const editableLoading = viewMode === 'class' && renderMode === 'editable' && compiling && !hasEditableModel
+  const editableLoading = viewMode === 'class' && compiling && !hasEditableModel && !currentSvg
+  const showEmptyCanvasState = viewMode === 'class' && !compiling && !hasEditableModel && !currentSvg
 
   // Default: all views start in graphviz mode
   useEffect(() => {
@@ -143,6 +147,21 @@ export function DiagramPanel() {
                 <div className="h-3 rounded animate-shimmer" style={{ width: '55%', animationDelay: '0.45s' }} />
               </div>
               <span>Loading diagram...</span>
+            </div>
+          )}
+          {showEmptyCanvasState && (
+            <div className="absolute inset-0 flex items-center justify-center p-6">
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                onClick={() => openCommandPalette(['examples'])}
+                className="bg-surface-0/88 border-border text-ink shadow-sm backdrop-blur-sm hover:bg-surface-1 hover:border-border-strong"
+                data-testid="empty-canvas-open-examples"
+              >
+                <BookOpen className="size-4" />
+                Open examples
+              </Button>
             </div>
           )}
         </div>
