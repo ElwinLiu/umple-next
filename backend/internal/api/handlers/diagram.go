@@ -411,9 +411,17 @@ func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
 	go func() {
 		defer wg.Done()
 		svgFile := filepath.Join(p.dir, "diagram.svg")
+		// Remove any leftover SVG so a real failure isn't masked by stale output.
+		os.Remove(svgFile)
 		cmd := exec.Command("dot", "-Tsvg", "-o", svgFile, gvFile)
 		cmd.Dir = p.dir
 		if out, err := cmd.CombinedOutput(); err != nil {
+			// Some layout engines (e.g. sfdp on Alpine) exit non-zero with
+			// a warning but still produce valid output via -o.
+			if data, readErr := os.ReadFile(svgFile); readErr == nil && len(data) > 0 {
+				svgData = data
+				return
+			}
 			svgErr = err
 			svgErrMsg = string(out)
 			return
@@ -428,7 +436,15 @@ func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
 			defer wg.Done()
 			cmd := exec.Command("dot", "-Tjson", gvFile)
 			cmd.Dir = p.dir
-			if jsonData, err := cmd.Output(); err == nil {
+			// cmd.Output() populates stdout even on ExitError (e.g. sfdp
+			// overlap warning). Only bail on non-exit failures.
+			jsonData, err := cmd.Output()
+			if err != nil {
+				if _, ok := err.(*exec.ExitError); !ok {
+					return
+				}
+			}
+			if len(jsonData) > 0 {
 				layout = parseGvLayout(jsonData)
 			}
 		}()
