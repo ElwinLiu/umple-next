@@ -26,8 +26,11 @@ export function CanvasToolbar({
   showDisplayOptions = true,
 }: CanvasToolbarProps) {
   const viewMode = useSessionStore((s) => s.viewMode)
+  const nodeCount = useSessionStore((s) => s.diagramData[viewMode]?.nodes.length ?? 0)
   const toggles = DISPLAY_TOGGLES[viewMode]
   const hasToggles = showDisplayOptions && toggles.length > 0
+
+  if (nodeCount === 0) return null
 
   return (
     <div
