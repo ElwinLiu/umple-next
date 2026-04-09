@@ -41,7 +41,7 @@ export function CommandPalette() {
   const {
     commandPaletteOpen, closeCommandPalette,
     setDiagramOnly, diagramOnly, toggleOutputPanel,
-    setRenderMode, renderMode,
+    setRenderMode, renderMode, commandPaletteInitialPage,
   } = useEphemeralStore()
   const { setViewMode } = useSessionStore()
   const loadExample = useSessionStore((s) => s.loadExample)
@@ -65,8 +65,13 @@ export function CommandPalette() {
     if (!commandPaletteOpen) {
       setPages([])
       setSearch('')
+      return
     }
-  }, [commandPaletteOpen])
+    if (commandPaletteInitialPage) {
+      setPages(commandPaletteInitialPage)
+      setSearch('')
+    }
+  }, [commandPaletteOpen, commandPaletteInitialPage])
 
   // Global Ctrl+K shortcut
   useEffect(() => {

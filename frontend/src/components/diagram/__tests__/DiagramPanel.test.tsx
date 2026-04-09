@@ -39,7 +39,7 @@ vi.mock('../../generation/GeneratedOutputView', () => ({
 
 afterEach(() => {
   cleanup()
-  window.localStorage.clear()
+  window.localStorage?.clear?.()
   rendererProps.umpleEditable.length = 0
   useSessionStore.setState({
     code: '',
@@ -125,5 +125,15 @@ describe('DiagramPanel', () => {
     )
 
     expect(screen.getByText('Loading diagram...')).toBeDefined()
+  })
+
+  it('shows an open examples action on an empty canvas', () => {
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.getByTestId('empty-canvas-open-examples')).toBeDefined()
   })
 })

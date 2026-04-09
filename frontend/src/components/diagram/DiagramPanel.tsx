@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect } from 'react'
-import { Download } from 'lucide-react'
+import { BookOpen, Download } from 'lucide-react'
 import { toSvg, toPng } from 'html-to-image'
 import { UmpleDiagram } from './UmpleDiagram'
 import { SmartSvgView } from './SmartSvgView'
@@ -10,6 +10,7 @@ import { CanvasBanner } from '../layout/CanvasBanner'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu'
+import { Button } from '@/components/ui/button'
 import { Tip } from '@/components/ui/tooltip'
 import { ErrorBanner } from '@/components/ui/error-banner'
 import { Switch } from '@/components/ui/switch'
@@ -45,6 +46,7 @@ export function DiagramPanel() {
   const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const generatedError = useEphemeralStore((s) => s.generatedError)
   const generationRequested = useEphemeralStore((s) => s.generationRequested)
+  const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette)
 
 
   const currentSvg = svgCache[viewMode] ?? ''
@@ -53,7 +55,8 @@ export function DiagramPanel() {
   const hasEditableModel = !!umpleModel?.umpleClasses?.length
   const canToggleRenderer = viewMode === 'class' && hasEditableModel
   const showEditable = canToggleRenderer && renderMode === 'editable'
-  const editableLoading = viewMode === 'class' && renderMode === 'editable' && compiling && !hasEditableModel
+  const editableLoading = viewMode === 'class' && compiling && !hasEditableModel && !currentSvg
+  const showEmptyCanvasState = viewMode === 'class' && !compiling && !hasEditableModel && !currentSvg
 
   // Default: all views start in graphviz mode
   useEffect(() => {
@@ -152,6 +155,21 @@ export function DiagramPanel() {
                 <div className="h-3 rounded animate-shimmer" style={{ width: '55%', animationDelay: '0.45s' }} />
               </div>
               <span>Loading diagram...</span>
+            </div>
+          )}
+          {showEmptyCanvasState && (
+            <div className="absolute inset-0 flex items-center justify-center p-6">
+              <Button
+                type="button"
+                size="lg"
+                variant="outline"
+                onClick={() => openCommandPalette(['examples'])}
+                className="bg-surface-0/88 border-border text-ink shadow-sm backdrop-blur-sm hover:bg-surface-1 hover:border-border-strong"
+                data-testid="empty-canvas-open-examples"
+              >
+                <BookOpen className="size-4" />
+                Open examples
+              </Button>
             </div>
           )}
         </div>
