@@ -47,6 +47,7 @@ func (s *Service) generateGeneric(language, dir, modelID, entryFile string, subo
 			return GenerateResponse{}, err
 		}
 	} else {
+		cleanGeneratedFiles(dir, language, entryFile)
 		stdout, stderr, runErr = s.runGenerateCommand(language, filepath.Join(dir, entryFile), dir, suboptions)
 	}
 	output := strings.TrimSpace(stdout)
