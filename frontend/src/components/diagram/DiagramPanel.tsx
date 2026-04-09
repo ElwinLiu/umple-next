@@ -59,6 +59,7 @@ export function DiagramPanel() {
   }, [viewMode, setRenderMode])
   const showHtml = !showEditable && !editableLoading && outputKind === 'html' && !!currentHtml
   const showGv = !showEditable && !editableLoading && !showHtml && !!currentSvg
+  const hasDiagram = showEditable || showHtml || showGv
   const mountEditable = canToggleRenderer
   const mountHtml = outputKind === 'html' && !!currentHtml
   const mountGv = outputKind === 'gv' && !!currentSvg
@@ -110,6 +111,7 @@ export function DiagramPanel() {
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
           <div className="absolute top-2 left-0 right-0 z-10 flex justify-center pointer-events-none">
             <CanvasToolbar
+              hasDiagram={hasDiagram}
               onExport={handleExport}
               canToggleRenderer={canToggleRenderer}
               renderMode={renderMode}
