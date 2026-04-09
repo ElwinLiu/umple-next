@@ -16,3 +16,17 @@ class Person {
  Integer idNumber;
  key{idNumber}
 }
+//$?[End_of_model]$?
+//Positioning
+namespace education;
+class School
+{
+  position 144 243 149 96;
+  position.association Person:student__School 70,0 72,79;
+}
+
+namespace human;
+class Person
+{
+  position 143 66 146 79;
+}

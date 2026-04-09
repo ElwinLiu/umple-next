@@ -82,3 +82,77 @@ class BoxOrPallet{
  * -- * DeliverOrShipmentBom;
  1 -- * Item; 
 }
+//$?[End_of_model]$?
+//Positioning
+class DeliverOrShipmentBom
+{
+  position 279 314 235 79;
+  position.association DeliverOrShipmentBom:delivery__LoadingGate:sentThrough 197,0 90,62;
+  position.association DeliverOrShipmentBom:arrival__LoadingGate:arriveAt 116,0 9,62;
+}
+
+class BoxOrPallet
+{
+  position 13 393 181 145;
+  position.association BoxOrPallet__DeliverOrShipmentBom 182,110 0,36;
+  position.association BoxOrPallet__Item 5,0 5,96;
+}
+
+class Item
+{
+  position 13 21 161 96;
+}
+
+class Truck
+{
+  position 318 453 164 79;
+  position.association DeliverOrShipmentBom__Truck 82,0 121,79;
+}
+
+class Row
+{
+  position 552 30 134 76;
+  position.association Level__Row 70,76 68,0;
+}
+
+class LoadingGate
+{
+  position 386 162 134 58;
+}
+
+class Level
+{
+  position 554 143 134 79;
+  position.association Level__Slot 70,79 71,0;
+}
+
+class Slot
+{
+  position 553 317 134 76;
+}
+
+class Rwbm
+{
+  position 87 297 109 62;
+}
+
+class SlotSet
+{
+  position 255 187 109 45;
+  position.association BoxOrPallet__SlotSet 17,45 163,0;
+  position.association Slot__SlotSet 86,45 57,0;
+}
+
+class MovementLocation
+{
+  position 322 32 135 45;
+}
+
+class RwbmMovement
+{
+  position 65 155 145 75;
+  position.association BoxOrPallet:movedBox__RwbmMovement 8,75 60,0;
+  position.association Rwbm__RwbmMovement 66,75 44,0;
+  position.association MovementLocation:from__RwbmMovement:fromMovement 145,17 60,45;
+  position.association MovementLocation:to__RwbmMovement:toMovement 53,0 30,45;
+}

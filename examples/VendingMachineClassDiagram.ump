@@ -96,4 +96,4 @@ class CoinHolderTransaction
 {
   position 283 501 201 63;
   position.association CoinHolder:sourceOrDestination__CoinHolderTransaction 16,0 223,80;
-}
+}//$?[End_of_model]$?

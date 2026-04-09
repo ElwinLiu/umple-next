@@ -17,3 +17,15 @@ class Clamor {
  String plata;
  key{sequencia}
 }
+//$?[End_of_model]$?
+//Positioning
+class Claim
+{
+  position 95 248 197 110;
+  position.association Claim__Clamor 100,0 79,96;
+}
+
+class Clamor
+{
+  position 116 50 151 96;
+}

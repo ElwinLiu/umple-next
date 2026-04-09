@@ -33,3 +33,34 @@ class Wheel {}
 association {
      0..1 Vehicle v <@>- 4 Wheel w;
 }
+
+
+//$?[End_of_model]$?
+// Positioning
+class Building
+{
+  position 17 323 120 62;
+}
+class Floor
+{
+  position 17 214 109 40;
+}
+class Room
+{
+  position 17 109 168 60;
+  position.association Person:p__Room:r 169,7 0,10;
+}
+class Person
+{
+  position 229 175 109 56;
+  position.association Person:p__Vehicle:v 110,12 0,10;
+}
+class Vehicle
+{
+  position 382 112 109 40;
+}
+class Wheel
+{
+  position 382 207 117 60;
+}
+// @@@skipcppcompile

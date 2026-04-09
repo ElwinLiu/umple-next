@@ -125,3 +125,64 @@ class Route {
    // Time seconds at current flow speeds
    Integer estimatedTime; 
 }
+//$?[End_of_model]$?
+
+class Turn
+{
+  position 89 579 181 77;
+}
+
+class Intersection
+{
+  position.association Intersection__Turn:illegalTurns 50,46 11,0;
+  position.association Intersection__Turn:impossibleTurns 80,46 110,0;
+  position 100 442 109 45;
+}
+
+class Route
+{
+  position 372 593 175 60;
+  position.association RoadSegment__Route 4,0 49,131;
+}
+
+class RoadSegment
+{
+  position 377 265 225 128;
+  position.association RoadSegment__RoadSegment:inverseSegments 23,128 0,124;
+}
+
+class RoadNode
+{
+  position.association RoadNode:start__RoadSegment:outgoingRoads 170,26 0,91;
+  position.association RoadNode:end__RoadSegment:incomingRoads 170,1 0,35;
+    position.association Location:nodeLocation__RoadNode 163,0 118,77;
+position 62 331 170 60;
+}
+
+class NamedRoad
+{
+  position 409 20 126 77;
+  position.association NamedRoad__RoadSegment:segments 30,80 30,0;
+}
+
+class Location
+{
+  position 258 60 121 77;
+}
+
+class Landmark
+{
+  position 111 211 141 60;
+}
+
+class CityMap
+{
+  position.association CityMap__Landmark:fireStations 30,46 30,0;
+  position.association CityMap__Landmark:policeStations 60,46 60,0;
+  position.association CityMap__Landmark:otherLandmarks 60,46 60,0;
+    position.association CityMap__Landmark:fireStn 5,46 0,56;
+  position.association CityMap__Landmark:policeStn 72,46 60,0;
+  position.association CityMap__Landmark:otherLm 25,46 0,0;
+position 17 67 109 45;
+}
+

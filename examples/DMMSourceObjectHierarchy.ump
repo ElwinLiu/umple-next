@@ -89,3 +89,93 @@ class Declaration{
 class Reference{
   isA Resolvable;
 }
+//$?[End_of_model]$?
+//Positioning
+class SourcePart
+{
+  position 93 154 139 110;
+}
+
+class MacroDefinition
+{
+  position 249 442 112 58;
+}
+
+class Resolvable
+{
+  position 483 338 112 58;
+}
+
+class SourceUnit
+{
+  position 456 155 112 58;
+}
+
+class SourceFile
+{
+  position 578 235 109 62;
+}
+
+class Reference
+{
+  position 568 449 109 41;
+}
+
+class Declaration
+{
+  position 399 449 109 41;
+}
+
+class Comment
+{
+  position 367 338 109 41;
+}
+
+class Definition
+{
+  position 250 338 109 41;
+}
+
+class MacroArgument
+{
+  position 132 337 109 41;
+}
+
+class MacroExpansion
+{
+  position 5 337 120 45;
+}
+
+class SourceObject
+{
+  position 292 16 113 45;
+}
+
+class Describes
+{
+  position 304 166 109 45;
+  position.association Describes__SourceObject 80,0 92,45;
+  position.association Comment__Describes 80,41 17,0;
+}
+
+class Contains
+{
+  position 73 17 109 45;
+  position.association Contains__SourcePart 65,45 45,0;
+  position.association Contains__SourceObject 110,9 0,10;
+}
+
+class Includes
+{
+  position 579 39 109 45;
+  position.association Includes:included__SourceFile:includes 21,45 22,0;
+  position.association Includes:includes__SourceFile:included 100,41 100,0;
+}
+
+class IsExpansionOf
+{
+  position 15 443 109 41;
+  position.association IsExpansionOf__MacroDefinition 109,10 0,11;
+  position.association IsExpansionOf__MacroExpansion 40,0 50,45;
+}
+// @@@skipcppcompile

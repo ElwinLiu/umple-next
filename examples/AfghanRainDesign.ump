@@ -130,3 +130,82 @@ class Village
   
   key {id}
 }
+//$?[End_of_model]$?
+//Positioning
+
+
+class Watershed
+{
+  position 1 502 119 75;
+}
+
+class District
+{
+  position 301 502 112 75;
+}
+
+class Office
+{
+  position 667 324 207 92;
+}
+
+class WorkerRole
+{
+  position 452 408 148 75;
+}
+
+class Worker
+{
+  position 423 265 204 109;
+  position.association Worker__WorkerRole 64,109 35,0;
+  position.association Office__Worker 204,67 0,21;
+}
+
+class WorkersOnSurvey
+{
+  position 382 43 203 92;
+  position.association Worker__WorkersOnSurvey 106,92 65,0;
+  position.association VillageSurvey__WorkersOnSurvey 0,85 177,27;
+}
+
+class VillageSurvey
+{
+  position 44 190 177 92;
+  position.association Village__VillageSurvey 88,92 131,0;
+}
+
+class SurveyObservation
+{
+  position 11 24 249 126;
+  position.association SurveyObservation__VillageSurvey 123,126 90,0;
+}
+
+class Farm
+{
+  position 250 348 159 75;
+  position.association Farm__Village 0,38 214,41;
+}
+
+class Bulletin
+{
+  position 682 34 165 125;
+  position.association AgriculturalResearchStation__Bulletin 81,125 83,0;
+}
+
+class AgriculturalResearchStation
+{
+  position 680 199 169 73;
+}
+
+class AgriculturalZone
+{
+  position 132 502 119 75;
+  position.association AgriculturalZone__District 119,40 0,40;
+}
+
+class Village
+{
+  position 1 345 214 92;
+  position.association Village__Watershed 63,92 63,0;
+  position.association AgriculturalZone__Village 174,92 43,0;
+}

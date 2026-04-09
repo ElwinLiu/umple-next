@@ -45,7 +45,7 @@ export function DiagramPanel() {
   const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const generatedError = useEphemeralStore((s) => s.generatedError)
   const generationRequested = useEphemeralStore((s) => s.generationRequested)
-  const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette)
+  const openExamplesPalette = useEphemeralStore((s) => s.openExamplesPalette)
 
 
   const currentSvg = svgCache[viewMode] ?? ''
@@ -155,7 +155,7 @@ export function DiagramPanel() {
                 type="button"
                 size="lg"
                 variant="outline"
-                onClick={() => openCommandPalette(['examples'])}
+                onClick={openExamplesPalette}
                 className="bg-surface-0/88 border-border text-ink shadow-sm backdrop-blur-sm hover:bg-surface-1 hover:border-border-strong"
                 data-testid="empty-canvas-open-examples"
               >

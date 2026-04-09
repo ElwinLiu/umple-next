@@ -41,6 +41,12 @@ var categoryOrder = []string{
 	"Feature Diagrams",
 }
 
+// hiddenExamples are present on disk but were intentionally not exposed in the
+// legacy UmpleOnline picker.
+var hiddenExamples = map[string]bool{
+	"OBDCarSystem": true,
+}
+
 // categoryMembers maps each category to its curated list of example names
 // (without .ump extension). Derived from legacy UmpleOnline (umple.php).
 var categoryMembers = map[string][]string{
@@ -83,14 +89,14 @@ var categoryMembers = map[string][]string{
 // fall back to the auto-generated label from humanize().
 var displayLabels = map[string]string{
 	// Class Diagrams
-	"2DShapes":                      "2DShapes",
+	"2DShapes":                      "2DShapes *",
 	"AccessControl":                 "Access Control",
 	"AccessControl2":                "Access Control 2",
 	"Accidents":                     "Accidents",
 	"Accommodations":                "Accommodations",
 	"AfghanRainDesign":              "Afghan Rain Design",
-	"AirlineExample":                "Airline",
-	"Auction":                       "Auction",
+	"AirlineExample":                "Airline *",
+	"Auction":                       "Auction *",
 	"BankingSystemA":                "Banking System A",
 	"BankingSystemB":                "Banking System B",
 	"CanalSystem":                   "Canal",
@@ -130,7 +136,7 @@ var displayLabels = map[string]string{
 	"VendingMachineClassDiagram":    "Vending Machine",
 	"WarehouseSystem":               "Warehouse System",
 	// State Machines
-	"AgentsCommunication":       "Agents Communicating",
+	"AgentsCommunication":       "Agents Communicating *",
 	"ApplicationProcessing":     "Application for a Grant",
 	"Booking":                   "Booking (Airline)",
 	"CanalLockStateMachine":     "Canal Lock",
@@ -139,18 +145,18 @@ var displayLabels = map[string]string{
 	"CollisionAvoidanceA1":      "Collision Avoidance - Alternative 1",
 	"CollisionAvoidanceA2":      "Collision Avoidance - Alternative 2",
 	"CollisionAvoidanceA3":      "Collision Avoidance - Alternative 3",
-	"ComplexStateMachine":       "Complex Symbolic",
+	"ComplexStateMachine":       "Complex Symbolic *",
 	"CourseSectionFlat":         "Course Section",
 	"CourseSectionNested":       "Course Section (Nested)",
-	"DigitalWatchFlat":          "Digital Watch (Flat)",
-	"DigitalWatchNested":        "Digital Watch Nested",
+	"DigitalWatchFlat":          "Digital Watch (Flat) *",
+	"DigitalWatchNested":        "Digital Watch Nested *",
 	"Dishwasher":                "Dishwasher",
 	"Elevator_State_Machine":    "Elevator",
 	"GarageDoor":                "Garage Door",
 	"HomeHeater":                "Home Heating System",
 	"LibraryLoanStateMachine":   "Library Loan",
 	"Lights":                    "Light (3 alternatives)",
-	"MicrowaveOven2":            "Microwave Oven",
+	"MicrowaveOven2":            "Microwave Oven *",
 	"Ovens":                     "Oven (3 alternatives)",
 	"ParliamentBill":            "Parliament Bill",
 	"Phone":                     "Phone and Lines",
@@ -158,10 +164,10 @@ var displayLabels = map[string]string{
 	"SecurityLight":             "Security Light",
 	"SpecificFlight":            "Specific Flight (Airline)",
 	"SpecificFlightFlat":        "Specific Flight (Airline - Flat)",
-	"TcpIpSimulation":           "TCP/IP Simulation",
+	"TcpIpSimulation":           "TCP/IP Simulation *",
 	"TelephoneSystem2":          "Telephone Set Modes",
 	"TicTacToe":                 "Tic Tac Toe or Noughts and Crosses",
-	"TimedCommands":             "Timed Commands",
+	"TimedCommands":             "Timed Commands *",
 	"TollBooth":                 "Toll Booth",
 	"TrafficLightsA":            "Traffic Lights A",
 	"TrafficLightsB":            "Traffic Lights B",
@@ -197,6 +203,9 @@ func (h *ExampleHandler) List(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		name := strings.TrimSuffix(e.Name(), ".ump")
+		if hiddenExamples[name] {
+			continue
+		}
 		available[name] = true
 	}
 

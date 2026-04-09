@@ -34,3 +34,25 @@ class Adoption {
 association {
  * Person child -- 0..1 Union parents;
 }
+//$?[End_of_model]$?
+
+//Positioning
+
+class Union
+{
+  position 217 341 183 96;
+  position.association Person:parent__Union 150,0 131,143;
+}
+
+class Adoption
+{
+  position 30 203 179 58;
+  position.association Adoption__Union:adoptiveParents 84,58 0,10;
+  position.association Adoption__Person:adoptedChild 76,0 0,106;
+}
+
+class Person
+{
+  position 236 30 165 143;
+}
+// @@@skipcppcompile

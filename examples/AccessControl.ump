@@ -65,3 +65,43 @@ associationClass RoleFacilityAccessRight
   * Role;
   CRUD_Value { R, RW }
 }
+
+//$?[End_of_model]$?
+// Positioning
+
+class FacilityType
+{
+  position 74 358 109 57;
+}
+
+class FunctionalArea
+{
+  position 48 23 112 57;
+}
+
+class Facility
+{
+  position 48 159 173 127;
+  position.association Facility__FacilityType 50,127 24,0;
+}
+
+class Role
+{
+  position 372 235 109 57;
+}
+
+class User
+{
+  position 332 46 162 127;
+  position.association Role__User 102,127 62,0;
+}
+
+class RoleFacilityAccessRight
+{
+  position 270 362 166 45;
+  position.association Facility__RoleFacilityAccessRight 24,0 173,115;
+  position.association Role__RoleFacilityAccessRight 145,0 43,57;
+}
+
+// @@@skipphpcompile - remove when issue 697 is fixed
+// @@@skipcppcompile
