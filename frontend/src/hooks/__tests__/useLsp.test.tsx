@@ -49,6 +49,8 @@ describe('useLsp', () => {
           code: 'class Person {}',
           dirty: false,
           savedCode: 'class Person {}',
+          undoStack: [],
+          redoStack: [],
         },
       ],
       activeTabId: 'main',

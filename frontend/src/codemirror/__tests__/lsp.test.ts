@@ -11,6 +11,8 @@ function makeTab(id: string, name: string, code: string): Tab {
     code,
     dirty: false,
     savedCode: code,
+    undoStack: [],
+    redoStack: [],
   }
 }
 

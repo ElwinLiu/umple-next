@@ -52,7 +52,7 @@ function syncToLocal(doc: Y.Doc) {
       }
     }
     // New tab from remote
-    return { id: ct.id, name: ct.name, code: ct.code, dirty: false, savedCode: ct.code }
+    return { id: ct.id, name: ct.name, code: ct.code, dirty: false, savedCode: ct.code, undoStack: [] as string[], redoStack: [] as string[] }
   })
 
   // If the active tab was deleted remotely, switch to an adjacent tab

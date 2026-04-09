@@ -48,6 +48,7 @@ function findClassRange(code: string, className: string): { from: number; to: nu
 
 export function EditorPanel() {
   const code = useSessionStore((s) => s.code)
+  const activeTabId = useSessionStore((s) => s.activeTabId)
   const setCode = useSessionStore((s) => s.setCode)
   const collabConfig = useCollabEditor()
   useCollabTabs()
@@ -131,6 +132,7 @@ export function EditorPanel() {
               <UmpleEditor
                 ref={editorRef}
                 code={code}
+                activeTabId={activeTabId}
                 onChange={handleChange}
                 readOnly={readOnly}
                 collabConfig={collabConfig}
