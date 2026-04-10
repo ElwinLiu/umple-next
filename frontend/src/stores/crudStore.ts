@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { api } from '@/api/client'
-import type { CrudSchema, CrudAssociation } from '@/api/types'
+import type { CrudSchema, CrudAssociation, CrudAttribute, CrudClass } from '@/api/types'
 import { useSessionStore } from './sessionStore'
 
 export interface CrudInstance {
@@ -249,6 +249,328 @@ export function validateInstance(
   return errors
 }
 
+function buildClassMap(schema: CrudSchema) {
+  return new Map(schema.classes.map((cls) => [cls.id ?? cls.name, cls]))
+}
+
+function buildAttributeMap(cls: CrudClass) {
+  return new Map(cls.attributes.map((attr) => [attr.name, attr]))
+}
+
+function buildAssociationMap(cls: CrudClass) {
+  return new Map(cls.associations.map((assoc) => [assoc.endId ?? assoc.id ?? assoc.roleName, assoc]))
+}
+
+function buildInstanceKey(className: string, instanceId: number) {
+  return `${className}:${instanceId}`
+}
+
+function getClassIdentity(cls: Pick<CrudClass, 'id' | 'name'>) {
+  return cls.id ?? cls.name
+}
+
+function getAssociationIdentity(assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName'>) {
+  return assoc.endId ?? assoc.id ?? assoc.roleName
+}
+
+function getAssociationTargetIdentity(assoc: Pick<CrudAssociation, 'targetClass' | 'targetClassId'>) {
+  return assoc.targetClassId ?? assoc.targetClass
+}
+
+function normalizeCrudTypeName(type: string) {
+  const normalized = type.trim().toLowerCase().replace(/\s+/g, '')
+  if (normalized === 'integer') return 'int'
+  if (normalized === 'bool') return 'boolean'
+  if (normalized === 'char') return 'character'
+  return normalized
+}
+
+function buildClassAttributeSignature(cls: CrudClass) {
+  return [...cls.attributes]
+    .map((attr) => [
+      attr.name,
+      normalizeCrudTypeName(attr.type),
+      attr.typeKind,
+      attr.isInherited ? '1' : '0',
+      attr.inheritedFrom ?? '',
+    ].join(':'))
+    .sort()
+    .join(';')
+}
+
+function buildClassAssociationSignature(cls: CrudClass) {
+  return cls.associations
+    .filter((assoc) => assoc.isNavigable)
+    .map((assoc) => [
+      assoc.targetClass,
+      assoc.multiplicity.min,
+      assoc.multiplicity.max,
+      assoc.reverseRoleName ? '1' : '0',
+      assoc.isComposition ? '1' : '0',
+    ].join('|'))
+    .sort()
+    .join(';')
+}
+
+function buildClassStructuralSignature(cls: CrudClass) {
+  return [
+    cls.isAbstract ? '1' : '0',
+    cls.extendsClass ?? '',
+    buildClassAttributeSignature(cls),
+    buildClassAssociationSignature(cls),
+  ].join('||')
+}
+
+function buildClassSourceMap(oldSchema: CrudSchema | null, newSchema: CrudSchema) {
+  const sourceMap = new Map<string, string>()
+  if (!oldSchema) return sourceMap
+
+  const oldClassesByIdentity = buildClassMap(oldSchema)
+  const oldClassesByName = new Map(oldSchema.classes.map((cls) => [cls.name, cls]))
+  const matchedOldNames = new Set<string>()
+  const matchedNewNames = new Set<string>()
+
+  for (const newClass of newSchema.classes) {
+    const oldByIdentity = oldClassesByIdentity.get(getClassIdentity(newClass))
+    if (oldByIdentity) {
+      sourceMap.set(newClass.name, oldByIdentity.name)
+      matchedOldNames.add(oldByIdentity.name)
+      matchedNewNames.add(newClass.name)
+      continue
+    }
+
+    const oldByName = oldClassesByName.get(newClass.name)
+    if (oldByName) {
+      sourceMap.set(newClass.name, oldByName.name)
+      matchedOldNames.add(oldByName.name)
+      matchedNewNames.add(newClass.name)
+    }
+  }
+
+  const unmatchedOld = oldSchema.classes.filter((cls) => !matchedOldNames.has(cls.name))
+  const unmatchedNew = newSchema.classes.filter((cls) => !matchedNewNames.has(cls.name))
+  const oldSignatures = new Map(unmatchedOld.map((cls) => [cls.name, buildClassStructuralSignature(cls)]))
+  const usedHeuristicOldNames = new Set<string>()
+
+  for (const newClass of unmatchedNew) {
+    const newSignature = buildClassStructuralSignature(newClass)
+    const candidates = unmatchedOld.filter((oldClass) =>
+      !usedHeuristicOldNames.has(oldClass.name) && oldSignatures.get(oldClass.name) === newSignature,
+    )
+
+    if (candidates.length === 1) {
+      const matchedOld = candidates[0]!
+      sourceMap.set(newClass.name, matchedOld.name)
+      usedHeuristicOldNames.add(matchedOld.name)
+    }
+  }
+
+  return sourceMap
+}
+
+function associationTargetsMatch(
+  oldAssoc: CrudAssociation,
+  newAssoc: CrudAssociation,
+  classSourceMap: Map<string, string>,
+) {
+  if (getAssociationTargetIdentity(oldAssoc) === getAssociationTargetIdentity(newAssoc)) return true
+  return classSourceMap.get(newAssoc.targetClass) === oldAssoc.targetClass
+}
+
+export function resolveSelectedClassName(
+  oldSchema: CrudSchema | null,
+  newSchema: CrudSchema,
+  selectedClassName: string | null,
+) {
+  if (!selectedClassName) return null
+  if (newSchema.classes.some((cls) => cls.name === selectedClassName)) return selectedClassName
+  if (!oldSchema) return null
+
+  const classSourceMap = buildClassSourceMap(oldSchema, newSchema)
+  for (const [newClassName, oldClassName] of classSourceMap.entries()) {
+    if (oldClassName === selectedClassName) return newClassName
+  }
+  return null
+}
+
+function coercePrimitiveValue(value: unknown, type: string): unknown {
+  const normalized = type.toLowerCase()
+
+  if (normalized === 'string' || normalized === '') {
+    if (typeof value === 'string') return value
+    if (typeof value === 'number' || typeof value === 'boolean') return String(value)
+    return undefined
+  }
+
+  if (normalized === 'boolean') {
+    if (typeof value === 'boolean') return value
+    if (typeof value === 'string') {
+      const lowered = value.trim().toLowerCase()
+      if (lowered === 'true') return true
+      if (lowered === 'false') return false
+    }
+    return undefined
+  }
+
+  if (normalized === 'integer' || normalized === 'int') {
+    if (typeof value === 'number' && Number.isInteger(value)) return value
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (trimmed === '') return undefined
+      const parsed = Number(trimmed)
+      if (Number.isInteger(parsed)) return parsed
+    }
+    return undefined
+  }
+
+  if (normalized === 'float' || normalized === 'double') {
+    if (typeof value === 'number' && Number.isFinite(value)) return value
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (trimmed === '') return undefined
+      const parsed = Number(trimmed)
+      if (Number.isFinite(parsed)) return parsed
+    }
+    return undefined
+  }
+
+  if (normalized === 'date' || normalized === 'time') {
+    return typeof value === 'string' && value.trim() !== '' ? value : undefined
+  }
+
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? value : undefined
+}
+
+function coerceAttributeValue(value: unknown, attr: CrudAttribute, schema: CrudSchema): unknown {
+  if (value === undefined) return undefined
+
+  if (attr.typeKind === 'enum') {
+    if (typeof value !== 'string') return undefined
+    const enumDef = schema.enums.find((candidate) => candidate.name === attr.type)
+    if (!enumDef) return undefined
+    return enumDef.values.includes(value) ? value : undefined
+  }
+
+  if (attr.typeKind === 'primitive') {
+    return coercePrimitiveValue(value, attr.type)
+  }
+
+  return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? value : undefined
+}
+
+function addAssocId(instance: CrudInstance, role: string, targetId: number, max = -1): boolean {
+  const ids = getAssocIds(instance, role)
+  if (ids.includes(targetId)) return true
+  if (max !== -1 && ids.length >= max) return false
+  setAssocIds(instance, role, [...ids, targetId], max)
+  return true
+}
+
+function clearAssociationFields(instances: Record<string, CrudInstance[]>) {
+  for (const list of Object.values(instances)) {
+    for (const instance of list) {
+      for (const key of Object.keys(instance)) {
+        if (key.startsWith('__assoc__')) delete instance[key]
+      }
+    }
+  }
+}
+
+export function reconcileInstances(
+  oldSchema: CrudSchema | null,
+  newSchema: CrudSchema,
+  oldInstances: Record<string, CrudInstance[]>,
+): Record<string, CrudInstance[]> {
+  const nextInstances: Record<string, CrudInstance[]> = {}
+
+  if (!oldSchema) {
+    for (const cls of newSchema.classes) nextInstances[cls.name] = []
+    return nextInstances
+  }
+
+  const oldClassesByName = new Map(oldSchema.classes.map((cls) => [cls.name, cls]))
+  const classSourceMap = buildClassSourceMap(oldSchema, newSchema)
+  const associationCandidates = new Map<string, Record<string, number[]>>()
+
+  for (const newClass of newSchema.classes) {
+    const oldClassName = classSourceMap.get(newClass.name)
+    const oldClass = oldClassName ? oldClassesByName.get(oldClassName) : undefined
+
+    if (!oldClass || newClass.isAbstract) {
+      nextInstances[newClass.name] = []
+      continue
+    }
+
+    const sourceList = oldInstances[oldClass.name] ?? []
+    const oldAttributes = buildAttributeMap(oldClass)
+    const oldAssociations = buildAssociationMap(oldClass)
+    const migratedList: CrudInstance[] = []
+
+    for (const oldInstance of sourceList) {
+      const nextInstance: CrudInstance = { _id: oldInstance._id }
+
+      for (const attr of newClass.attributes) {
+        if (!oldAttributes.has(attr.name)) continue
+        const migrated = coerceAttributeValue(oldInstance[attr.name], attr, newSchema)
+        if (migrated !== undefined) nextInstance[attr.name] = migrated
+      }
+
+      const instanceAssocCandidates: Record<string, number[]> = {}
+      for (const assoc of newClass.associations) {
+        const assocIdentity = getAssociationIdentity(assoc)
+        const oldAssoc = oldAssociations.get(assocIdentity) ?? oldAssociations.get(assoc.roleName)
+        if (!oldAssoc || !associationTargetsMatch(oldAssoc, assoc, classSourceMap)) continue
+        const ids = toIdArray(oldInstance[assocKey(oldAssoc.roleName)])
+        if (ids.length > 0) instanceAssocCandidates[assocIdentity] = ids
+      }
+
+      associationCandidates.set(buildInstanceKey(newClass.name, oldInstance._id), instanceAssocCandidates)
+      migratedList.push(nextInstance)
+    }
+
+    nextInstances[newClass.name] = migratedList
+  }
+
+  clearAssociationFields(nextInstances)
+
+  for (const cls of newSchema.classes) {
+    for (const assoc of cls.associations) {
+      const reverseAssoc = findReverseAssoc(newSchema, assoc)
+      const sourceList = nextInstances[cls.name] ?? []
+      const targetById = new Map(
+        collectTargetInstances(newSchema, nextInstances, assoc.targetClass).map((instance) => [instance._id, instance]),
+      )
+
+      for (const source of sourceList) {
+        const candidateIds = associationCandidates.get(buildInstanceKey(cls.name, source._id))?.[getAssociationIdentity(assoc)] ?? []
+        const filteredIds = [...new Set(candidateIds)]
+          .filter((id) => targetById.has(id))
+          .filter((id) => !assoc.isReflexive || id !== source._id)
+
+        const trimmedIds = assoc.multiplicity.max === -1
+          ? filteredIds
+          : filteredIds.slice(0, assoc.multiplicity.max)
+
+        for (const targetId of trimmedIds) {
+          const target = targetById.get(targetId)
+          if (!target) continue
+          const added = addAssocId(source, assoc.roleName, targetId, assoc.multiplicity.max)
+          if (!added) continue
+
+          if (assoc.reverseRoleName && reverseAssoc) {
+            const accepted = addAssocId(target, assoc.reverseRoleName, source._id, reverseAssoc.multiplicity.max)
+            if (!accepted) {
+              removeAssocId(source, assoc.roleName, targetId, assoc.multiplicity.max)
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return nextInstances
+}
+
 // ── Session storage persistence ─────────────────────────────────────
 
 const CRUD_STORAGE_KEY = 'umple-crud-instances'
@@ -308,11 +630,14 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       if (get().schemaRequestKey !== schemaRequestKey) return
       const schema = res.schema
       const state = get()
-      let selected = state.selectedClass
+      let selected = resolveSelectedClassName(state.schema, schema, state.selectedClass)
       if (!selected || !schema.classes.some((c) => c.name === selected)) {
         selected = schema.classes.find((c) => !c.isAbstract)?.name ?? null
       }
       const restored = restoreFromSession(schemaRequestKey)
+      const reconciledInstances = state.schema
+        ? reconcileInstances(state.schema, schema, state.instances)
+        : (restored?.instances ?? {})
       set({
         schema,
         schemaLoading: false,
@@ -320,8 +645,8 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         schemaRequestKey,
         crudModelId: res.modelId || null,
         selectedClass: selected,
-        instances: restored?.instances ?? {},
-        nextId: restored?.nextId ?? 1,
+        instances: reconciledInstances,
+        nextId: state.schema ? state.nextId : (restored?.nextId ?? 1),
         editingInstance: null,
         validationErrors: [],
       })

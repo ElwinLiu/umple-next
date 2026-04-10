@@ -34,6 +34,7 @@ type RawModel struct {
 }
 
 type RawClass struct {
+	ID                    string                  `json:"id"`
 	Name                  string                  `json:"name"`
 	Attributes            []RawAttribute          `json:"attributes"`
 	Methods               []RawMethod             `json:"methods"`
@@ -84,6 +85,7 @@ type CrudSchema struct {
 }
 
 type CrudClass struct {
+	ID           string            `json:"id,omitempty"`
 	Name         string            `json:"name"`
 	IsAbstract   bool              `json:"isAbstract"`
 	ExtendsClass string            `json:"extendsClass,omitempty"`
@@ -100,6 +102,10 @@ type CrudAttribute struct {
 }
 
 type CrudAssociation struct {
+	ID              string       `json:"id,omitempty"`
+	EndID           string       `json:"endId,omitempty"`
+	SourceClassID   string       `json:"sourceClassId,omitempty"`
+	TargetClassID   string       `json:"targetClassId,omitempty"`
 	TargetClass     string       `json:"targetClass"`
 	RoleName        string       `json:"roleName"`
 	ReverseRoleName string       `json:"reverseRoleName"`
@@ -118,6 +124,13 @@ type Multiplicity struct {
 type CrudEnum struct {
 	Name   string   `json:"name"`
 	Values []string `json:"values"`
+}
+
+func buildAssociationEndID(id string, side string) string {
+	if id == "" {
+		return ""
+	}
+	return id + ":" + side
 }
 
 // ParseMultiplicity converts a multiplicity string like "0..1", "*", "1..*"
@@ -232,6 +245,10 @@ func ResolveAssociations(className string, associations []RawAssociation) []Crud
 		// When class appears as classOne, the target is classTwo
 		if isClassOne {
 			result = append(result, CrudAssociation{
+				ID:              a.ID,
+				EndID:           buildAssociationEndID(a.ID, "classOne"),
+				SourceClassID:   a.ClassOneID,
+				TargetClassID:   a.ClassTwoID,
 				TargetClass:     a.ClassTwoID,
 				RoleName:        a.RoleTwo,
 				ReverseRoleName: a.RoleOne,
@@ -245,6 +262,10 @@ func ResolveAssociations(className string, associations []RawAssociation) []Crud
 		// When class appears as classTwo, the target is classOne
 		if isClassTwo {
 			result = append(result, CrudAssociation{
+				ID:              a.ID,
+				EndID:           buildAssociationEndID(a.ID, "classTwo"),
+				SourceClassID:   a.ClassTwoID,
+				TargetClassID:   a.ClassOneID,
 				TargetClass:     a.ClassOneID,
 				RoleName:        a.RoleOne,
 				ReverseRoleName: a.RoleTwo,
@@ -313,6 +334,7 @@ func TransformSchema(raw RawModel) CrudSchema {
 		}
 
 		classes = append(classes, CrudClass{
+			ID:           cls.ID,
 			Name:         cls.Name,
 			IsAbstract:   bool(cls.IsAbstract),
 			ExtendsClass: cls.ExtendsClass,
