@@ -114,7 +114,7 @@ test('uses the selected diagram type for the first diagram request', async ({ pa
   await expect.poll(() => diagramTypes[diagramTypes.length - 1]).toBe('GvStateDiagram')
 })
 
-test('grouped dropdown renders all 8 diagram types with group labels', async ({ page }) => {
+test('grouped dropdown renders legacy diagram view groups', async ({ page }) => {
   await page.route('**/api/diagram', async (route) => {
     await route.fulfill({ json: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>' } })
   })
@@ -127,18 +127,86 @@ test('grouped dropdown renders all 8 diagram types with group labels', async ({ 
 
   // Verify group labels exist (scoped to label slots to avoid matching radio items)
   const labels = page.locator('[data-slot="dropdown-menu-label"]')
-  await expect(labels.filter({ hasText: 'Structure' })).toBeVisible()
-  await expect(labels.filter({ hasText: 'Behavior' })).toBeVisible()
-  await expect(labels.filter({ hasText: 'Other' })).toBeVisible()
+  await expect(labels.filter({ hasText: 'Class Views' })).toBeVisible()
+  await expect(labels.filter({ hasText: 'State Views' })).toBeVisible()
+  await expect(labels.filter({ hasText: 'Special Views' })).toBeVisible()
+  await expect(labels.filter({ hasText: 'Instance Views' })).toBeVisible()
+  await expect(page.locator('[data-slot="dropdown-menu-radio-group"] > [data-slot="dropdown-menu-radio-item"]')).toHaveCount(0)
 
-  // Verify all 8 diagram types are present
+  // Verify all exposed diagram types are present
   for (const id of [
     'diagram-view-class', 'diagram-view-erd', 'diagram-view-feature', 'diagram-view-structure',
     'diagram-view-state', 'diagram-view-eventSequence', 'diagram-view-stateTables',
-    'diagram-view-instance',
+    'diagram-view-instance', 'diagram-view-crud',
   ]) {
     await expect(page.getByTestId(id)).toBeVisible()
   }
+})
+
+test('command palette lists all supported diagram commands and diagram commands work', async ({ page }) => {
+  const diagramTypes: string[] = []
+
+  await page.route('**/api/diagram', async (route) => {
+    const body = route.request().postDataJSON() as { diagramType?: string }
+    if (body.diagramType) diagramTypes.push(body.diagramType)
+    await route.fulfill({ json: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>' } })
+  })
+
+  await page.goto('/')
+  await expect(page.getByTestId('app-shell')).toBeVisible()
+
+  await page.keyboard.press('Control+k')
+  await page.getByTestId('command-item-examples-browse').click()
+  await page.getByTestId('command-item-category-Samples').click()
+  await page.getByTestId('command-item-example-Banking').click()
+  await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
+
+  await page.keyboard.press('Control+k')
+  await expect(page.getByTestId('command-palette')).toBeVisible()
+
+  for (const id of [
+    'command-item-diagram-class', 'command-item-diagram-erd', 'command-item-diagram-crud',
+    'command-item-diagram-state', 'command-item-diagram-stateTables',
+    'command-item-diagram-structure', 'command-item-diagram-feature',
+    'command-item-diagram-instance', 'command-item-diagram-eventSequence',
+  ]) {
+    await expect(page.getByTestId(id)).toBeVisible()
+  }
+
+  await expect(page.getByTestId('command-item-gen-Java')).toBeVisible()
+  await expect(page.getByTestId('command-item-gen-stateDiagram')).toHaveCount(0)
+  await expect(page.getByTestId('command-item-gen-featureDiagram')).toHaveCount(0)
+
+  await page.getByTestId('command-item-diagram-erd').click()
+  await expect.poll(() => diagramTypes[diagramTypes.length - 1]).toBe('GvEntityRelationshipDiagram')
+})
+
+test('command palette view commands toggle renderer, output panel, and diagram-only mode', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByTestId('app-shell')).toBeVisible()
+
+  await page.keyboard.press('Control+k')
+  await page.getByTestId('command-item-examples-browse').click()
+  await page.getByTestId('command-item-category-Samples').click()
+  await page.getByTestId('command-item-example-Banking').click()
+  await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
+
+  await page.keyboard.press('Control+k')
+  const initialRendererLabel = await page.getByTestId('command-item-view-renderer').textContent()
+  await page.getByTestId('command-item-view-renderer').click()
+
+  await page.keyboard.press('Control+k')
+  if (initialRendererLabel?.includes('Editable')) {
+    await expect(page.getByTestId('command-item-view-renderer')).toContainText('Graphviz')
+  } else {
+    await expect(page.getByTestId('command-item-view-renderer')).toContainText('Editable')
+  }
+  await page.getByTestId('command-item-view-output-panel').click()
+  await expect(page.getByTestId('output-panel')).toBeVisible()
+
+  await page.keyboard.press('Control+k')
+  await page.getByTestId('command-item-view-diagram-only').click()
+  await expect(page.getByTestId('editor-panel')).toHaveCount(0)
 })
 
 test('ERD selection sends GvEntityRelationshipDiagram to backend', async ({ page }) => {

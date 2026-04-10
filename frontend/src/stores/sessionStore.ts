@@ -2,20 +2,14 @@ import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import type { Node, Edge } from '@xyflow/react'
 import type { UmpleModel, GvLayout, StoredLayoutMetadata, ApiTab } from '../api/types'
+import { VIEW_OUTPUT_KIND } from '../constants/diagram'
+import type { DiagramView } from '../constants/diagram'
 import { useEphemeralStore } from './ephemeralStore'
 import { ensureUmpExt } from '../lib/umpFile'
 
 // ── Diagram types ──
-
-export type DiagramView = 'class' | 'state' | 'feature' | 'structure' | 'erd' | 'instance' | 'eventSequence' | 'stateTables' | 'crud'
-
-/** Classifies each view by its backend output kind */
-export const VIEW_OUTPUT_KIND: Record<DiagramView, 'gv' | 'html' | 'component'> = {
-  class: 'gv', state: 'gv', feature: 'gv', structure: 'html',
-  erd: 'gv', instance: 'gv',
-  eventSequence: 'html', stateTables: 'html',
-  crud: 'component',
-}
+export type { DiagramView } from '../constants/diagram'
+export { VIEW_OUTPUT_KIND } from '../constants/diagram'
 
 interface DiagramElements {
   nodes: Node[]

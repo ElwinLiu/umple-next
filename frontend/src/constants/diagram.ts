@@ -1,85 +1,284 @@
-import type { DiagramView } from '../stores/sessionStore'
-import type { DisplayPrefKey } from '../stores/preferencesStore'
+import { LayoutGrid } from 'lucide-react'
 
-export const EXAMPLE_CATEGORY_TO_VIEW: Partial<Record<string, DiagramView>> = {
-  'Class Diagrams': 'class',
-  'State Machines': 'state',
-  'Composite Structure': 'structure',
-  'Feature Diagrams': 'feature',
-  'Entity Relationships': 'erd',
+export type DiagramView =
+  | 'class'
+  | 'state'
+  | 'feature'
+  | 'structure'
+  | 'erd'
+  | 'instance'
+  | 'eventSequence'
+  | 'stateTables'
+  | 'crud'
+
+export type DiagramOutputKind = 'gv' | 'html' | 'component'
+
+export type DisplayPrefKey =
+  | 'showAttributes'
+  | 'showMethods'
+  | 'showTraits'
+  | 'showActions'
+  | 'showTransitionLabels'
+  | 'showGuards'
+  | 'showGuardLabels'
+  | 'showNaturalLanguage'
+  | 'showFeatureDependency'
+
+export interface DiagramDisplayToggle {
+  key: DisplayPrefKey
+  label: string
+  enabledSuboption?: string
+  disabledSuboption?: string
+}
+
+export interface DiagramViewMode {
+  value: DiagramView
+  label: string
+  longLabel: string
+  outputKind: DiagramOutputKind
+  diagramType?: string
+  exampleCategories?: string[]
+  legacyDiagramTypes?: string[]
+  displayToggles?: DiagramDisplayToggle[]
+}
+
+export interface DiagramViewGroup {
+  label: string
+  modes: DiagramViewMode[]
+}
+
+export interface LayoutOption {
+  value: 'dot' | 'sfdp' | 'circo' | 'neato' | 'fdp' | 'twopi'
+  label: string
+  suboption?: string
+}
+
+export const LAYOUT_OPTIONS = [
+  { value: 'dot', label: 'Dot (default)' },
+  { value: 'sfdp', label: 'SFDP', suboption: 'gvsfdp' },
+  { value: 'circo', label: 'Circo', suboption: 'gvcirco' },
+  { value: 'neato', label: 'Neato', suboption: 'gvneato' },
+  { value: 'fdp', label: 'FDP', suboption: 'gvfdp' },
+  { value: 'twopi', label: 'Twopi', suboption: 'gvtwopi' },
+] as const satisfies readonly LayoutOption[]
+
+export type GvLayoutAlgorithm = (typeof LAYOUT_OPTIONS)[number]['value']
+
+export interface DiagramDisplayPrefs {
+  showAttributes: boolean
+  showMethods: boolean
+  showTraits: boolean
+  showActions: boolean
+  showTransitionLabels: boolean
+  showGuards: boolean
+  showGuardLabels: boolean
+  showNaturalLanguage: boolean
+  showFeatureDependency: boolean
+  layoutAlgorithm: GvLayoutAlgorithm
+}
+
+const CLASS_TOGGLES: DiagramDisplayToggle[] = [
+  { key: 'showAttributes', label: 'Attributes', disabledSuboption: 'hideattributes' },
+  { key: 'showMethods', label: 'Methods', enabledSuboption: 'showmethods' },
+  { key: 'showTraits', label: 'Traits' },
+]
+
+const STATE_TOGGLES: DiagramDisplayToggle[] = [
+  { key: 'showActions', label: 'Actions', disabledSuboption: 'hideactions' },
+  { key: 'showTransitionLabels', label: 'Transition Labels', enabledSuboption: 'showtransitionlabels' },
+  { key: 'showGuards', label: 'Guards', disabledSuboption: 'hideguards' },
+  { key: 'showGuardLabels', label: 'Guard Labels', enabledSuboption: 'showguardlabels' },
+  { key: 'showNaturalLanguage', label: 'Natural Language', disabledSuboption: 'hidenaturallanguage' },
+]
+
+const FEATURE_TOGGLES: DiagramDisplayToggle[] = [
+  { key: 'showFeatureDependency', label: 'Feature Dependency', enabledSuboption: 'showFeatureDependency' },
+]
+
+/** Grouped diagram view modes following the legacy UmpleOnline live-view menu.
+ *  Editable class view is controlled separately by render mode, so it is not listed here.
+ */
+export const VIEW_MODE_GROUPS: DiagramViewGroup[] = [
+  {
+    label: 'Class Views',
+    modes: [
+      {
+        value: 'class',
+        label: 'Class',
+        longLabel: 'Class Diagram',
+        outputKind: 'gv',
+        diagramType: 'GvClassDiagram',
+        exampleCategories: ['Class Diagrams'],
+        legacyDiagramTypes: ['GvClass', 'class'],
+        displayToggles: CLASS_TOGGLES,
+      },
+      {
+        value: 'erd',
+        label: 'Entity Relationship',
+        longLabel: 'Entity Relationship Diagram',
+        outputKind: 'gv',
+        diagramType: 'GvEntityRelationshipDiagram',
+        exampleCategories: ['Entity Relationships'],
+        legacyDiagramTypes: ['erd'],
+      },
+      {
+        value: 'crud',
+        label: 'CRUD UI',
+        longLabel: 'CRUD UI',
+        outputKind: 'component',
+      },
+    ],
+  },
+  {
+    label: 'State Views',
+    modes: [
+      {
+        value: 'state',
+        label: 'State',
+        longLabel: 'State Machine Diagram',
+        outputKind: 'gv',
+        diagramType: 'GvStateDiagram',
+        exampleCategories: ['State Machines'],
+        legacyDiagramTypes: ['state'],
+        displayToggles: STATE_TOGGLES,
+      },
+      {
+        value: 'stateTables',
+        label: 'State Tables',
+        longLabel: 'State Tables Diagram',
+        outputKind: 'html',
+        diagramType: 'StateTables',
+      },
+    ],
+  },
+  {
+    label: 'Special Views',
+    modes: [
+      {
+        value: 'structure',
+        label: 'Structure',
+        longLabel: 'Composite Structure Diagram',
+        outputKind: 'html',
+        diagramType: 'StructureDiagram',
+        exampleCategories: ['Composite Structure'],
+        legacyDiagramTypes: ['structure'],
+      },
+      {
+        value: 'feature',
+        label: 'Feature',
+        longLabel: 'Feature Diagram',
+        outputKind: 'gv',
+        diagramType: 'GvFeatureDiagram',
+        exampleCategories: ['Feature Diagrams'],
+        legacyDiagramTypes: ['feature'],
+        displayToggles: FEATURE_TOGGLES,
+      },
+    ],
+  },
+  {
+    label: 'Instance Views',
+    modes: [
+      {
+        value: 'instance',
+        label: 'Instance',
+        longLabel: 'Instance Diagram',
+        outputKind: 'gv',
+        diagramType: 'InstanceDiagram',
+      },
+      {
+        value: 'eventSequence',
+        label: 'Event Sequence',
+        longLabel: 'Event Sequence Diagram',
+        outputKind: 'html',
+        diagramType: 'EventSequence',
+      },
+    ],
+  },
+]
+
+export const DIAGRAM_VIEW_ICON = LayoutGrid
+
+export const ALL_VIEW_MODES = VIEW_MODE_GROUPS.flatMap((group) => group.modes)
+
+const VIEW_MODE_BY_VALUE = new Map(ALL_VIEW_MODES.map((mode) => [mode.value, mode]))
+const LAYOUT_OPTION_BY_VALUE = new Map(LAYOUT_OPTIONS.map((option) => [option.value, option]))
+
+export const VIEW_OUTPUT_KIND = Object.fromEntries(
+  ALL_VIEW_MODES.map((mode) => [mode.value, mode.outputKind] as const)
+) as Record<DiagramView, DiagramOutputKind>
+
+export const DISPLAY_TOGGLES = Object.fromEntries(
+  ALL_VIEW_MODES.map((mode) => [mode.value, mode.displayToggles ?? []] as const)
+) as Record<DiagramView, DiagramDisplayToggle[]>
+
+export const DISPLAY_PREF_DEFAULTS: Record<DisplayPrefKey, boolean> = {
+  showAttributes: true,
+  showMethods: false,
+  showTraits: false,
+  showActions: true,
+  showTransitionLabels: false,
+  showGuards: true,
+  showGuardLabels: false,
+  showNaturalLanguage: true,
+  showFeatureDependency: false,
+}
+
+export const DISPLAY_PREF_KEYS = Object.keys(DISPLAY_PREF_DEFAULTS) as DisplayPrefKey[]
+
+export const EXAMPLE_CATEGORY_TO_VIEW = Object.fromEntries(
+  ALL_VIEW_MODES.flatMap((mode) =>
+    (mode.exampleCategories ?? []).map((category) => [category, mode.value] as const)
+  )
+) as Partial<Record<string, DiagramView>>
+
+const LEGACY_DIAGRAM_TYPE_TO_VIEW = Object.fromEntries(
+  ALL_VIEW_MODES.flatMap((mode) =>
+    (mode.legacyDiagramTypes ?? []).map((legacyType) => [legacyType, mode.value] as const)
+  )
+) as Partial<Record<string, DiagramView>>
+
+export function getViewModeOption(view: DiagramView): DiagramViewMode | null {
+  return VIEW_MODE_BY_VALUE.get(view) ?? null
 }
 
 export function getViewForExampleCategory(category: string): DiagramView | null {
   return EXAMPLE_CATEGORY_TO_VIEW[category] ?? null
 }
 
-/** Grouped diagram view modes for dropdowns and sidebar */
-export const VIEW_MODE_GROUPS: {
-  label: string
-  modes: { value: DiagramView; label: string; longLabel?: string }[]
-}[] = [
-  {
-    label: 'Structure',
-    modes: [
-      { value: 'class', label: 'Class', longLabel: 'Class Diagram' },
-      { value: 'erd', label: 'Entity Relationship', longLabel: 'Entity Relationship Diagram' },
-      { value: 'feature', label: 'Feature', longLabel: 'Feature Diagram' },
-      { value: 'structure', label: 'Structure', longLabel: 'Composite Structure Diagram' },
-    ],
-  },
-  {
-    label: 'Behavior',
-    modes: [
-      { value: 'state', label: 'State', longLabel: 'State Machine Diagram' },
-      { value: 'eventSequence', label: 'Event Sequence', longLabel: 'Event Sequence Diagram' },
-      { value: 'stateTables', label: 'State Tables', longLabel: 'State Tables Diagram' },
-    ],
-  },
-  {
-    label: 'Other',
-    modes: [
-      { value: 'instance', label: 'Instance', longLabel: 'Instance Diagram' },
-      { value: 'crud', label: 'CRUD UI', longLabel: 'CRUD UI' },
-    ],
-  },
-]
-
-export const ALL_VIEW_MODES = VIEW_MODE_GROUPS.flatMap((g) => g.modes)
-
-/** Pinned diagram types shown at the top of dropdowns for quick access */
-export const PINNED_VIEW_MODES: DiagramView[] = ['class', 'state']
-
-/** Display preference toggles per diagram view */
-export const DISPLAY_TOGGLES: Record<DiagramView, { key: DisplayPrefKey; label: string }[]> = {
-  class: [
-    { key: 'showAttributes', label: 'Attributes' },
-    { key: 'showMethods', label: 'Methods' },
-    { key: 'showTraits', label: 'Traits' },
-  ],
-  state: [
-    { key: 'showActions', label: 'Actions' },
-    { key: 'showTransitionLabels', label: 'Transition Labels' },
-    { key: 'showGuards', label: 'Guards' },
-    { key: 'showGuardLabels', label: 'Guard Labels' },
-    { key: 'showNaturalLanguage', label: 'Natural Language' },
-  ],
-  feature: [
-    { key: 'showFeatureDependency', label: 'Feature Dependency' },
-  ],
-  structure: [],
-  erd: [],
-  instance: [],
-  eventSequence: [],
-  stateTables: [],
-  crud: [],
+export function getViewForLegacyDiagramType(diagramType: string): DiagramView | null {
+  return LEGACY_DIAGRAM_TYPE_TO_VIEW[diagramType] ?? null
 }
 
-/** Layout algorithm options for Graphviz */
-export const LAYOUT_OPTIONS = [
-  { value: 'dot', label: 'Dot (default)' },
-  { value: 'sfdp', label: 'SFDP' },
-  { value: 'circo', label: 'Circo' },
-  { value: 'neato', label: 'Neato' },
-  { value: 'fdp', label: 'FDP' },
-  { value: 'twopi', label: 'Twopi' },
-]
+export function getLayoutOption(algo: GvLayoutAlgorithm): LayoutOption | null {
+  return LAYOUT_OPTION_BY_VALUE.get(algo) ?? null
+}
+
+export function buildSuboptions(
+  prefs: DiagramDisplayPrefs,
+  viewMode: DiagramView,
+  isDark: boolean,
+): string[] {
+  const opts: string[] = []
+  const view = getViewModeOption(viewMode)
+
+  for (const toggle of view?.displayToggles ?? []) {
+    const enabled = prefs[toggle.key]
+    if (toggle.enabledSuboption && enabled) opts.push(toggle.enabledSuboption)
+    if (toggle.disabledSuboption && !enabled) opts.push(toggle.disabledSuboption)
+  }
+
+  const layoutOption = getLayoutOption(prefs.layoutAlgorithm)
+  if (layoutOption?.suboption) {
+    opts.push(layoutOption.suboption)
+  }
+
+  if (isDark) opts.push('gvdark')
+
+  return opts
+}
+
+/** Returns the effective backend diagram type, accounting for the Traits toggle. */
+export function getEffectiveDiagramType(viewMode: DiagramView, showTraits: boolean): string {
+  if (viewMode === 'class' && showTraits) return 'GvClassTraitDiagram'
+  return getViewModeOption(viewMode)?.diagramType ?? 'GvClassDiagram'
+}

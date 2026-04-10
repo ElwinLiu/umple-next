@@ -5,10 +5,10 @@ import { usePreferencesStore, type GvLayoutAlgorithm } from '../../stores/prefer
 import { useExamples } from '../../hooks/useExamples'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
-import { GENERATE_TARGETS, GENERATE_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
-import { LAYOUT_OPTIONS, ALL_VIEW_MODES, PINNED_VIEW_MODES, getViewForExampleCategory } from '../../constants/diagram'
+import { GENERATE_ONLY_TARGETS, GENERATE_ONLY_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
+import { LAYOUT_OPTIONS, VIEW_MODE_GROUPS, getViewForExampleCategory, getLayoutOption } from '../../constants/diagram'
 import { Combobox } from '@/components/ui/combobox'
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -188,12 +188,12 @@ function ToolsGroup() {
   const showLayout = VIEW_OUTPUT_KIND[viewMode] !== 'html'
 
   const selectedTarget = useMemo(
-    () => getGenerateTarget(targetId) ?? GENERATE_TARGETS[0],
+    () => getGenerateTarget(targetId) ?? GENERATE_ONLY_TARGETS[0],
     [targetId],
   )
 
   const generateGroups = useMemo(
-    () => GENERATE_TARGET_GROUPS.map((g) => ({
+    () => GENERATE_ONLY_TARGET_GROUPS.map((g) => ({
       label: g.label,
       options: g.targets.map((t) => ({ value: t.id, label: t.label })),
     })),
@@ -204,7 +204,7 @@ function ToolsGroup() {
     () => allCategories
       .filter((cat) => (getViewForExampleCategory(cat.name) ?? 'class') === viewMode)
       .flatMap((cat) => cat.examples)
-      .map((ex) => ({ value: ex.name, label: ex.label })),
+      .map((ex) => ({ value: ex.name, label: ex.label || ex.name })),
     [allCategories, viewMode]
   )
 
@@ -225,20 +225,16 @@ function ToolsGroup() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PINNED_VIEW_MODES.map((pv) => {
-                  const m = ALL_VIEW_MODES.find((v) => v.value === pv)
-                  if (!m) return null
-                  return (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.longLabel ?? m.label}
-                    </SelectItem>
-                  )
-                })}
-                <SelectSeparator />
-                {ALL_VIEW_MODES.filter((m) => !PINNED_VIEW_MODES.includes(m.value)).map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.longLabel ?? m.label}
-                  </SelectItem>
+                {VIEW_MODE_GROUPS.map((group, index) => (
+                  <SelectGroup key={group.label}>
+                    {index > 0 && <SelectSeparator />}
+                    <SelectLabel>{group.label}</SelectLabel>
+                    {group.modes.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.longLabel ?? m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
@@ -287,8 +283,8 @@ function ToolsGroup() {
                 variant="secondary"
                 size="xs"
                 className="text-xs"
-                title={selectedTarget.executable ? 'Execute generated code' : 'Execution is only supported for Java and Python'}
-              >
+              title={selectedTarget.executable ? 'Execute generated code' : 'Execution is only supported for Java and Python'}
+            >
                 {running ? (
                   <Loader2 className="size-3 animate-spin" />
                 ) : (
@@ -306,7 +302,7 @@ function ToolsGroup() {
             <SubLabel>Layout Algorithm</SubLabel>
             <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>{getLayoutOption(layoutAlgorithm)?.label}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {LAYOUT_OPTIONS.map((opt) => (
