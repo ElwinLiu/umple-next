@@ -224,9 +224,8 @@ function randomValue(type: string, typeKind: string, schema: import('@/api/types
   return ''
 }
 
-/** Collect instances for a target class, including concrete subclass instances
- *  (needed when an association targets an abstract class). */
-function collectTargetInstances(
+/** Collect instances for a class, including concrete subclass instances. */
+function collectClassInstances(
   schema: CrudSchema,
   instances: Record<string, CrudInstance[]>,
   className: string,
@@ -234,7 +233,7 @@ function collectTargetInstances(
   const result: CrudInstance[] = [...(instances[className] ?? [])]
   for (const cls of schema.classes) {
     if (cls.extendsClass === className) {
-      result.push(...collectTargetInstances(schema, instances, cls.name))
+      result.push(...collectClassInstances(schema, instances, cls.name))
     }
   }
   return result
@@ -441,7 +440,7 @@ export function validateGlobalModel(
 
       if (missingCount > 0) {
         totalViolations += missingCount
-        const availableTargets = collectTargetInstances(schema, snapshot, assoc.targetClass)
+        const availableTargets = collectClassInstances(schema, snapshot, assoc.targetClass)
 
         if (availableTargets.length === 0) {
           messages.push(
@@ -761,6 +760,236 @@ function addAssocId(instance: CrudInstance, assoc: AssocKeyInput, targetId: numb
   return true
 }
 
+function canGenerateAssociationLink(
+  source: CrudInstance,
+  target: CrudInstance,
+  assoc: CrudAssociation,
+  reverseAssoc?: CrudAssociation,
+): boolean {
+  if (assoc.isReflexive && target._id === source._id) return false
+  // For reflexive to-one (tree/parent), only link to lower IDs to prevent cycles.
+  if (assoc.isReflexive && assoc.multiplicity.max === 1 && target._id >= source._id) return false
+
+  const sourceIds = getAssocIds(source, assoc)
+  if (sourceIds.includes(target._id)) return false
+  if (assoc.multiplicity.max !== -1 && sourceIds.length >= assoc.multiplicity.max) return false
+
+  if (!reverseAssoc) return true
+
+  const reverseIds = getAssocIds(target, reverseAssoc)
+  if (reverseIds.includes(source._id)) return false
+  if (reverseAssoc.multiplicity.max !== -1 && reverseIds.length >= reverseAssoc.multiplicity.max) return false
+
+  return true
+}
+
+function createAssociationLink(
+  source: CrudInstance,
+  target: CrudInstance,
+  assoc: CrudAssociation,
+  reverseAssoc?: CrudAssociation,
+): boolean {
+  const added = addAssocId(source, assoc, target._id, assoc.multiplicity.max)
+  if (!added) return false
+  if (!reverseAssoc) return true
+
+  const reverseAdded = addAssocId(target, reverseAssoc, source._id, reverseAssoc.multiplicity.max)
+  if (reverseAdded) return true
+
+  removeAssocId(source, assoc, target._id, assoc.multiplicity.max)
+  return false
+}
+
+function satisfyAssociationMinimum(
+  schema: CrudSchema,
+  instances: Record<string, CrudInstance[]>,
+  primaryClassName: string,
+  secondaryClassName: string,
+  primaryAssoc: CrudAssociation,
+  secondaryAssoc: CrudAssociation | undefined,
+  scoreCandidate: (candidate: CrudInstance) => number,
+  nextId: number,
+) {
+  if (primaryAssoc.multiplicity.min <= 0) return nextId
+
+  const createRandomInstanceForFamily = (className: string) => {
+    const familyCandidates = schema.classes
+      .filter((cls) => !cls.isAbstract && (cls.name === className || cls.extendsClass === className || isDescendantOf(schema, cls.name, className)))
+      .sort((left, right) => {
+        const leftExact = left.name === className ? 0 : 1
+        const rightExact = right.name === className ? 0 : 1
+        if (leftExact !== rightExact) return leftExact - rightExact
+        return (instances[left.name] ?? []).length - (instances[right.name] ?? []).length
+      })
+
+    const targetClass = familyCandidates[0]
+    if (!targetClass) return null
+
+    const instance = createRandomInstanceForClass(targetClass, schema, nextId)
+    instances[targetClass.name] = [...(instances[targetClass.name] ?? []), instance]
+    nextId++
+    return instance
+  }
+
+  const primaryList = collectClassInstances(schema, instances, primaryClassName)
+  const shuffledPrimary = [...primaryList].sort(() => Math.random() - 0.5)
+  for (const primary of shuffledPrimary) {
+    while (getAssocIds(primary, primaryAssoc).length < primaryAssoc.multiplicity.min) {
+      let secondaryList = collectClassInstances(schema, instances, secondaryClassName)
+      let candidates = secondaryList.filter((secondary) =>
+        canGenerateAssociationLink(primary, secondary, primaryAssoc, secondaryAssoc),
+      )
+      let candidate = pickAssociationCandidate(candidates, scoreCandidate)
+      if (!candidate) {
+        const created = createRandomInstanceForFamily(secondaryClassName)
+        if (!created) break
+        secondaryList = collectClassInstances(schema, instances, secondaryClassName)
+        candidates = secondaryList.filter((secondary) =>
+          canGenerateAssociationLink(primary, secondary, primaryAssoc, secondaryAssoc),
+        )
+        candidate = candidates.find((secondary) => secondary._id === created._id) ?? pickAssociationCandidate(candidates, scoreCandidate)
+      }
+      if (!candidate) break
+      if (!createAssociationLink(primary, candidate, primaryAssoc, secondaryAssoc)) break
+    }
+  }
+
+  return nextId
+}
+
+function addRandomAssociationExtras(
+  sourceList: CrudInstance[],
+  targetList: CrudInstance[],
+  assoc: CrudAssociation,
+  reverseAssoc?: CrudAssociation,
+) {
+  for (const source of sourceList) {
+    const available = targetList.filter((target) => canGenerateAssociationLink(source, target, assoc, reverseAssoc))
+    const currentCount = getAssocIds(source, assoc).length
+    const { max } = assoc.multiplicity
+    const effectiveMax = max === -1 ? currentCount + available.length : Math.min(max, currentCount + available.length)
+    const additionalMax = effectiveMax - currentCount
+    if (additionalMax <= 0) continue
+
+    const linkCount = Math.floor(Math.random() * (additionalMax + 1))
+    const shuffled = [...available].sort(() => Math.random() - 0.5)
+    const picked = shuffled.slice(0, linkCount)
+
+    for (const target of picked) {
+      createAssociationLink(source, target, assoc, reverseAssoc)
+    }
+  }
+}
+
+function pickAssociationCandidate<T>(
+  candidates: T[],
+  score: (candidate: T) => number,
+): T | undefined {
+  if (candidates.length === 0) return undefined
+
+  const ranked = [...candidates].sort((left, right) => {
+    const leftScore = score(left)
+    const rightScore = score(right)
+    if (leftScore !== rightScore) return leftScore - rightScore
+    return Math.random() - 0.5
+  })
+
+  return ranked[0]
+}
+
+function createRandomInstanceForClass(cls: CrudClass, schema: CrudSchema, instanceId: number): CrudInstance {
+  const data: Record<string, unknown> = {}
+  for (const attr of cls.attributes) {
+    data[attr.name] = randomValue(attr.type, attr.typeKind, schema)
+  }
+  return { _id: instanceId, ...data }
+}
+
+function buildRandomAssociationProcessingKey(
+  className: string,
+  assoc: CrudAssociation,
+  reverseAssoc?: CrudAssociation,
+) {
+  return reverseAssoc
+    ? [`${className}:${getAssociationIdentity(assoc)}`, `${assoc.targetClass}:${getAssociationIdentity(reverseAssoc)}`]
+      .sort()
+      .join('<->')
+    : `${className}:${getAssociationIdentity(assoc)}`
+}
+
+function forEachRandomAssociationPair(
+  schema: CrudSchema,
+  concreteClasses: CrudClass[],
+  visit: (cls: CrudClass, assoc: CrudAssociation, reverseAssoc?: CrudAssociation) => void,
+) {
+  const processed = new Set<string>()
+
+  for (const cls of concreteClasses) {
+    for (const assoc of cls.associations) {
+      if (!assoc.isNavigable) continue
+
+      const reverseAssoc = findReverseAssoc(schema, assoc)
+      const processingKey = buildRandomAssociationProcessingKey(cls.name, assoc, reverseAssoc)
+      if (processed.has(processingKey)) continue
+      processed.add(processingKey)
+
+      visit(cls, assoc, reverseAssoc)
+    }
+  }
+}
+
+function isDescendantOf(schema: CrudSchema, className: string, ancestorName: string): boolean {
+  let current = schema.classes.find((cls) => cls.name === className)?.extendsClass
+  while (current) {
+    if (current === ancestorName) return true
+    current = schema.classes.find((cls) => cls.name === current)?.extendsClass
+  }
+  return false
+}
+
+function ensureRandomAssociationMinimums(
+  schema: CrudSchema,
+  concreteClasses: CrudClass[],
+  instances: Record<string, CrudInstance[]>,
+  nextId: number,
+) {
+  const maxPasses = Math.max(1, schema.classes.length * 4)
+
+  for (let pass = 0; pass < maxPasses; pass++) {
+    const previousNextId = nextId
+
+    forEachRandomAssociationPair(schema, concreteClasses, (cls, assoc, reverseAssoc) => {
+      if (reverseAssoc) {
+        nextId = satisfyAssociationMinimum(
+          schema,
+          instances,
+          assoc.targetClass,
+          cls.name,
+          reverseAssoc,
+          assoc,
+          (source) => getAssocIds(source, assoc).length,
+          nextId,
+        )
+      }
+
+      nextId = satisfyAssociationMinimum(
+        schema,
+        instances,
+        cls.name,
+        assoc.targetClass,
+        assoc,
+        reverseAssoc,
+        (target) => reverseAssoc ? getAssocIds(target, reverseAssoc).length : 0,
+        nextId,
+      )
+    })
+
+    if (nextId === previousNextId) break
+  }
+
+  return nextId
+}
+
 function clearAssociationFields(instances: Record<string, CrudInstance[]>) {
   for (const list of Object.values(instances)) {
     for (const instance of list) {
@@ -780,10 +1009,10 @@ function normalizeInstancesForSchema(
   for (const cls of schema.classes) {
     const list = instances[cls.name] ?? []
     normalized[cls.name] = list.map((instance) => {
-      const nextInstance: CrudInstance = {}
+      const nextInstance: CrudInstance = { _id: instance._id }
 
       for (const [key, value] of Object.entries(instance)) {
-        if (!key.startsWith('__assoc__')) nextInstance[key] = value
+        if (key !== '_id' && !key.startsWith('__assoc__')) nextInstance[key] = value
       }
 
       for (const assoc of cls.associations) {
@@ -886,7 +1115,7 @@ export function reconcileInstancesDetailed(
         const oldAssoc = getAssociationLookupKeys(assoc)
           .map((key) => oldAssociations.get(key))
           .find((candidate): candidate is CrudAssociation =>
-            Boolean(candidate) && associationTargetsMatch(candidate, assoc, classSourceMap),
+            candidate !== undefined && associationTargetsMatch(candidate, assoc, classSourceMap),
           )
         if (!oldAssoc) continue
         const ids = getAssocIds(oldInstance, oldAssoc)
@@ -937,7 +1166,7 @@ export function reconcileInstancesDetailed(
       const reverseAssoc = findReverseAssoc(newSchema, assoc)
       const sourceList = nextInstances[cls.name] ?? []
       const targetById = new Map(
-        collectTargetInstances(newSchema, nextInstances, assoc.targetClass).map((instance) => [instance._id, instance]),
+        collectClassInstances(newSchema, nextInstances, assoc.targetClass).map((instance) => [instance._id, instance]),
       )
 
       for (const source of sourceList) {
@@ -1147,9 +1376,9 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         if (key.startsWith('__assoc__')) oldAssocData[key] = oldInst[key]
       }
 
-      const preservedFields: CrudInstance = {}
+      const preservedFields: CrudInstance = { _id: oldInst._id }
       for (const [key, value] of Object.entries(oldInst)) {
-        if (!key.startsWith('__assoc__')) preservedFields[key] = value
+        if (key !== '_id' && !key.startsWith('__assoc__')) preservedFields[key] = value
       }
 
       const newInst: CrudInstance = { ...preservedFields, ...data }
@@ -1272,11 +1501,7 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       let nextId = s.nextId
 
       for (let i = 0; i < count; i++) {
-        const data: Record<string, unknown> = {}
-        for (const attr of cls.attributes) {
-          data[attr.name] = randomValue(attr.type, attr.typeKind, schema)
-        }
-        list.push({ _id: nextId, ...data })
+        list.push(createRandomInstanceForClass(cls, schema, nextId))
         nextId++
       }
 
@@ -1304,80 +1529,23 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       const count = Math.random() < 0.5 ? 1 : 2
       const list: CrudInstance[] = []
       for (let i = 0; i < count; i++) {
-        const data: Record<string, unknown> = {}
-        for (const attr of cls.attributes) {
-          data[attr.name] = randomValue(attr.type, attr.typeKind, schema)
-        }
-        list.push({ _id: nextId, ...data })
+        list.push(createRandomInstanceForClass(cls, schema, nextId))
         nextId++
       }
       newInstances[cls.name] = list
     }
 
     // Step 2: Generate random associations respecting multiplicity constraints
-    const processed = new Set<string>()
+    nextId = ensureRandomAssociationMinimums(schema, concreteClasses, newInstances, nextId)
 
-    for (const cls of concreteClasses) {
-      for (const assoc of cls.associations) {
-        if (!assoc.isNavigable) continue
+    // Step 3: Generate random associations respecting multiplicity constraints
+    forEachRandomAssociationPair(schema, concreteClasses, (cls, assoc, reverseAssoc) => {
+      const sourceList = collectClassInstances(schema, newInstances, cls.name)
+      const targetList = collectClassInstances(schema, newInstances, assoc.targetClass)
+      if (sourceList.length === 0 || targetList.length === 0) return
 
-        const reverseAssoc = findReverseAssoc(schema, assoc)
-        const processingKey = reverseAssoc
-          ? [`${cls.name}:${getAssociationIdentity(assoc)}`, `${assoc.targetClass}:${getAssociationIdentity(reverseAssoc)}`]
-            .sort()
-            .join('<->')
-          : `${cls.name}:${getAssociationIdentity(assoc)}`
-        if (processed.has(processingKey)) continue
-        processed.add(processingKey)
-
-        const sourceList = newInstances[cls.name] ?? []
-        const targetList = collectTargetInstances(schema, newInstances, assoc.targetClass)
-        if (sourceList.length === 0 || targetList.length === 0) continue
-
-        const maxReverse = reverseAssoc?.multiplicity.max ?? -1
-
-        // Track how many reverse links each target has accumulated
-        const reverseCount = new Map<number, number>()
-        for (const t of targetList) reverseCount.set(t._id, 0)
-
-        for (const source of sourceList) {
-          const available = targetList.filter((t) => {
-            if (assoc.isReflexive && t._id === source._id) return false
-            // For reflexive to-one (tree/parent), only link to lower IDs to prevent cycles
-            if (assoc.isReflexive && assoc.multiplicity.max === 1 && t._id >= source._id) return false
-            if (maxReverse !== -1 && (reverseCount.get(t._id) ?? 0) >= maxReverse) return false
-            return true
-          })
-
-          const { min, max } = assoc.multiplicity
-          const effectiveMax = max === -1 ? available.length : Math.min(max, available.length)
-          const effectiveMin = Math.min(min, available.length)
-          if (effectiveMax < effectiveMin) continue
-
-          const linkCount = effectiveMin + Math.floor(Math.random() * (effectiveMax - effectiveMin + 1))
-          // Shuffle available targets and pick
-          const shuffled = [...available].sort(() => Math.random() - 0.5)
-          const picked = shuffled.slice(0, linkCount)
-
-          if (picked.length > 0) {
-            setAssocIds(source, assoc, picked.map((t) => t._id), max)
-
-            if (reverseAssoc) {
-              for (const target of picked) {
-                const existing = getAssocIds(target, reverseAssoc)
-                setAssocIds(
-                  target,
-                  reverseAssoc,
-                  [...existing, source._id],
-                  reverseAssoc.multiplicity.max,
-                )
-                reverseCount.set(target._id, (reverseCount.get(target._id) ?? 0) + 1)
-              }
-            }
-          }
-        }
-      }
-    }
+      addRandomAssociationExtras(sourceList, targetList, assoc, reverseAssoc)
+    })
 
     set({
       instances: newInstances,

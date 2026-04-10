@@ -9,6 +9,15 @@ import {
   validateGlobalModel,
   validateInstance,
 } from '../crudStore'
+import { accessControl2CrudSchema } from './fixtures/accessControl2CrudSchema'
+
+function createDeterministicRandom(seed: number) {
+  let state = seed >>> 0
+  return () => {
+    state = (1664525 * state + 1013904223) >>> 0
+    return state / 2 ** 32
+  }
+}
 
 const baseCrudState = useCrudStore.getState()
 
@@ -372,6 +381,67 @@ const randomBidirectionalSchema: CrudSchema = {
           isComposition: false,
         },
       ],
+    },
+  ],
+  enums: [],
+}
+
+const canalInheritedAssociationSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'SegEnd',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'umpleAssociation_3',
+          endId: 'umpleAssociation_3:classTwo',
+          targetClass: 'Segment',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: -1, raw: '1..*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Segment',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'umpleAssociation_3',
+          endId: 'umpleAssociation_3:classOne',
+          targetClass: 'SegEnd',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 2, max: 2, raw: '2' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Lock',
+      isAbstract: false,
+      extendsClass: 'Segment',
+      attributes: [],
+      associations: [],
+    },
+    {
+      name: 'Bend',
+      isAbstract: false,
+      extendsClass: 'SegEnd',
+      attributes: [],
+      associations: [],
+    },
+    {
+      name: 'EntryAndExitPoint',
+      isAbstract: false,
+      extendsClass: 'SegEnd',
+      attributes: [],
+      associations: [],
     },
   ],
   enums: [],
@@ -1251,5 +1321,125 @@ describe('crudStore', () => {
 
     const linkedRightIds = (state.instances.Left ?? []).map((left) => left[assocKey(leftAssoc)])
     expect(new Set(linkedRightIds).size).toBe(2)
+  })
+
+  it('generateRandomAll satisfies required reverse multiplicities when the forward side is optional', () => {
+    useCrudStore.setState({ schema: deliveryOrderSchemaWithUnnamedRoles })
+    const randomValues = [0.1, 0.1, 0.1]
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1)
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const orderAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[0]!.associations[0]!
+    const deliveryAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[1]!.associations[0]!
+    const order = state.instances.Order?.[0]
+    const delivery = state.instances.Delivery?.[0]
+
+    expect(order).toBeTruthy()
+    expect(delivery).toBeTruthy()
+    expect(order?.[assocKey(orderAssoc)]).toBe(delivery?._id)
+    expect(delivery?.[assocKey(deliveryAssoc)]).toEqual([order?._id])
+    expect(state.globalValidationCount).toBe(0)
+  })
+
+  it('generateRandomAll adds more source instances when one optional source cannot satisfy all required targets', () => {
+    useCrudStore.setState({ schema: deliveryOrderSchemaWithUnnamedRoles })
+    const randomValues = [0.1, 0.9, 0.1, 0.1, 0.1, 0.1]
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1)
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const orderAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[0]!.associations[0]!
+    const deliveryAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[1]!.associations[0]!
+    const deliveries = state.instances.Delivery ?? []
+    const orders = state.instances.Order ?? []
+
+    expect(deliveries).toHaveLength(2)
+    expect(orders.length).toBeGreaterThanOrEqual(2)
+
+    for (const delivery of deliveries) {
+      const linkedOrderIds = delivery[assocKey(deliveryAssoc)]
+      if (!Array.isArray(linkedOrderIds)) throw new Error('expected delivery links to be stored as an array')
+      expect(linkedOrderIds).toHaveLength(1)
+
+      const linkedOrder = orders.find((order) => order._id === linkedOrderIds[0])
+      expect(linkedOrder?.[assocKey(orderAssoc)]).toBe(delivery._id)
+    }
+
+    expect(state.globalValidationCount).toBe(0)
+  })
+
+  it('generateRandomAll keeps AccessControl2 mayUse links valid after ACSystem counts are expanded later', () => {
+    useCrudStore.setState({ schema: accessControl2CrudSchema })
+    const rng = createDeterministicRandom(2)
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => rng())
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const acSystemClass = accessControl2CrudSchema.classes.find((cls) => cls.name === 'ACSystem')!
+    const mayUseAssoc = acSystemClass.associations.find((assoc) => assoc.roleName === 'mayUse')!
+    const systems = state.instances.ACSystem ?? []
+    const doorClass = accessControl2CrudSchema.classes.find((cls) => cls.name === 'Door')!
+    const controlsAssoc = doorClass.associations.find((assoc) => assoc.roleName === 'controls')!
+    const doors = state.instances.Door ?? []
+
+    expect(systems).toHaveLength(2)
+    for (const system of systems) {
+      const linkedUsers = system[assocKey(mayUseAssoc)]
+      if (!Array.isArray(linkedUsers)) throw new Error('expected ACSystem mayUse links to be stored as an array')
+      expect(linkedUsers.length).toBeGreaterThanOrEqual(1)
+    }
+    expect(doors).toHaveLength(2)
+    for (const door of doors) {
+      expect(door[assocKey(controlsAssoc)]).toBeTypeOf('number')
+    }
+    expect(state.globalValidationCount).toBe(0)
+  })
+
+  it('generateRandomAll uses inherited CanalSystem-style SegEnd subclasses to satisfy Segment endpoints', () => {
+    useCrudStore.setState({ schema: canalInheritedAssociationSchema })
+    const randomValues = [0.1, 0.1, 0.1, 0.1, 0.1]
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1)
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const segmentAssoc = canalInheritedAssociationSchema.classes[1]!.associations[0]!
+    const segmentFamily = [...(state.instances.Segment ?? []), ...(state.instances.Lock ?? [])]
+    const derivedEndpointIds = [
+      ...(state.instances.Bend ?? []).map((instance) => instance._id),
+      ...(state.instances.EntryAndExitPoint ?? []).map((instance) => instance._id),
+    ]
+    const usedEndpointIds = new Set<number>()
+
+    for (const segment of segmentFamily) {
+      const linkedSegEnds = segment[assocKey(segmentAssoc)]
+      if (!Array.isArray(linkedSegEnds)) throw new Error('expected segment endpoints to be stored as an array')
+      expect(linkedSegEnds).toHaveLength(2)
+      for (const linkedId of linkedSegEnds) usedEndpointIds.add(linkedId)
+    }
+
+    expect(derivedEndpointIds.length).toBeGreaterThan(0)
+    expect(derivedEndpointIds.some((id) => usedEndpointIds.has(id))).toBe(true)
+    expect(state.globalValidationCount).toBe(0)
   })
 })
