@@ -1,17 +1,9 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useGenerate } from '../../hooks/useGenerate'
 import { GENERATE_ONLY_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
 import { ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-} from '@/components/ui/dropdown-menu'
+import { Combobox, type ComboboxGroup } from '@/components/ui/combobox'
 import { Tip } from '@/components/ui/tooltip'
 import { lineTabClasses } from '@/components/ui/line-tab'
 import { cn } from '@/lib/utils'
@@ -25,6 +17,17 @@ export function CanvasBanner() {
   const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const generationRequested = useEphemeralStore((s) => s.generationRequested)
   const handleGenerate = useGenerate()
+  const generateGroups = useMemo<ComboboxGroup[]>(
+    () => GENERATE_ONLY_TARGET_GROUPS.map((group) => ({
+      label: group.label,
+      options: group.targets.map((target) => ({
+        value: target.id,
+        label: target.label,
+        keywords: [target.id, group.label],
+      })),
+    })),
+    [],
+  )
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -80,33 +83,19 @@ export function CanvasBanner() {
                 <span className="truncate">{getGenerateTarget(generatedTargetId)?.label ?? generatedTargetId}</span>
               </button>
             </Tip>
-            <DropdownMenu>
-              <Tip content="Change language" side="bottom">
-                <DropdownMenuTrigger
-                  className="px-1 py-0.5 text-xs transition-colors cursor-pointer outline-none text-ink-faint hover:text-ink-muted"
-                  aria-label="Change language"
-                >
-                  <ChevronDown className="size-3" />
-                </DropdownMenuTrigger>
-              </Tip>
-              <DropdownMenuContent align="start" className="w-52 max-h-64">
-                {GENERATE_ONLY_TARGET_GROUPS.map((group, gi) => (
-                  <DropdownMenuGroup key={group.label}>
-                    {gi > 0 && <DropdownMenuSeparator />}
-                    <DropdownMenuLabel className="text-xxs">{group.label}</DropdownMenuLabel>
-                    {group.targets.map((target) => (
-                      <DropdownMenuItem
-                        key={target.id}
-                        onSelect={() => handleGenerate(target.id)}
-                        className={`text-xs ${target.id === generatedTargetId ? 'bg-brand-light text-brand font-semibold' : ''}`}
-                      >
-                        {target.label}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuGroup>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Combobox
+              groups={generateGroups}
+              value={generatedTargetId}
+              onSelect={(targetId) => {
+                void handleGenerate(targetId)
+              }}
+              searchPlaceholder="Search targets..."
+              className="h-auto w-auto border-0 bg-transparent px-1 py-0.5 text-xs text-ink-faint hover:text-ink-muted focus:border-transparent focus:ring-0"
+              contentClassName="w-72 min-w-[18rem]"
+              listClassName="max-h-72"
+              triggerChildren={<ChevronDown className="size-3" />}
+              ariaLabel="Change language"
+            />
           </div>
         )}
       </div>

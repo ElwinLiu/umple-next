@@ -38,7 +38,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     target: '[data-tour="diagram-view"]',
     title: 'Switch to State Machine',
-    description: 'Click this dropdown and select "State" to switch the diagram view.',
+    description: 'Open this view picker and select "State" to switch the diagram view.',
     placement: 'bottom',
     icon: MousePointerClick,
     interactive: true,
@@ -47,7 +47,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     target: '[data-tour="examples"]',
     title: 'Pick a state machine example',
-    description: 'Choose any example from the dropdown to load a state machine model.',
+    description: 'Choose any example from the picker to load a state machine model.',
     placement: 'right',
     icon: MousePointerClick,
     interactive: true,
@@ -68,7 +68,7 @@ const TOUR_STEPS: TourStep[] = [
   {
     target: '[data-tour="generate"]',
     title: 'Generate Python code',
-    description: 'Select "Python" from the language dropdown, then click Generate to produce working code from your model.',
+    description: 'Select "Python" from the target picker, then click Generate to produce working code from your model.',
     placement: 'right',
     icon: MousePointerClick,
     interactive: true,

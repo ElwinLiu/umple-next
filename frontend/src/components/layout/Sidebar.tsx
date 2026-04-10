@@ -8,8 +8,8 @@ import { useGenerate } from '../../hooks/useGenerate'
 import { GENERATE_ONLY_TARGETS, GENERATE_ONLY_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
 import { LAYOUT_OPTIONS, VIEW_MODE_GROUPS, getLayoutOption } from '../../constants/diagram'
 import { canViewUseExampleCategory } from '../../constants/examples'
-import { Combobox } from '@/components/ui/combobox'
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Combobox, type ComboboxGroup } from '@/components/ui/combobox'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -181,7 +181,7 @@ function ToolsGroup() {
   const { execute } = useExecute()
   const running = useEphemeralStore((s) => s.executing)
   const generate = useGenerate()
-  const { categories: allCategories, loadExample } = useExamples()
+  const { categories: allCategories, loadExample, loading: loadingExamples } = useExamples()
   const targetId = useSessionStore((s) => s.generateTargetId)
   const setTargetId = useSessionStore((s) => s.setGenerateTargetId)
   const selectedExample = useSessionStore((s) => s.selectedExample)
@@ -199,6 +199,18 @@ function ToolsGroup() {
       options: g.targets.map((t) => ({ value: t.id, label: t.label })),
     })),
     []
+  )
+
+  const viewModeGroups = useMemo<ComboboxGroup[]>(
+    () => VIEW_MODE_GROUPS.map((group) => ({
+      label: group.label,
+      options: group.modes.map((mode) => ({
+        value: mode.value,
+        label: mode.longLabel ?? mode.label,
+        keywords: [mode.label, mode.longLabel, group.label].filter(Boolean) as string[],
+      })),
+    })),
+    [],
   )
 
   const exampleOptions = useMemo(
@@ -221,31 +233,22 @@ function ToolsGroup() {
         <div data-tour="examples">
           <SubLabel>Examples</SubLabel>
           <div className="space-y-1.5">
-            <Select value={viewMode} onValueChange={(v) => setViewMode(v as typeof viewMode)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {VIEW_MODE_GROUPS.map((group, index) => (
-                  <SelectGroup key={group.label}>
-                    {index > 0 && <SelectSeparator />}
-                    <SelectLabel>{group.label}</SelectLabel>
-                    {group.modes.map((m) => (
-                      <SelectItem key={m.value} value={m.value}>
-                        {m.longLabel ?? m.label}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              groups={viewModeGroups}
+              value={viewMode}
+              onSelect={(value) => setViewMode(value as typeof viewMode)}
+              placeholder="Select view..."
+              searchPlaceholder="Search views..."
+            />
             <Combobox
               key={viewMode}
               options={exampleOptions}
               value={selectedExample ?? undefined}
               onSelect={loadExample}
-              placeholder={exampleOptions.length > 0 ? 'Load an example...' : 'No examples'}
+              placeholder={loadingExamples ? 'Loading examples...' : exampleOptions.length > 0 ? 'Load an example...' : 'No examples'}
               searchPlaceholder="Search examples..."
+              emptyText={loadingExamples ? 'Loading examples...' : 'No results.'}
+              disabled={loadingExamples && exampleOptions.length === 0}
             />
           </div>
         </div>

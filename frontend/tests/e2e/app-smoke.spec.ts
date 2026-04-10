@@ -130,13 +130,12 @@ test('grouped dropdown renders legacy diagram view groups', async ({ page }) => 
   // Open the diagram view dropdown
   await page.getByLabel('Diagram view').click()
 
-  // Verify group labels exist (scoped to label slots to avoid matching radio items)
-  const labels = page.locator('[data-slot="dropdown-menu-label"]')
-  await expect(labels.filter({ hasText: 'Class Views' })).toBeVisible()
-  await expect(labels.filter({ hasText: 'State Views' })).toBeVisible()
-  await expect(labels.filter({ hasText: 'Special Views' })).toBeVisible()
-  await expect(labels.filter({ hasText: 'Instance Views' })).toBeVisible()
-  await expect(page.locator('[data-slot="dropdown-menu-radio-group"] > [data-slot="dropdown-menu-radio-item"]')).toHaveCount(0)
+  // Verify grouped headings exist in the combobox.
+  await expect(page.locator('[cmdk-group-heading]').filter({ hasText: 'Class Views' })).toBeVisible()
+  await expect(page.locator('[cmdk-group-heading]').filter({ hasText: 'State Views' })).toBeVisible()
+  await expect(page.locator('[cmdk-group-heading]').filter({ hasText: 'Special Views' })).toBeVisible()
+  await expect(page.locator('[cmdk-group-heading]').filter({ hasText: 'Instance Views' })).toBeVisible()
+  await expect(page.getByPlaceholder('Search views...')).toBeVisible()
 
   // Verify all exposed diagram types are present
   for (const id of [
