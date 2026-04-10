@@ -112,9 +112,18 @@ wait_for_backend() {
 }
 
 check_frontend() {
+  local frontend_check_host="$1"
+  local frontend_host_port="$2"
+  local frontend_check_url_host="$frontend_check_host"
+
+  case "$frontend_check_url_host" in
+    \[*\]) ;;
+    *:*) frontend_check_url_host="[$frontend_check_url_host]" ;;
+  esac
+
   echo "==> Checking frontend..."
-  if ! curl -sf http://localhost:3100/ > /dev/null; then
-    echo "ERROR: Frontend not responding on host port 3100"
+  if ! curl -sf "http://${frontend_check_url_host}:${frontend_host_port}/" > /dev/null; then
+    echo "ERROR: Frontend not responding on ${frontend_check_host}:${frontend_host_port}"
     compose -f docker-compose.prod.yml logs frontend --tail=40
     return 1
   fi
@@ -164,6 +173,18 @@ if [ "$ALLOWED_ORIGINS" = "http://localhost:3100" ]; then
   exit 1
 fi
 
+FRONTEND_BIND_HOST="$(read_env_value "FRONTEND_BIND_HOST" .env || true)"
+FRONTEND_BIND_HOST="${FRONTEND_BIND_HOST:-127.0.0.1}"
+FRONTEND_HOST_PORT="$(read_env_value "FRONTEND_HOST_PORT" .env || true)"
+FRONTEND_HOST_PORT="${FRONTEND_HOST_PORT:-3100}"
+
+FRONTEND_CHECK_HOST="$FRONTEND_BIND_HOST"
+if [ "$FRONTEND_CHECK_HOST" = "0.0.0.0" ]; then
+  FRONTEND_CHECK_HOST="127.0.0.1"
+elif [ "$FRONTEND_CHECK_HOST" = "::" ]; then
+  FRONTEND_CHECK_HOST="::1"
+fi
+
 DOCKER_GID="$(stat -c '%g' /var/run/docker.sock)"
 PREVIOUS_BACKEND_IMAGE="$(read_env_value "BACKEND_IMAGE" .env || true)"
 PREVIOUS_FRONTEND_IMAGE="$(read_env_value "FRONTEND_IMAGE" .env || true)"
@@ -185,6 +206,8 @@ echo "    CODE_EXEC_IMAGE=$CODE_EXEC_IMAGE"
 echo "    COLLAB_IMAGE=$COLLAB_IMAGE"
 echo "    LSP_PROXY_IMAGE=$LSP_PROXY_IMAGE"
 echo "    DOCKER_GID=$DOCKER_GID"
+echo "    FRONTEND_BIND_HOST=$FRONTEND_BIND_HOST"
+echo "    FRONTEND_HOST_PORT=$FRONTEND_HOST_PORT"
 
 cleanup_docker_storage
 
@@ -206,7 +229,7 @@ echo "==> Restarting services..."
 compose -f docker-compose.prod.yml up -d --remove-orphans
 
 wait_for_backend
-check_frontend
+check_frontend "$FRONTEND_CHECK_HOST" "$FRONTEND_HOST_PORT"
 
 ROLLBACK_ARMED=0
 
