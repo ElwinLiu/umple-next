@@ -51,11 +51,11 @@ export function AppToolbar() {
 
   const exampleGroups = useMemo<ComboboxGroup[]>(
     () => exampleCategories.map((category) => ({
-      label: category.name,
+      label: category.label,
       options: category.examples.map((example) => ({
-        value: JSON.stringify({ name: example.name, category: category.name }),
+        value: JSON.stringify({ name: example.name, categoryId: category.id }),
         label: example.label || example.name,
-        keywords: [example.name, category.name],
+        keywords: [example.name, category.label],
       })),
     })),
     [exampleCategories],
@@ -124,12 +124,14 @@ export function AppToolbar() {
         </DropdownMenu>
 
         <ToolbarDivider />
-
         <Combobox
           groups={exampleGroups}
           onSelect={(selection) => {
-            const parsed = JSON.parse(selection) as { name: string; category: string }
-            void loadExample(parsed.name, parsed.category)
+            const parsed = JSON.parse(selection) as { name: string; categoryId: string }
+            void loadExample(parsed.name, {
+              categoryId: parsed.categoryId as import('../../api/types').ExampleCategoryId,
+              switchToDefaultView: true,
+            })
           }}
           placeholder="Examples"
           searchPlaceholder="Search examples..."

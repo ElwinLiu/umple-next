@@ -24,12 +24,16 @@ test.beforeEach(async ({ page }) => {
     await route.fulfill({
       json: [
         {
+          id: 'class',
+          label: 'Samples',
           name: 'Samples',
           examples: [
             { name: 'Banking', filename: 'banking.ump' },
           ],
         },
         {
+          id: 'structure',
+          label: 'Composite Structure',
           name: 'Composite Structure',
           examples: [
             { name: 'PingPong', filename: 'PingPong.ump' },
@@ -48,6 +52,7 @@ test.beforeEach(async ({ page }) => {
         code: name === 'PingPong'
           ? `class Component1 {\n  public in Integer pIn1;\n  public out Integer pOut1;\n}\n\nclass Atomic {\n  Component1 cmp1;\n}\n`
           : `class Account {\n  balance;\n}\n`,
+        defaultCategoryId: name === 'PingPong' ? 'structure' : 'class',
       },
     })
   })

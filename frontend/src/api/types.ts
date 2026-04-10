@@ -164,9 +164,20 @@ export interface ExampleEntry {
   filename: string
 }
 
+export type ExampleCategoryId = 'class' | 'state' | 'structure' | 'feature' | 'other'
+
 export interface ExampleCategory {
+  id: ExampleCategoryId
+  label: string
   name: string
   examples: ExampleEntry[]
+}
+
+export interface ExampleResponse {
+  name: string
+  code: string
+  modelId?: string
+  defaultCategoryId?: ExampleCategoryId
 }
 
 export interface GenerateRequest {

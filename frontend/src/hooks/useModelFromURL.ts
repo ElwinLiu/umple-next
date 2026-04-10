@@ -3,7 +3,8 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useCollabStore } from '../stores/collabStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
 import { isTemporaryModel } from '../lib/modelId'
-import { getViewForExampleCategory, getViewForLegacyDiagramType } from '../constants/diagram'
+import { getViewForLegacyDiagramType } from '../constants/diagram'
+import { getDefaultViewForExampleCategory } from '../constants/examples'
 import { getGenerateTarget } from '../generation/targets'
 import { api } from '../api/client'
 
@@ -115,8 +116,8 @@ export function useModelFromURL() {
         loadExample(res.name, res.code, res.modelId)
 
         // Auto-switch view mode from category, unless ?diagramtype= overrides.
-        if (!initialDiagramType && res.category) {
-          const view = getViewForExampleCategory(res.category)
+        if (!initialDiagramType && res.defaultCategoryId) {
+          const view = getDefaultViewForExampleCategory(res.defaultCategoryId)
           if (view) setViewMode(view)
         }
 
