@@ -13,41 +13,45 @@ export function getViewForExampleCategory(category: string): DiagramView | null 
   return EXAMPLE_CATEGORY_TO_VIEW[category] ?? null
 }
 
-/** Grouped diagram view modes for dropdowns and sidebar */
+/** Grouped diagram view modes following the legacy UmpleOnline live-view menu.
+ *  Editable class view is controlled separately by render mode, so it is not listed here.
+ */
 export const VIEW_MODE_GROUPS: {
   label: string
   modes: { value: DiagramView; label: string; longLabel?: string }[]
 }[] = [
   {
-    label: 'Structure',
+    label: 'Class Views',
     modes: [
       { value: 'class', label: 'Class', longLabel: 'Class Diagram' },
       { value: 'erd', label: 'Entity Relationship', longLabel: 'Entity Relationship Diagram' },
-      { value: 'feature', label: 'Feature', longLabel: 'Feature Diagram' },
-      { value: 'structure', label: 'Structure', longLabel: 'Composite Structure Diagram' },
+      { value: 'crud', label: 'CRUD UI', longLabel: 'CRUD UI' },
     ],
   },
   {
-    label: 'Behavior',
+    label: 'State Views',
     modes: [
       { value: 'state', label: 'State', longLabel: 'State Machine Diagram' },
-      { value: 'eventSequence', label: 'Event Sequence', longLabel: 'Event Sequence Diagram' },
       { value: 'stateTables', label: 'State Tables', longLabel: 'State Tables Diagram' },
     ],
   },
   {
-    label: 'Other',
+    label: 'Special Views',
+    modes: [
+      { value: 'structure', label: 'Structure', longLabel: 'Composite Structure Diagram' },
+      { value: 'feature', label: 'Feature', longLabel: 'Feature Diagram' },
+    ],
+  },
+  {
+    label: 'Instance Views',
     modes: [
       { value: 'instance', label: 'Instance', longLabel: 'Instance Diagram' },
-      { value: 'crud', label: 'CRUD UI', longLabel: 'CRUD UI' },
+      { value: 'eventSequence', label: 'Event Sequence', longLabel: 'Event Sequence Diagram' },
     ],
   },
 ]
 
 export const ALL_VIEW_MODES = VIEW_MODE_GROUPS.flatMap((g) => g.modes)
-
-/** Pinned diagram types shown at the top of dropdowns for quick access */
-export const PINNED_VIEW_MODES: DiagramView[] = ['class', 'state']
 
 /** Display preference toggles per diagram view */
 export const DISPLAY_TOGGLES: Record<DiagramView, { key: DisplayPrefKey; label: string }[]> = {

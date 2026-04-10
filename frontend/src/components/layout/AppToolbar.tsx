@@ -26,7 +26,7 @@ import {
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Tip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { VIEW_MODE_GROUPS, ALL_VIEW_MODES, PINNED_VIEW_MODES } from '../../constants/diagram'
+import { VIEW_MODE_GROUPS, ALL_VIEW_MODES } from '../../constants/diagram'
 
 const pillBase = 'flex items-center bg-surface-0 rounded-lg border border-border shadow-sm px-1 py-1'
 const toolbarBtn = 'flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer'
@@ -162,20 +162,11 @@ export function AppToolbar() {
           </Tip>
           <DropdownMenuContent align="start" className="w-48">
             <DropdownMenuRadioGroup value={viewMode} onValueChange={(v) => setViewMode(v as DiagramView)}>
-              {PINNED_VIEW_MODES.map((pv) => {
-                const m = ALL_VIEW_MODES.find((v) => v.value === pv)
-                if (!m) return null
-                return (
-                  <DropdownMenuRadioItem key={m.value} value={m.value} data-testid={`diagram-view-${m.value}`}>
-                    {m.label}
-                  </DropdownMenuRadioItem>
-                )
-              })}
-              {VIEW_MODE_GROUPS.map((group) => (
+              {VIEW_MODE_GROUPS.map((group, index) => (
                 <DropdownMenuGroup key={group.label}>
-                  <DropdownMenuSeparator />
+                  {index > 0 && <DropdownMenuSeparator />}
                   <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-                  {group.modes.filter((m) => !PINNED_VIEW_MODES.includes(m.value)).map((m) => (
+                  {group.modes.map((m) => (
                     <DropdownMenuRadioItem key={m.value} value={m.value} data-testid={`diagram-view-${m.value}`}>
                       {m.label}
                     </DropdownMenuRadioItem>

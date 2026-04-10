@@ -114,7 +114,7 @@ test('uses the selected diagram type for the first diagram request', async ({ pa
   await expect.poll(() => diagramTypes[diagramTypes.length - 1]).toBe('GvStateDiagram')
 })
 
-test('grouped dropdown renders all 8 diagram types with group labels', async ({ page }) => {
+test('grouped dropdown renders legacy diagram view groups', async ({ page }) => {
   await page.route('**/api/diagram', async (route) => {
     await route.fulfill({ json: { svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>' } })
   })
@@ -127,15 +127,17 @@ test('grouped dropdown renders all 8 diagram types with group labels', async ({ 
 
   // Verify group labels exist (scoped to label slots to avoid matching radio items)
   const labels = page.locator('[data-slot="dropdown-menu-label"]')
-  await expect(labels.filter({ hasText: 'Structure' })).toBeVisible()
-  await expect(labels.filter({ hasText: 'Behavior' })).toBeVisible()
-  await expect(labels.filter({ hasText: 'Other' })).toBeVisible()
+  await expect(labels.filter({ hasText: 'Class Views' })).toBeVisible()
+  await expect(labels.filter({ hasText: 'State Views' })).toBeVisible()
+  await expect(labels.filter({ hasText: 'Special Views' })).toBeVisible()
+  await expect(labels.filter({ hasText: 'Instance Views' })).toBeVisible()
+  await expect(page.locator('[data-slot="dropdown-menu-radio-group"] > [data-slot="dropdown-menu-radio-item"]')).toHaveCount(0)
 
-  // Verify all 8 diagram types are present
+  // Verify all exposed diagram types are present
   for (const id of [
     'diagram-view-class', 'diagram-view-erd', 'diagram-view-feature', 'diagram-view-structure',
     'diagram-view-state', 'diagram-view-eventSequence', 'diagram-view-stateTables',
-    'diagram-view-instance',
+    'diagram-view-instance', 'diagram-view-crud',
   ]) {
     await expect(page.getByTestId(id)).toBeVisible()
   }

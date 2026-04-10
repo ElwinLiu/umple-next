@@ -6,9 +6,9 @@ import { useExamples } from '../../hooks/useExamples'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
 import { GENERATE_TARGETS, GENERATE_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
-import { LAYOUT_OPTIONS, ALL_VIEW_MODES, PINNED_VIEW_MODES, getViewForExampleCategory } from '../../constants/diagram'
+import { LAYOUT_OPTIONS, VIEW_MODE_GROUPS, getViewForExampleCategory } from '../../constants/diagram'
 import { Combobox } from '@/components/ui/combobox'
-import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import {
@@ -225,20 +225,16 @@ function ToolsGroup() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {PINNED_VIEW_MODES.map((pv) => {
-                  const m = ALL_VIEW_MODES.find((v) => v.value === pv)
-                  if (!m) return null
-                  return (
-                    <SelectItem key={m.value} value={m.value}>
-                      {m.longLabel ?? m.label}
-                    </SelectItem>
-                  )
-                })}
-                <SelectSeparator />
-                {ALL_VIEW_MODES.filter((m) => !PINNED_VIEW_MODES.includes(m.value)).map((m) => (
-                  <SelectItem key={m.value} value={m.value}>
-                    {m.longLabel ?? m.label}
-                  </SelectItem>
+                {VIEW_MODE_GROUPS.map((group, index) => (
+                  <SelectGroup key={group.label}>
+                    {index > 0 && <SelectSeparator />}
+                    <SelectLabel>{group.label}</SelectLabel>
+                    {group.modes.map((m) => (
+                      <SelectItem key={m.value} value={m.value}>
+                        {m.longLabel ?? m.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
