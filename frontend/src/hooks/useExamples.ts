@@ -4,12 +4,17 @@ import { useCollabStore } from '../stores/collabStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
 import { collabLoadExample } from './useCollabTabs'
 import { api } from '../api/client'
-import type { ExampleCategory } from '../api/types'
-import { getViewForExampleCategory } from '../constants/diagram'
+import type { ExampleCategory, ExampleCategoryId } from '../api/types'
+import { getDefaultViewForExampleCategory } from '../constants/examples'
 
 // Module-level cache so all consumers share one fetch
 let cachedCategories: ExampleCategory[] | null = null
 let fetchPromise: Promise<ExampleCategory[]> | null = null
+
+interface LoadExampleOptions {
+  categoryId?: ExampleCategoryId
+  switchToDefaultView?: boolean
+}
 
 export function useExamples() {
   const [allCategories, setAllCategories] = useState<ExampleCategory[]>(cachedCategories ?? [])
@@ -42,9 +47,9 @@ export function useExamples() {
     [allCategories],
   )
 
-  const loadExample = useCallback(async (name: string, categoryName?: string) => {
-    if (categoryName) {
-      const targetView = getViewForExampleCategory(categoryName)
+  const loadExample = useCallback(async (name: string, options?: LoadExampleOptions) => {
+    if (options?.switchToDefaultView && options.categoryId) {
+      const targetView = getDefaultViewForExampleCategory(options.categoryId)
       if (targetView) useSessionStore.getState().setViewMode(targetView)
     }
     try {

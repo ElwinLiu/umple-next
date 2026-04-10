@@ -37,7 +37,6 @@ export interface DiagramViewMode {
   longLabel: string
   outputKind: DiagramOutputKind
   diagramType?: string
-  exampleCategories?: string[]
   legacyDiagramTypes?: string[]
   displayToggles?: DiagramDisplayToggle[]
 }
@@ -108,7 +107,6 @@ export const VIEW_MODE_GROUPS: DiagramViewGroup[] = [
         longLabel: 'Class Diagram',
         outputKind: 'gv',
         diagramType: 'GvClassDiagram',
-        exampleCategories: ['Class Diagrams'],
         legacyDiagramTypes: ['GvClass', 'class'],
         displayToggles: CLASS_TOGGLES,
       },
@@ -118,7 +116,6 @@ export const VIEW_MODE_GROUPS: DiagramViewGroup[] = [
         longLabel: 'Entity Relationship Diagram',
         outputKind: 'gv',
         diagramType: 'GvEntityRelationshipDiagram',
-        exampleCategories: ['Entity Relationships'],
         legacyDiagramTypes: ['erd'],
       },
       {
@@ -138,7 +135,6 @@ export const VIEW_MODE_GROUPS: DiagramViewGroup[] = [
         longLabel: 'State Machine Diagram',
         outputKind: 'gv',
         diagramType: 'GvStateDiagram',
-        exampleCategories: ['State Machines'],
         legacyDiagramTypes: ['state'],
         displayToggles: STATE_TOGGLES,
       },
@@ -160,7 +156,6 @@ export const VIEW_MODE_GROUPS: DiagramViewGroup[] = [
         longLabel: 'Composite Structure Diagram',
         outputKind: 'html',
         diagramType: 'StructureDiagram',
-        exampleCategories: ['Composite Structure'],
         legacyDiagramTypes: ['structure'],
       },
       {
@@ -169,7 +164,6 @@ export const VIEW_MODE_GROUPS: DiagramViewGroup[] = [
         longLabel: 'Feature Diagram',
         outputKind: 'gv',
         diagramType: 'GvFeatureDiagram',
-        exampleCategories: ['Feature Diagrams'],
         legacyDiagramTypes: ['feature'],
         displayToggles: FEATURE_TOGGLES,
       },
@@ -225,12 +219,6 @@ export const DISPLAY_PREF_DEFAULTS: Record<DisplayPrefKey, boolean> = {
 
 export const DISPLAY_PREF_KEYS = Object.keys(DISPLAY_PREF_DEFAULTS) as DisplayPrefKey[]
 
-export const EXAMPLE_CATEGORY_TO_VIEW = Object.fromEntries(
-  ALL_VIEW_MODES.flatMap((mode) =>
-    (mode.exampleCategories ?? []).map((category) => [category, mode.value] as const)
-  )
-) as Partial<Record<string, DiagramView>>
-
 const LEGACY_DIAGRAM_TYPE_TO_VIEW = Object.fromEntries(
   ALL_VIEW_MODES.flatMap((mode) =>
     (mode.legacyDiagramTypes ?? []).map((legacyType) => [legacyType, mode.value] as const)
@@ -239,10 +227,6 @@ const LEGACY_DIAGRAM_TYPE_TO_VIEW = Object.fromEntries(
 
 export function getViewModeOption(view: DiagramView): DiagramViewMode | null {
   return VIEW_MODE_BY_VALUE.get(view) ?? null
-}
-
-export function getViewForExampleCategory(category: string): DiagramView | null {
-  return EXAMPLE_CATEGORY_TO_VIEW[category] ?? null
 }
 
 export function getViewForLegacyDiagramType(diagramType: string): DiagramView | null {

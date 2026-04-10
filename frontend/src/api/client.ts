@@ -1,5 +1,5 @@
 import type {
-  CompileRequest, CompileResponse, ExampleCategory, GenerateRequest, GenerateResponse,
+  CompileRequest, CompileResponse, ExampleCategory, ExampleResponse, GenerateRequest, GenerateResponse,
   DiagramResponse, GetModelResponse, CrudSchemaResponse, PromoteResponse,
 } from './types'
 
@@ -46,7 +46,7 @@ export const api = {
     return request(`/models/${encodeURIComponent(id)}`, { signal })
   },
 
-  getExample(name: string): Promise<{ name: string; code: string; modelId?: string; category?: string }> {
+  getExample(name: string): Promise<ExampleResponse> {
     return request(`/examples/${encodeURIComponent(name)}`)
   },
 

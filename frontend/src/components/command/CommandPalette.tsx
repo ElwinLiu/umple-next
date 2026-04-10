@@ -5,6 +5,8 @@ import { useGenerate } from '../../hooks/useGenerate'
 import { useExamples } from '../../hooks/useExamples'
 import { GENERATE_ONLY_TARGET_GROUPS } from '../../generation/targets'
 import { DIAGRAM_VIEW_ICON, VIEW_MODE_GROUPS } from '../../constants/diagram'
+import { EXAMPLE_CATEGORY_LABELS } from '../../constants/examples'
+import type { ExampleCategoryId } from '../../api/types'
 import {
   LayoutGrid, Workflow, GitBranch, Network,
   Code, Layers, Maximize2, Minimize2,
@@ -22,11 +24,11 @@ import {
   CommandSeparator,
 } from '@/components/ui/command'
 
-const CATEGORY_ICONS: Record<string, React.ReactNode> = {
-  'Class Diagrams': <LayoutGrid />,
-  'State Machines': <Workflow />,
-  'Composite Structure': <Network />,
-  'Feature Diagrams': <GitBranch />,
+const CATEGORY_ICONS: Partial<Record<ExampleCategoryId, React.ReactNode>> = {
+  class: <LayoutGrid />,
+  state: <Workflow />,
+  structure: <Network />,
+  feature: <GitBranch />,
 }
 
 export function CommandPalette() {
@@ -102,13 +104,15 @@ export function CommandPalette() {
     generate(language)
   }, [closeCommandPalette, generate])
 
-  const currentCategory = useMemo(
-    () => page && page !== 'examples' ? categories.find((c) => c.name === page) : undefined,
-    [categories, page],
-  )
+  const currentCategory = useMemo(() => {
+    if (!page || page === 'examples') return undefined
+    return categories.find((c) => c.id === page)
+  }, [categories, page])
   const canToggleRenderer = viewMode === 'class' && !!umpleModel?.umpleClasses?.length
 
-  const breadcrumb = pages.map((p) => (p === 'examples' ? 'Examples' : p)).join(' \u203A ')
+  const breadcrumb = pages
+    .map((p) => (p === 'examples' ? 'Examples' : EXAMPLE_CATEGORY_LABELS[p as ExampleCategoryId] ?? p))
+    .join(' \u203A ')
 
   return (
     <CommandDialog
@@ -246,12 +250,12 @@ export function CommandPalette() {
           <CommandGroup heading="Categories">
             {categories.map((cat) => (
               <CommandItem
-                key={cat.name}
-                onSelect={() => pushPage(cat.name)}
-                data-testid={`command-item-category-${cat.name}`}
+                key={cat.id}
+                onSelect={() => pushPage(cat.id)}
+                data-testid={`command-item-category-${cat.label}`}
               >
-                {CATEGORY_ICONS[cat.name] ?? <FolderOpen />}
-                {cat.name}
+                {CATEGORY_ICONS[cat.id] ?? <FolderOpen />}
+                {cat.label}
                 <span className="ml-auto text-xs text-muted-foreground">
                   {cat.examples.length}
                 </span>
@@ -262,13 +266,16 @@ export function CommandPalette() {
 
         {/* Examples: example list within a category */}
         {currentCategory && (
-          <CommandGroup heading={page}>
+          <CommandGroup heading={currentCategory.label}>
             {currentCategory.examples.map((ex) => (
                 <CommandItem
                   key={ex.name}
                   onSelect={() => {
                     closeCommandPalette()
-                    loadExample(ex.name, currentCategory.name)
+                    loadExample(ex.name, {
+                      categoryId: currentCategory.id,
+                      switchToDefaultView: true,
+                    })
                   }}
                   data-testid={`command-item-example-${ex.name}`}
                 >

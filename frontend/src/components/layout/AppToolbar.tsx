@@ -109,11 +109,17 @@ export function AppToolbar() {
               <DropdownMenuItem disabled>Loading examples...</DropdownMenuItem>
             ) : (
               exampleCategories.map((cat) => (
-                <DropdownMenuSub key={cat.name}>
-                  <DropdownMenuSubTrigger>{cat.name}</DropdownMenuSubTrigger>
+                <DropdownMenuSub key={cat.id}>
+                  <DropdownMenuSubTrigger>{cat.label}</DropdownMenuSubTrigger>
                   <DropdownMenuSubContent className="w-56 max-h-72">
                     {cat.examples.map((ex) => (
-                      <DropdownMenuItem key={ex.name} onSelect={() => loadExample(ex.name, cat.name)}>
+                      <DropdownMenuItem
+                        key={ex.name}
+                        onSelect={() => loadExample(ex.name, {
+                          categoryId: cat.id,
+                          switchToDefaultView: true,
+                        })}
+                      >
                         {ex.label || ex.name}
                       </DropdownMenuItem>
                     ))}

@@ -6,7 +6,8 @@ import { useExamples } from '../../hooks/useExamples'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
 import { GENERATE_ONLY_TARGETS, GENERATE_ONLY_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
-import { LAYOUT_OPTIONS, VIEW_MODE_GROUPS, getViewForExampleCategory, getLayoutOption } from '../../constants/diagram'
+import { LAYOUT_OPTIONS, VIEW_MODE_GROUPS, getLayoutOption } from '../../constants/diagram'
+import { canViewUseExampleCategory } from '../../constants/examples'
 import { Combobox } from '@/components/ui/combobox'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
@@ -202,7 +203,7 @@ function ToolsGroup() {
 
   const exampleOptions = useMemo(
     () => allCategories
-      .filter((cat) => (getViewForExampleCategory(cat.name) ?? 'class') === viewMode)
+      .filter((cat) => canViewUseExampleCategory(viewMode, cat.id))
       .flatMap((cat) => cat.examples)
       .map((ex) => ({ value: ex.name, label: ex.label || ex.name })),
     [allCategories, viewMode]

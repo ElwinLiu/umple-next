@@ -10,7 +10,7 @@
  */
 import { expect, test, type Page } from '@playwright/test'
 import type { ExampleCategory } from '../../src/api/types'
-import { EXAMPLE_CATEGORY_TO_VIEW } from '../../src/constants/diagram'
+import { getDefaultViewForExampleCategory } from '../../src/constants/examples'
 
 test.skip(
   !process.env.PLAYWRIGHT_LIVE_BACKEND,
@@ -132,15 +132,15 @@ test.describe('Live backend — all examples', () => {
     let passed = 0
 
     for (const cat of categories) {
-      const view = EXAMPLE_CATEGORY_TO_VIEW[cat.name]
+      const view = getDefaultViewForExampleCategory(cat.id)
       if (!view) continue // skip categories we don't map (e.g. "Other")
 
       for (const ex of cat.examples) {
-        const label = `${cat.name} / ${ex.name}`
+        const label = `${cat.label} / ${ex.name}`
 
         // Load via command palette
         try {
-          await loadExample(page, cat.name, ex.name)
+          await loadExample(page, cat.label, ex.name)
         } catch {
           compileFailures.push(`${label} — failed to load via command palette`)
           continue
