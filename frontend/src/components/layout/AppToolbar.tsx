@@ -4,7 +4,7 @@ import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
 import { useCompile } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
 import { useExamples } from '../../hooks/useExamples'
-import { GENERATE_TARGET_GROUPS } from '../../generation/targets'
+import { GENERATE_ONLY_TARGET_GROUPS } from '../../generation/targets'
 import { AiConfigForm } from '@/components/sidebar/AiConfigForm'
 import { useTaskStore } from '../../stores/taskStore'
 import { ToolbarDivider } from '@/components/diagram/CanvasToolbar'
@@ -26,7 +26,7 @@ import {
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Tip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { VIEW_MODE_GROUPS, ALL_VIEW_MODES } from '../../constants/diagram'
+import { VIEW_MODE_GROUPS, getViewModeOption } from '../../constants/diagram'
 
 const pillBase = 'flex items-center bg-surface-0 rounded-lg border border-border shadow-sm px-1 py-1'
 const toolbarBtn = 'flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer'
@@ -114,7 +114,7 @@ export function AppToolbar() {
                   <DropdownMenuSubContent className="w-56 max-h-72">
                     {cat.examples.map((ex) => (
                       <DropdownMenuItem key={ex.name} onSelect={() => loadExample(ex.name, cat.name)}>
-                        {ex.label}
+                        {ex.label || ex.name}
                       </DropdownMenuItem>
                     ))}
                   </DropdownMenuSubContent>
@@ -156,7 +156,7 @@ export function AppToolbar() {
               className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer outline-none"
               aria-label="Diagram view"
             >
-              <span className="truncate">{ALL_VIEW_MODES.find((m) => m.value === viewMode)?.label ?? 'Class'}</span>
+              <span className="truncate">{getViewModeOption(viewMode)?.label ?? 'Class'}</span>
               <ChevronDown className="size-3 shrink-0" />
             </DropdownMenuTrigger>
           </Tip>
@@ -196,7 +196,7 @@ export function AppToolbar() {
             </DropdownMenuTrigger>
           </Tip>
           <DropdownMenuContent align="end" className="w-52 max-h-80">
-            {GENERATE_TARGET_GROUPS.map((group, gi) => (
+            {GENERATE_ONLY_TARGET_GROUPS.map((group, gi) => (
               <DropdownMenuGroup key={group.label}>
                 {gi > 0 && <DropdownMenuSeparator />}
                 <DropdownMenuLabel className="text-xxs">{group.label}</DropdownMenuLabel>

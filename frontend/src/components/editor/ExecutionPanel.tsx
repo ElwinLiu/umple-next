@@ -231,7 +231,7 @@ export function OutputPanel() {
   }, [executionOutput, executionErrors])
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col" data-testid="output-panel">
       {/* Header */}
       <div className="flex h-[38px] shrink-0 items-center justify-between border-b border-border px-3">
         <div className="flex items-center gap-2">

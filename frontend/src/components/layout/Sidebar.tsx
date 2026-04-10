@@ -5,8 +5,8 @@ import { usePreferencesStore, type GvLayoutAlgorithm } from '../../stores/prefer
 import { useExamples } from '../../hooks/useExamples'
 import { useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
-import { GENERATE_TARGETS, GENERATE_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
-import { LAYOUT_OPTIONS, VIEW_MODE_GROUPS, getViewForExampleCategory } from '../../constants/diagram'
+import { GENERATE_ONLY_TARGETS, GENERATE_ONLY_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
+import { LAYOUT_OPTIONS, VIEW_MODE_GROUPS, getViewForExampleCategory, getLayoutOption } from '../../constants/diagram'
 import { Combobox } from '@/components/ui/combobox'
 import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectSeparator, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
@@ -188,12 +188,12 @@ function ToolsGroup() {
   const showLayout = VIEW_OUTPUT_KIND[viewMode] !== 'html'
 
   const selectedTarget = useMemo(
-    () => getGenerateTarget(targetId) ?? GENERATE_TARGETS[0],
+    () => getGenerateTarget(targetId) ?? GENERATE_ONLY_TARGETS[0],
     [targetId],
   )
 
   const generateGroups = useMemo(
-    () => GENERATE_TARGET_GROUPS.map((g) => ({
+    () => GENERATE_ONLY_TARGET_GROUPS.map((g) => ({
       label: g.label,
       options: g.targets.map((t) => ({ value: t.id, label: t.label })),
     })),
@@ -204,7 +204,7 @@ function ToolsGroup() {
     () => allCategories
       .filter((cat) => (getViewForExampleCategory(cat.name) ?? 'class') === viewMode)
       .flatMap((cat) => cat.examples)
-      .map((ex) => ({ value: ex.name, label: ex.label })),
+      .map((ex) => ({ value: ex.name, label: ex.label || ex.name })),
     [allCategories, viewMode]
   )
 
@@ -283,8 +283,8 @@ function ToolsGroup() {
                 variant="secondary"
                 size="xs"
                 className="text-xs"
-                title={selectedTarget.executable ? 'Execute generated code' : 'Execution is only supported for Java and Python'}
-              >
+              title={selectedTarget.executable ? 'Execute generated code' : 'Execution is only supported for Java and Python'}
+            >
                 {running ? (
                   <Loader2 className="size-3 animate-spin" />
                 ) : (
@@ -302,7 +302,7 @@ function ToolsGroup() {
             <SubLabel>Layout Algorithm</SubLabel>
             <Select value={layoutAlgorithm} onValueChange={(v) => setLayoutAlgorithm(v as GvLayoutAlgorithm)}>
               <SelectTrigger>
-                <SelectValue />
+                <SelectValue>{getLayoutOption(layoutAlgorithm)?.label}</SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {LAYOUT_OPTIONS.map((opt) => (

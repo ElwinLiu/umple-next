@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
-import { useSessionStore, type DiagramView } from '../stores/sessionStore'
+import { useSessionStore } from '../stores/sessionStore'
 import { useCollabStore } from '../stores/collabStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
 import { isTemporaryModel } from '../lib/modelId'
-import { getViewForExampleCategory } from '../constants/diagram'
+import { getViewForExampleCategory, getViewForLegacyDiagramType } from '../constants/diagram'
 import { getGenerateTarget } from '../generation/targets'
 import { api } from '../api/client'
 
@@ -23,16 +23,6 @@ const initialReadOnly = initialParams.has('readOnly')
 
 /** ?generateDefault= param. */
 const initialGenerateDefault = initialParams.get('generateDefault')
-
-/** Map legacy ?diagramtype= values to new view modes. */
-const DIAGRAM_TYPE_MAP: Record<string, DiagramView> = {
-  GvClass: 'class',
-  class: 'class',
-  state: 'state',
-  feature: 'feature',
-  structure: 'structure',
-  erd: 'erd',
-}
 
 /**
  * Read the persisted modelId from sessionStorage (Zustand hydrates async, so
@@ -88,7 +78,7 @@ export function useModelFromURL() {
   useEffect(() => {
     // ?diagramtype=
     if (initialDiagramType) {
-      const mapped = DIAGRAM_TYPE_MAP[initialDiagramType]
+      const mapped = getViewForLegacyDiagramType(initialDiagramType)
       if (mapped) useSessionStore.getState().setViewMode(mapped)
     }
 

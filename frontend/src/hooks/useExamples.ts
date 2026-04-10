@@ -13,12 +13,14 @@ let fetchPromise: Promise<ExampleCategory[]> | null = null
 
 export function useExamples() {
   const [allCategories, setAllCategories] = useState<ExampleCategory[]>(cachedCategories ?? [])
+  const [loading, setLoading] = useState(cachedCategories === null)
   const localLoadExample = useSessionStore((s) => s.loadExample)
   const isCollaborating = useCollabStore((s) => s.isCollaborating)
 
   useEffect(() => {
     if (cachedCategories) {
       setAllCategories(cachedCategories)
+      setLoading(false)
       return
     }
     if (!fetchPromise) {
@@ -27,7 +29,12 @@ export function useExamples() {
         .then((cats) => { cachedCategories = cats })
         .catch(() => { fetchPromise = null })
     }
-    fetchPromise.then(setAllCategories).catch(() => {})
+    fetchPromise
+      .then((cats) => {
+        setAllCategories(cats)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
   }, [])
 
   const categories = useMemo(
@@ -51,5 +58,5 @@ export function useExamples() {
     } catch { /* ignore */ }
   }, [localLoadExample, isCollaborating])
 
-  return { categories, loadExample }
+  return { categories, loadExample, loading }
 }

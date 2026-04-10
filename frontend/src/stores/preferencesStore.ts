@@ -1,5 +1,15 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
+import {
+  DISPLAY_PREF_DEFAULTS,
+  DISPLAY_PREF_KEYS,
+  type DisplayPrefKey,
+  type DiagramDisplayPrefs,
+  type DiagramView,
+  type GvLayoutAlgorithm,
+  buildSuboptions,
+  getEffectiveDiagramType,
+} from '../constants/diagram'
 
 // ── AI Config types ──
 
@@ -31,14 +41,7 @@ export function createDefaultProviderConfigs(): Record<AiProvider, ProviderConfi
   ) as Record<AiProvider, ProviderConfig>
 }
 
-// ── Diagram display pref types ──
-
-export type GvLayoutAlgorithm = 'dot' | 'sfdp' | 'circo' | 'neato' | 'fdp' | 'twopi'
-
-export type DisplayPrefKey =
-  | 'showAttributes' | 'showMethods' | 'showTraits'
-  | 'showActions' | 'showTransitionLabels' | 'showGuards' | 'showGuardLabels' | 'showNaturalLanguage'
-  | 'showFeatureDependency'
+export type { DisplayPrefKey, GvLayoutAlgorithm } from '../constants/diagram'
 
 // ── Store ──
 
@@ -93,15 +96,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
 
       // Diagram display preferences (match Umple compiler defaults)
-      showAttributes: true,
-      showMethods: false,
-      showTraits: false,
-      showActions: true,
-      showTransitionLabels: false,
-      showGuards: true,
-      showGuardLabels: false,
-      showNaturalLanguage: true,
-      showFeatureDependency: false,
+      ...DISPLAY_PREF_DEFAULTS,
       layoutAlgorithm: 'dot',
       toggleDisplayPref: (key) => set((s) => ({ [key]: !s[key] })),
       setLayoutAlgorithm: (layoutAlgorithm) => set({ layoutAlgorithm }),
@@ -140,11 +135,13 @@ export const usePreferencesStore = create<PreferencesState>()(
         // schemas (e.g. serialized action names stored as null) would
         // otherwise shadow the real store actions after the spread.
         const DATA_KEYS = [
-          'theme', 'hasSeenWelcome', 'showSidebar',
-          'showAttributes', 'showMethods', 'showTraits',
-          'showActions', 'showTransitionLabels', 'showGuards', 'showGuardLabels', 'showNaturalLanguage',
-          'showFeatureDependency', 'layoutAlgorithm',
-          'activeProvider', 'configs',
+          'theme',
+          'hasSeenWelcome',
+          'showSidebar',
+          ...DISPLAY_PREF_KEYS,
+          'layoutAlgorithm',
+          'activeProvider',
+          'configs',
         ] as const
         const safe: Record<string, unknown> = {}
         for (const k of DATA_KEYS) {
@@ -160,15 +157,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         theme: state.theme,
         hasSeenWelcome: state.hasSeenWelcome,
         showSidebar: state.showSidebar,
-        showAttributes: state.showAttributes,
-        showMethods: state.showMethods,
-        showTraits: state.showTraits,
-        showActions: state.showActions,
-        showTransitionLabels: state.showTransitionLabels,
-        showGuards: state.showGuards,
-        showGuardLabels: state.showGuardLabels,
-        showNaturalLanguage: state.showNaturalLanguage,
-        showFeatureDependency: state.showFeatureDependency,
+        ...Object.fromEntries(DISPLAY_PREF_KEYS.map((key) => [key, state[key]])),
         layoutAlgorithm: state.layoutAlgorithm,
         activeProvider: state.activeProvider,
         configs: state.configs,
@@ -181,58 +170,28 @@ export const usePreferencesStore = create<PreferencesState>()(
  *  Use as an effect dependency to trigger diagram refresh on pref changes. */
 export function selectSuboptionsKey(s: PreferencesState): string {
   return JSON.stringify([
-    s.showAttributes, s.showMethods, s.showTraits,
-    s.showActions, s.showTransitionLabels, s.showGuards, s.showGuardLabels, s.showNaturalLanguage,
-    s.showFeatureDependency, s.layoutAlgorithm,
+    ...DISPLAY_PREF_KEYS.map((key) => s[key]),
+    s.layoutAlgorithm,
   ])
 }
 
-/** Builds the suboptions array to send to the backend based on display preferences. */
-export function buildSuboptions(
-  prefs: Pick<PreferencesState,
-    'showAttributes' | 'showMethods' | 'showTraits' |
-    'showActions' | 'showTransitionLabels' | 'showGuards' | 'showGuardLabels' | 'showNaturalLanguage' |
-    'showFeatureDependency' | 'layoutAlgorithm'
-  >,
-  viewMode: string,
-  isDark: boolean,
-): string[] {
-  const opts: string[] = []
+export { buildSuboptions, getEffectiveDiagramType }
 
-  if (viewMode === 'class') {
-    if (!prefs.showAttributes) opts.push('hideattributes')
-    if (prefs.showMethods) opts.push('showmethods')
-  } else if (viewMode === 'state') {
-    if (!prefs.showActions) opts.push('hideactions')
-    if (prefs.showTransitionLabels) opts.push('showtransitionlabels')
-    if (!prefs.showGuards) opts.push('hideguards')
-    if (prefs.showGuardLabels) opts.push('showguardlabels')
-    if (!prefs.showNaturalLanguage) opts.push('hidenaturallanguage')
-  } else if (viewMode === 'feature') {
-    if (prefs.showFeatureDependency) opts.push('showFeatureDependency')
+export function selectDiagramDisplayPrefs(
+  s: Pick<PreferencesState, keyof DiagramDisplayPrefs>
+): DiagramDisplayPrefs {
+  return {
+    showAttributes: s.showAttributes,
+    showMethods: s.showMethods,
+    showTraits: s.showTraits,
+    showActions: s.showActions,
+    showTransitionLabels: s.showTransitionLabels,
+    showGuards: s.showGuards,
+    showGuardLabels: s.showGuardLabels,
+    showNaturalLanguage: s.showNaturalLanguage,
+    showFeatureDependency: s.showFeatureDependency,
+    layoutAlgorithm: s.layoutAlgorithm,
   }
-
-  if (prefs.layoutAlgorithm !== 'dot') {
-    opts.push('gv' + prefs.layoutAlgorithm)
-  }
-
-  if (isDark) opts.push('gvdark')
-
-  return opts
 }
 
-/** Returns the effective diagram type, accounting for the Traits toggle. */
-export function getEffectiveDiagramType(viewMode: string, showTraits: boolean): string {
-  const VIEW_TO_GV_TYPE: Record<string, string> = {
-    class: 'GvClassDiagram',
-    state: 'GvStateDiagram',
-    feature: 'GvFeatureDiagram',
-    structure: 'StructureDiagram',
-    erd: 'GvEntityRelationshipDiagram',
-    instance: 'InstanceDiagram',
-    eventSequence: 'EventSequence',
-    stateTables: 'StateTables',
-  }
-  if (viewMode === 'class' && showTraits) return 'GvClassTraitDiagram'
-  return VIEW_TO_GV_TYPE[viewMode] ?? 'GvClassDiagram'
-}
+export type { DiagramDisplayPrefs, DiagramView } from '../constants/diagram'

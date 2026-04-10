@@ -1,13 +1,10 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
-import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
-import { useCollabStore } from '../../stores/collabStore'
-import { collabLoadExample } from '../../hooks/useCollabTabs'
+import { useSessionStore } from '../../stores/sessionStore'
 import { useGenerate } from '../../hooks/useGenerate'
-import { api } from '../../api/client'
-import type { ExampleCategory } from '../../api/types'
-import { GENERATE_TARGET_GROUPS } from '../../generation/targets'
-import { getViewForExampleCategory } from '../../constants/diagram'
+import { useExamples } from '../../hooks/useExamples'
+import { GENERATE_ONLY_TARGET_GROUPS } from '../../generation/targets'
+import { DIAGRAM_VIEW_ICON, VIEW_MODE_GROUPS } from '../../constants/diagram'
 import {
   LayoutGrid, Workflow, GitBranch, Network,
   Code, Layers, Maximize2, Minimize2,
@@ -25,13 +22,6 @@ import {
   CommandSeparator,
 } from '@/components/ui/command'
 
-const DIAGRAM_VIEWS: { value: DiagramView; label: string; icon: React.ReactNode }[] = [
-  { value: 'class', label: 'Class Diagram', icon: <LayoutGrid /> },
-  { value: 'state', label: 'State Diagram', icon: <Workflow /> },
-  { value: 'feature', label: 'Feature Diagram', icon: <GitBranch /> },
-  { value: 'structure', label: 'Structure Diagram', icon: <Network /> },
-]
-
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   'Class Diagrams': <LayoutGrid />,
   'State Machines': <Workflow />,
@@ -45,25 +35,16 @@ export function CommandPalette() {
     setDiagramOnly, diagramOnly, toggleOutputPanel,
     setRenderMode, renderMode, commandPaletteInitialPage,
   } = useEphemeralStore()
-  const { setViewMode } = useSessionStore()
-  const localLoadExample = useSessionStore((s) => s.loadExample)
-  const isCollaborating = useCollabStore((s) => s.isCollaborating)
+  const setViewMode = useSessionStore((s) => s.setViewMode)
+  const viewMode = useSessionStore((s) => s.viewMode)
+  const umpleModel = useSessionStore((s) => s.umpleModel)
   const generate = useGenerate()
+  const { categories, loadExample, loading } = useExamples()
 
-  const [categories, setCategories] = useState<ExampleCategory[]>([])
-  const [loadingExamples, setLoadingExamples] = useState(false)
   const [pages, setPages] = useState<string[]>([])
   const [search, setSearch] = useState('')
 
   const page = pages[pages.length - 1]
-
-  // Load categories on first open
-  useEffect(() => {
-    if (commandPaletteOpen && categories.length === 0) {
-      setLoadingExamples(true)
-      api.listExamples().then(setCategories).catch(() => {}).finally(() => setLoadingExamples(false))
-    }
-  }, [commandPaletteOpen, categories.length])
 
   // Reset state when palette closes
   useEffect(() => {
@@ -121,27 +102,11 @@ export function CommandPalette() {
     generate(language)
   }, [closeCommandPalette, generate])
 
-  const handleLoadExample = useCallback(async (name: string, category: string) => {
-    closeCommandPalette()
-    try {
-      const res = await api.getExample(name)
-      if (isCollaborating) {
-        collabLoadExample(res.name, res.code, res.modelId)
-      } else {
-        localLoadExample(res.name, res.code, res.modelId)
-      }
-      const view = getViewForExampleCategory(category)
-      if (view) {
-        setViewMode(view)
-      }
-      useEphemeralStore.getState().setRightPanelView('diagram')
-    } catch { /* ignore */ }
-  }, [closeCommandPalette, localLoadExample, isCollaborating, setViewMode])
-
   const currentCategory = useMemo(
     () => page && page !== 'examples' ? categories.find((c) => c.name === page) : undefined,
     [categories, page],
   )
+  const canToggleRenderer = viewMode === 'class' && !!umpleModel?.umpleClasses?.length
 
   const breadcrumb = pages.map((p) => (p === 'examples' ? 'Examples' : p)).join(' \u203A ')
 
@@ -185,24 +150,28 @@ export function CommandPalette() {
         {/* Root page */}
         {!page && (
           <>
-            <CommandGroup heading="Diagram">
-              {DIAGRAM_VIEWS.map((dt) => (
-                <CommandItem
-                  key={dt.value}
-                  onSelect={() => {
-                    setViewMode(dt.value)
-                    useEphemeralStore.getState().setRightPanelView('diagram')
-                    closeCommandPalette()
-                  }}
-                  data-testid={`command-item-diagram-${dt.value}`}
-                >
-                  {dt.icon}
-                  {dt.label}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {VIEW_MODE_GROUPS.map((group) => (
+              <CommandGroup key={group.label} heading={group.label}>
+                {group.modes.map((mode) => (
+                  <CommandItem
+                    key={mode.value}
+                    onSelect={() => {
+                      setViewMode(mode.value)
+                      useEphemeralStore.getState().setRightPanelView('diagram')
+                      closeCommandPalette()
+                    }}
+                    data-testid={`command-item-diagram-${mode.value}`}
+                  >
+                    <DIAGRAM_VIEW_ICON />
+                    {mode.longLabel ?? mode.label}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ))}
 
-            {GENERATE_TARGET_GROUPS.map((group) => (
+            <CommandSeparator />
+
+            {GENERATE_ONLY_TARGET_GROUPS.map((group) => (
               <CommandGroup key={group.label} heading={group.label}>
                 {group.targets.map((target) => (
                   <CommandItem
@@ -219,20 +188,24 @@ export function CommandPalette() {
 
             <CommandSeparator />
             <CommandGroup heading="View">
-              <CommandItem
-                onSelect={() => {
-                  setRenderMode(renderMode === 'editable' ? 'graphviz' : 'editable')
-                  closeCommandPalette()
-                }}
-              >
-                <Layers />
-                Switch to {renderMode === 'editable' ? 'Graphviz' : 'Editable'} Rendering
-              </CommandItem>
+              {canToggleRenderer && (
+                <CommandItem
+                  onSelect={() => {
+                    setRenderMode(renderMode === 'editable' ? 'graphviz' : 'editable')
+                    closeCommandPalette()
+                  }}
+                  data-testid="command-item-view-renderer"
+                >
+                  <Layers />
+                  Switch to {renderMode === 'editable' ? 'Graphviz' : 'Editable'} Rendering
+                </CommandItem>
+              )}
               <CommandItem
                 onSelect={() => {
                   setDiagramOnly(!diagramOnly)
                   closeCommandPalette()
                 }}
+                data-testid="command-item-view-diagram-only"
               >
                 {diagramOnly ? <Minimize2 /> : <Maximize2 />}
                 {diagramOnly ? 'Exit Diagram Only Mode' : 'Diagram Only Mode'}
@@ -242,6 +215,7 @@ export function CommandPalette() {
                   toggleOutputPanel()
                   closeCommandPalette()
                 }}
+                data-testid="command-item-view-output-panel"
               >
                 <Terminal />
                 Toggle Output Panel
@@ -251,7 +225,7 @@ export function CommandPalette() {
 
             <CommandSeparator />
             <CommandGroup heading="Examples">
-              {loadingExamples ? (
+              {loading ? (
                 <div className="py-2 text-center text-xs text-muted-foreground">Loading examples...</div>
               ) : categories.length > 0 ? (
                 <CommandItem
@@ -292,11 +266,14 @@ export function CommandPalette() {
             {currentCategory.examples.map((ex) => (
                 <CommandItem
                   key={ex.name}
-                  onSelect={() => handleLoadExample(ex.name, currentCategory.name)}
+                  onSelect={() => {
+                    closeCommandPalette()
+                    loadExample(ex.name, currentCategory.name)
+                  }}
                   data-testid={`command-item-example-${ex.name}`}
                 >
                   <FileCode />
-                  {ex.label}
+                  {ex.label || ex.name}
                 </CommandItem>
               ))}
           </CommandGroup>

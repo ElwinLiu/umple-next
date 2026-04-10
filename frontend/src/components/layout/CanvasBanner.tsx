@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useGenerate } from '../../hooks/useGenerate'
-import { GENERATE_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
+import { GENERATE_ONLY_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
 import { ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -90,7 +90,7 @@ export function CanvasBanner() {
                 </DropdownMenuTrigger>
               </Tip>
               <DropdownMenuContent align="start" className="w-52 max-h-64">
-                {GENERATE_TARGET_GROUPS.map((group, gi) => (
+                {GENERATE_ONLY_TARGET_GROUPS.map((group, gi) => (
                   <DropdownMenuGroup key={group.label}>
                     {gi > 0 && <DropdownMenuSeparator />}
                     <DropdownMenuLabel className="text-xxs">{group.label}</DropdownMenuLabel>
