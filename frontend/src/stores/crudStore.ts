@@ -26,6 +26,16 @@ export interface ValidationError {
   message: string
 }
 
+export interface ReconcileResult {
+  instances: Record<string, CrudInstance[]>
+  adjustments: string[]
+}
+
+export interface GlobalValidationResult {
+  messages: string[]
+  count: number
+}
+
 interface CrudState {
   // Schema from backend
   schema: CrudSchema | null
@@ -42,6 +52,9 @@ interface CrudState {
   selectedClass: string | null
   editingInstance: { className: string; instanceId: number | null } | null
   validationErrors: ValidationError[]
+  adjustmentMessages: string[]
+  globalValidationErrors: string[]
+  globalValidationCount: number
 
   // Actions
   fetchSchema: (code: string, modelId?: string) => Promise<void>
@@ -179,6 +192,65 @@ function collectTargetInstances(
   return result
 }
 
+interface PendingGlobalValidation {
+  className: string
+  instanceId: number | null
+  newInstance: CrudInstance
+}
+
+const EMPTY_GLOBAL_VALIDATION_RESULT: GlobalValidationResult = {
+  messages: [],
+  count: 0,
+}
+
+function hasMeaningfulCrudValue(value: unknown): boolean {
+  if (value === undefined || value === null || value === '') return false
+  if (Array.isArray(value)) return value.length > 0
+  return true
+}
+
+function cloneInstances(instances: Record<string, CrudInstance[]>): Record<string, CrudInstance[]> {
+  const snapshot: Record<string, CrudInstance[]> = {}
+
+  for (const [className, list] of Object.entries(instances)) {
+    snapshot[className] = list.map((instance) => ({ ...instance }))
+  }
+
+  return snapshot
+}
+
+function formatAssociationRequirement(assoc: CrudAssociation) {
+  const { min, max } = assoc.multiplicity
+  const instanceWord = max === 1 ? 'instance' : 'instances'
+
+  if (max !== -1 && max === min) {
+    return `exactly ${min} ${assoc.targetClass} ${instanceWord}`
+  }
+
+  if (max === -1) {
+    return `at least ${min} ${assoc.targetClass} ${instanceWord}`
+  }
+
+  if (max > min) {
+    return `between ${min} and ${max} ${assoc.targetClass} ${instanceWord}`
+  }
+
+  return `at least ${min} ${assoc.targetClass} ${instanceWord}`
+}
+
+function computeGlobalValidationState(
+  schema: CrudSchema | null,
+  instances: Record<string, CrudInstance[]>,
+) {
+  if (!schema) return { globalValidationErrors: [], globalValidationCount: 0 }
+
+  const result = validateGlobalModel(schema, instances)
+  return {
+    globalValidationErrors: result.messages,
+    globalValidationCount: result.count,
+  }
+}
+
 // ── Validation ───────────────────────────────────────────────────────
 
 export function validateInstance(
@@ -249,6 +321,107 @@ export function validateInstance(
   return errors
 }
 
+export function validateGlobalModel(
+  schema: CrudSchema,
+  instances: Record<string, CrudInstance[]>,
+  pendingUpdate?: PendingGlobalValidation,
+): GlobalValidationResult {
+  if (!schema) return EMPTY_GLOBAL_VALIDATION_RESULT
+
+  const snapshot = cloneInstances(instances)
+
+  if (pendingUpdate) {
+    const list = [...(snapshot[pendingUpdate.className] ?? [])]
+
+    if (pendingUpdate.instanceId === null) {
+      list.push({ ...pendingUpdate.newInstance })
+    } else {
+      const idx = list.findIndex((instance) => instance._id === pendingUpdate.instanceId)
+      if (idx === -1) {
+        list.push({ ...pendingUpdate.newInstance })
+      } else {
+        list[idx] = { ...pendingUpdate.newInstance }
+      }
+    }
+
+    snapshot[pendingUpdate.className] = list
+  }
+
+  const messages: string[] = []
+  let totalViolations = 0
+
+  for (const cls of schema.classes) {
+    const sourceList = snapshot[cls.name] ?? []
+
+    for (const assoc of cls.associations) {
+      if (!assoc.isNavigable) continue
+
+      const { min, max } = assoc.multiplicity
+      if (min <= 0 && max === -1) continue
+
+      let missingCount = 0
+      let overMaxCount = 0
+      let firstMissingId: number | null = null
+      let firstOverMaxId: number | null = null
+
+      for (const instance of sourceList) {
+        const ids = getAssocIds(instance, assoc.roleName)
+        const linkCount = ids.length
+
+        if (linkCount < min) {
+          missingCount++
+          if (firstMissingId === null) firstMissingId = instance._id
+        }
+
+        if (max !== -1 && linkCount > max) {
+          overMaxCount++
+          if (firstOverMaxId === null) firstOverMaxId = instance._id
+        }
+      }
+
+      if (missingCount > 0) {
+        totalViolations += missingCount
+        const availableTargets = collectTargetInstances(schema, snapshot, assoc.targetClass)
+
+        if (availableTargets.length === 0) {
+          messages.push(
+            `Conflict: ${cls.name} cannot exist without ${assoc.targetClass} according to the updated association. ` +
+            `Create at least one ${assoc.targetClass} instance and associate it with the existing ${cls.name} instances.`,
+          )
+        } else {
+          const targetLabel = firstMissingId === null ? cls.name : `${cls.name} #${firstMissingId}`
+          messages.push(
+            `Please associate ${targetLabel} with ${formatAssociationRequirement(assoc)} ` +
+            `to satisfy association '${assoc.roleName}'.`,
+          )
+        }
+      }
+
+      if (overMaxCount > 0) {
+        totalViolations += overMaxCount
+        const maxText = max === 1 ? 'one' : String(max)
+
+        if (firstOverMaxId === null) {
+          messages.push(
+            `Some ${cls.name} instances exceed the maximum allowed number of ${assoc.targetClass} links ` +
+            `for association '${assoc.roleName}'.`,
+          )
+        } else {
+          messages.push(
+            `Please reduce the number of associated ${assoc.targetClass} instances for ${cls.name} #${firstOverMaxId} ` +
+            `to at most ${maxText} to satisfy association '${assoc.roleName}'.`,
+          )
+        }
+      }
+    }
+  }
+
+  return {
+    messages: [...new Set(messages)],
+    count: totalViolations,
+  }
+}
+
 function buildClassMap(schema: CrudSchema) {
   return new Map(schema.classes.map((cls) => [cls.id ?? cls.name, cls]))
 }
@@ -283,6 +456,39 @@ function normalizeCrudTypeName(type: string) {
   if (normalized === 'bool') return 'boolean'
   if (normalized === 'char') return 'character'
   return normalized
+}
+
+function buildAttributeCompatibilitySignature(attr: CrudAttribute) {
+  const typeName = attr.typeKind === 'enum' ? attr.type.trim() : normalizeCrudTypeName(attr.type)
+  return [attr.typeKind, typeName].join(':')
+}
+
+function attributeTypesChanged(oldAttr: CrudAttribute, newAttr: CrudAttribute) {
+  return buildAttributeCompatibilitySignature(oldAttr) !== buildAttributeCompatibilitySignature(newAttr)
+}
+
+function buildAttributeRenameMap(oldClass: CrudClass, newClass: CrudClass) {
+  const oldByName = new Map(oldClass.attributes.map((attr) => [attr.name, attr]))
+  const newByName = new Map(newClass.attributes.map((attr) => [attr.name, attr]))
+  const oldOnly = oldClass.attributes.filter((attr) => !newByName.has(attr.name))
+  const newOnly = newClass.attributes.filter((attr) => !oldByName.has(attr.name))
+  const usedOldNames = new Set<string>()
+  const renameMap = new Map<string, string>()
+
+  for (const newAttr of newOnly) {
+    const candidates = oldOnly.filter((oldAttr) =>
+      !usedOldNames.has(oldAttr.name) &&
+      buildAttributeCompatibilitySignature(oldAttr) === buildAttributeCompatibilitySignature(newAttr),
+    )
+
+    if (candidates.length === 1) {
+      const matchedOld = candidates[0]!
+      renameMap.set(newAttr.name, matchedOld.name)
+      usedOldNames.add(matchedOld.name)
+    }
+  }
+
+  return renameMap
 }
 
 function buildClassAttributeSignature(cls: CrudClass) {
@@ -476,16 +682,17 @@ function clearAssociationFields(instances: Record<string, CrudInstance[]>) {
   }
 }
 
-export function reconcileInstances(
+export function reconcileInstancesDetailed(
   oldSchema: CrudSchema | null,
   newSchema: CrudSchema,
   oldInstances: Record<string, CrudInstance[]>,
-): Record<string, CrudInstance[]> {
+): ReconcileResult {
   const nextInstances: Record<string, CrudInstance[]> = {}
+  const adjustments: string[] = []
 
   if (!oldSchema) {
     for (const cls of newSchema.classes) nextInstances[cls.name] = []
-    return nextInstances
+    return { instances: nextInstances, adjustments }
   }
 
   const oldClassesByName = new Map(oldSchema.classes.map((cls) => [cls.name, cls]))
@@ -504,15 +711,56 @@ export function reconcileInstances(
     const sourceList = oldInstances[oldClass.name] ?? []
     const oldAttributes = buildAttributeMap(oldClass)
     const oldAssociations = buildAssociationMap(oldClass)
+    const attributeRenameMap = buildAttributeRenameMap(oldClass, newClass)
     const migratedList: CrudInstance[] = []
+    const attributeRenameMoves = new Map<string, { oldName: string; movedCount: number }>()
+    const attributeTypeChanges = new Map<string, { oldType: string; newType: string; kept: number; removed: number }>()
 
     for (const oldInstance of sourceList) {
       const nextInstance: CrudInstance = { _id: oldInstance._id }
 
       for (const attr of newClass.attributes) {
-        if (!oldAttributes.has(attr.name)) continue
-        const migrated = coerceAttributeValue(oldInstance[attr.name], attr, newSchema)
-        if (migrated !== undefined) nextInstance[attr.name] = migrated
+        const oldAttr = oldAttributes.get(attr.name)
+
+        if (oldAttr) {
+          const oldValue = oldInstance[attr.name]
+          const migrated = coerceAttributeValue(oldValue, attr, newSchema)
+
+          if (migrated !== undefined) nextInstance[attr.name] = migrated
+
+          if (attributeTypesChanged(oldAttr, attr) && hasMeaningfulCrudValue(oldValue)) {
+            const summary = attributeTypeChanges.get(attr.name) ?? {
+              oldType: oldAttr.type,
+              newType: attr.type,
+              kept: 0,
+              removed: 0,
+            }
+
+            if (migrated !== undefined) {
+              summary.kept++
+            } else {
+              summary.removed++
+            }
+
+            attributeTypeChanges.set(attr.name, summary)
+          }
+          continue
+        }
+
+        const renamedFrom = attributeRenameMap.get(attr.name)
+        if (!renamedFrom) continue
+
+        const oldValue = oldInstance[renamedFrom]
+        if (!hasMeaningfulCrudValue(oldValue)) continue
+
+        const migrated = coerceAttributeValue(oldValue, attr, newSchema)
+        if (migrated === undefined || nextInstance[attr.name] !== undefined) continue
+
+        nextInstance[attr.name] = migrated
+
+        const summary = attributeRenameMoves.get(attr.name) ?? { oldName: renamedFrom, movedCount: 0 }
+        summary.movedCount++
+        attributeRenameMoves.set(attr.name, summary)
       }
 
       const instanceAssocCandidates: Record<string, number[]> = {}
@@ -529,9 +777,39 @@ export function reconcileInstances(
     }
 
     nextInstances[newClass.name] = migratedList
+
+    if (oldClass.name !== newClass.name && migratedList.length > 0) {
+      adjustments.push(
+        `Class '${oldClass.name}' was renamed to '${newClass.name}'. Existing instances were preserved because the class still matched uniquely.`,
+      )
+    }
+
+    for (const [newAttrName, summary] of attributeRenameMoves.entries()) {
+      if (summary.movedCount <= 0) continue
+      adjustments.push(
+        `Attribute '${summary.oldName}' in class '${newClass.name}' was renamed to '${newAttrName}'. Existing data was preserved because the attribute type did not change.`,
+      )
+    }
+
+    for (const [attrName, summary] of attributeTypeChanges.entries()) {
+      if (summary.kept > 0 && summary.removed === 0) {
+        adjustments.push(
+          `Data type of attribute '${attrName}' in class '${newClass.name}' was updated from ${summary.oldType} to ${summary.newType}. Existing data was kept because it is compatible with the new type.`,
+        )
+      } else if (summary.kept > 0 && summary.removed > 0) {
+        adjustments.push(
+          `Data type of attribute '${attrName}' in class '${newClass.name}' was updated from ${summary.oldType} to ${summary.newType}. Existing data was adjusted: compatible values were kept where possible, and incompatible values were removed from ${summary.removed} instance(s).`,
+        )
+      } else if (summary.removed > 0) {
+        adjustments.push(
+          `Data type of attribute '${attrName}' in class '${newClass.name}' was updated from ${summary.oldType} to ${summary.newType}. Existing data was removed from ${summary.removed} instance(s) because it is not compatible with the new type.`,
+        )
+      }
+    }
   }
 
   clearAssociationFields(nextInstances)
+  const associationAdjustments = new Map<string, { fromClass: string; roleName: string; targetClass: string; removedCount: number }>()
 
   for (const cls of newSchema.classes) {
     for (const assoc of cls.associations) {
@@ -551,6 +829,16 @@ export function reconcileInstances(
           ? filteredIds
           : filteredIds.slice(0, assoc.multiplicity.max)
 
+        const adjustmentKey = `${cls.name}:${assoc.roleName}`
+        const adjustment = associationAdjustments.get(adjustmentKey) ?? {
+          fromClass: cls.name,
+          roleName: assoc.roleName,
+          targetClass: assoc.targetClass,
+          removedCount: 0,
+        }
+        adjustment.removedCount += filteredIds.length - trimmedIds.length
+        associationAdjustments.set(adjustmentKey, adjustment)
+
         for (const targetId of trimmedIds) {
           const target = targetById.get(targetId)
           if (!target) continue
@@ -561,6 +849,7 @@ export function reconcileInstances(
             const accepted = addAssocId(target, assoc.reverseRoleName, source._id, reverseAssoc.multiplicity.max)
             if (!accepted) {
               removeAssocId(source, assoc.roleName, targetId, assoc.multiplicity.max)
+              adjustment.removedCount++
             }
           }
         }
@@ -568,7 +857,25 @@ export function reconcileInstances(
     }
   }
 
-  return nextInstances
+  for (const adjustment of associationAdjustments.values()) {
+    if (adjustment.removedCount <= 0) continue
+    adjustments.push(
+      `Existing links for association '${adjustment.roleName}' from ${adjustment.fromClass} to ${adjustment.targetClass} were trimmed to satisfy the updated multiplicity constraints.`,
+    )
+  }
+
+  return {
+    instances: nextInstances,
+    adjustments: [...new Set(adjustments)],
+  }
+}
+
+export function reconcileInstances(
+  oldSchema: CrudSchema | null,
+  newSchema: CrudSchema,
+  oldInstances: Record<string, CrudInstance[]>,
+): Record<string, CrudInstance[]> {
+  return reconcileInstancesDetailed(oldSchema, newSchema, oldInstances).instances
 }
 
 // ── Session storage persistence ─────────────────────────────────────
@@ -618,10 +925,20 @@ export const useCrudStore = create<CrudState>((set, get) => ({
   selectedClass: null,
   editingInstance: null,
   validationErrors: [],
+  adjustmentMessages: [],
+  globalValidationErrors: [],
+  globalValidationCount: 0,
 
   fetchSchema: async (code, modelId) => {
     const schemaRequestKey = buildCrudSchemaRequestKey(code)
-    set({ schemaLoading: true, schemaError: null, schemaRequestKey })
+    set({
+      schemaLoading: true,
+      schemaError: null,
+      schemaRequestKey,
+      adjustmentMessages: [],
+      globalValidationErrors: [],
+      globalValidationCount: 0,
+    })
     try {
       const activeTabId = useSessionStore.getState().activeTabId
       const res = await api.crudSchema({ code, modelId, activeTabId })
@@ -635,9 +952,11 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         selected = schema.classes.find((c) => !c.isAbstract)?.name ?? null
       }
       const restored = restoreFromSession(schemaRequestKey)
-      const reconciledInstances = state.schema
-        ? reconcileInstances(state.schema, schema, state.instances)
-        : (restored?.instances ?? {})
+      const reconciliation = state.schema
+        ? reconcileInstancesDetailed(state.schema, schema, state.instances)
+        : { instances: restored?.instances ?? {}, adjustments: [] }
+      const reconciledInstances = reconciliation.instances
+      const globalValidation = validateGlobalModel(schema, reconciledInstances)
       set({
         schema,
         schemaLoading: false,
@@ -649,6 +968,9 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         nextId: state.schema ? state.nextId : (restored?.nextId ?? 1),
         editingInstance: null,
         validationErrors: [],
+        adjustmentMessages: reconciliation.adjustments,
+        globalValidationErrors: globalValidation.messages,
+        globalValidationCount: globalValidation.count,
       })
     } catch (err) {
       if (get().schemaRequestKey !== schemaRequestKey) return
@@ -676,7 +998,12 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         syncReverseLinks(schema, newInstances, className, id, data, {})
       }
 
-      return { nextId: s.nextId + 1, instances: newInstances, validationErrors: [] }
+      return {
+        nextId: s.nextId + 1,
+        instances: newInstances,
+        validationErrors: [],
+        ...computeGlobalValidationState(schema, newInstances),
+      }
     })
     return id
   },
@@ -704,7 +1031,11 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         syncReverseLinks(schema, newInstances, className, instanceId, data, oldAssocData)
       }
 
-      return { instances: newInstances, validationErrors: [] }
+      return {
+        instances: newInstances,
+        validationErrors: [],
+        ...computeGlobalValidationState(schema, newInstances),
+      }
     })
   },
 
@@ -715,7 +1046,10 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       const newInstances = { ...s.instances }
       deleteInstancesInPlace(schema, newInstances, [{ cls: className, id: instanceId }])
 
-      return { instances: newInstances }
+      return {
+        instances: newInstances,
+        ...computeGlobalValidationState(schema, newInstances),
+      }
     })
   },
 
@@ -726,12 +1060,18 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       const newInstances = { ...s.instances }
       if (!schema) {
         newInstances[className] = []
-        return { instances: newInstances }
+        return {
+          instances: newInstances,
+          ...computeGlobalValidationState(schema, newInstances),
+        }
       }
 
       const seeds = (newInstances[className] ?? []).map((inst) => ({ cls: className, id: inst._id }))
       deleteInstancesInPlace(schema, newInstances, seeds)
-      return { instances: newInstances }
+      return {
+        instances: newInstances,
+        ...computeGlobalValidationState(schema, newInstances),
+      }
     })
   },
 
@@ -743,7 +1083,14 @@ export const useCrudStore = create<CrudState>((set, get) => ({
 
   resetInstances: () => {
     saveToSession(null, {}, 1)
-    set({ instances: {}, nextId: 1, editingInstance: null, validationErrors: [] })
+    set({
+      instances: {},
+      nextId: 1,
+      editingInstance: null,
+      validationErrors: [],
+      globalValidationErrors: [],
+      globalValidationCount: 0,
+    })
   },
 
   exportJson: () => {
@@ -772,6 +1119,7 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         nextId: typeof data.nextId === 'number' ? data.nextId : 1,
         editingInstance: null,
         validationErrors: [],
+        ...computeGlobalValidationState(schema, data.instances as Record<string, CrudInstance[]>),
       })
       return true
     } catch {
@@ -800,7 +1148,11 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       }
 
       newInstances[className] = list
-      return { instances: newInstances, nextId }
+      return {
+        instances: newInstances,
+        nextId,
+        ...computeGlobalValidationState(schema, newInstances),
+      }
     })
   },
 
@@ -893,7 +1245,13 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       }
     }
 
-    set({ instances: newInstances, nextId, editingInstance: null, validationErrors: [] })
+    set({
+      instances: newInstances,
+      nextId,
+      editingInstance: null,
+      validationErrors: [],
+      ...computeGlobalValidationState(schema, newInstances),
+    })
   },
 }))
 

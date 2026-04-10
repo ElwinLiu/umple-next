@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import type { ReactNode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import type { CrudSchema } from '@/api/types'
 import { buildCrudSchemaRequestKey, useCrudStore } from '@/stores/crudStore'
 import { useSessionStore } from '@/stores/sessionStore'
@@ -84,5 +84,27 @@ describe('ObjectExplorer', () => {
     render(<ObjectExplorer />)
 
     expect(fetchSchema).toHaveBeenCalledWith('class Student {}', 'model-1')
+  })
+
+  it('renders adjustment and global validation banners from the store', () => {
+    const fetchSchema = vi.fn()
+    const code = 'class Student {}'
+
+    useCrudStore.setState({
+      schema,
+      selectedClass: 'Student',
+      schemaRequestKey: buildCrudSchemaRequestKey(code),
+      fetchSchema,
+      adjustmentMessages: ['Class "Person" was renamed to "Student".'],
+      globalValidationErrors: ['Please associate Student #1 with exactly 1 Locker instance.'],
+      globalValidationCount: 1,
+    })
+    useSessionStore.setState({ code, modelId: 'model-1' })
+
+    render(<ObjectExplorer />)
+
+    expect(screen.getByText('Total 1 validation error.')).toBeTruthy()
+    expect(screen.getByText('Class "Person" was renamed to "Student".')).toBeTruthy()
+    expect(screen.getByText('Please associate Student #1 with exactly 1 Locker instance.')).toBeTruthy()
   })
 })

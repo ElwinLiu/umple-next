@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import type { CrudSchema } from '@/api/types'
-import { assocKey, reconcileInstances, resolveSelectedClassName, useCrudStore, validateInstance } from '../crudStore'
+import {
+  assocKey,
+  reconcileInstances,
+  reconcileInstancesDetailed,
+  resolveSelectedClassName,
+  useCrudStore,
+  validateGlobalModel,
+  validateInstance,
+} from '../crudStore'
 
 const baseCrudState = useCrudStore.getState()
 
@@ -120,6 +128,63 @@ const personWithNicknameSchema: CrudSchema = {
   enums: [],
 }
 
+const personWithHandleSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'handle', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithAliasSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'alias', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithDisplayNameSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'displayName', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithAliasAndNicknameSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'alias', type: 'String', typeKind: 'primitive', isInherited: false },
+        { name: 'nickname', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
 const personAgeAsStringSchema: CrudSchema = {
   classes: [
     {
@@ -141,6 +206,37 @@ const personAgeAsIntegerSchema: CrudSchema = {
       isAbstract: false,
       attributes: [
         { name: 'age', type: 'Integer', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithMandatoryLockerSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Locker',
+          roleName: 'assignedLocker',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: 1, raw: '1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
       ],
       associations: [],
     },
@@ -184,6 +280,46 @@ const personLockerSchema: CrudSchema = {
           roleName: 'assignedLocker',
           reverseRoleName: 'owner',
           multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Person',
+          roleName: 'owner',
+          reverseRoleName: 'assignedLocker',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
+const personManyLockersSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Locker',
+          roleName: 'assignedLocker',
+          reverseRoleName: 'owner',
+          multiplicity: { min: 0, max: -1, raw: '*' },
           isNavigable: true,
           isComposition: false,
         },
@@ -648,6 +784,33 @@ describe('crudStore', () => {
     })
   })
 
+  it('preserves attribute values across a unique rename match', () => {
+    const instances = {
+      Person: [{ _id: 1, handle: 'alice' }],
+    }
+
+    const reconciled = reconcileInstancesDetailed(personWithHandleSchema, personWithAliasSchema, instances)
+
+    expect(reconciled.instances).toEqual({
+      Person: [{ _id: 1, alias: 'alice' }],
+    })
+    expect(reconciled.adjustments).toContain(
+      `Attribute 'handle' in class 'Person' was renamed to 'alias'. Existing data was preserved because the attribute type did not change.`,
+    )
+  })
+
+  it('does not guess an attribute rename when the match is ambiguous', () => {
+    const instances = {
+      Person: [{ _id: 1, alias: 'ally', nickname: 'alice' }],
+    }
+
+    const reconciled = reconcileInstancesDetailed(personWithAliasAndNicknameSchema, personWithDisplayNameSchema, instances)
+
+    expect(reconciled.instances).toEqual({
+      Person: [{ _id: 1 }],
+    })
+  })
+
   it('coerces compatible attribute type changes', () => {
     const instances = {
       Person: [{ _id: 1, age: '42' }],
@@ -670,6 +833,18 @@ describe('crudStore', () => {
     expect(reconciled).toEqual({
       Person: [{ _id: 1 }],
     })
+  })
+
+  it('records attribute type-change adjustments when incompatible values are dropped', () => {
+    const instances = {
+      Person: [{ _id: 1, age: 'not-a-number' }],
+    }
+
+    const reconciled = reconcileInstancesDetailed(personAgeAsStringSchema, personAgeAsIntegerSchema, instances)
+
+    expect(reconciled.adjustments).toContain(
+      `Data type of attribute 'age' in class 'Person' was updated from String to Integer. Existing data was removed from 1 instance(s) because it is not compatible with the new type.`,
+    )
   })
 
   it('keeps existing instances when an unrelated class is added', () => {
@@ -726,6 +901,29 @@ describe('crudStore', () => {
       Locker: [{ _id: 2, number: 'L1' }],
       Cabinet: [],
     })
+  })
+
+  it('records association adjustments when links are trimmed by a tighter multiplicity', () => {
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: [2, 3] }],
+      Locker: [
+        { _id: 2, number: 'L1', [assocKey('owner')]: 1 },
+        { _id: 3, number: 'L2', [assocKey('owner')]: 1 },
+      ],
+    }
+
+    const reconciled = reconcileInstancesDetailed(personManyLockersSchema, personLockerSchema, instances)
+
+    expect(reconciled.instances).toEqual({
+      Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: 2 }],
+      Locker: [
+        { _id: 2, number: 'L1', [assocKey('owner')]: 1 },
+        { _id: 3, number: 'L2' },
+      ],
+    })
+    expect(reconciled.adjustments).toContain(
+      `Existing links for association 'assignedLocker' from Person to Locker were trimmed to satisfy the updated multiplicity constraints.`,
+    )
   })
 
   it('preserves class instances across rename when class shape matches uniquely', () => {
@@ -803,5 +1001,19 @@ describe('crudStore', () => {
       Person: [{ _id: 1, name: 'Alice', [assocKey('locker')]: 2 }],
       Locker: [{ _id: 2, number: 'L1', [assocKey('assignedPerson')]: 1 }],
     })
+  })
+
+  it('reports global validation errors when schema evolution makes existing instances invalid', () => {
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice' }],
+      Locker: [],
+    }
+
+    const result = validateGlobalModel(personWithMandatoryLockerSchema, instances)
+
+    expect(result.count).toBe(1)
+    expect(result.messages).toEqual([
+      `Conflict: Person cannot exist without Locker according to the updated association. Create at least one Locker instance and associate it with the existing Person instances.`,
+    ])
   })
 })

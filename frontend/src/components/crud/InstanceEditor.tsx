@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useCrudStore, type CrudInstance, assocKey, validateInstance } from '@/stores/crudStore'
+import { useMemo, useState, useEffect } from 'react'
+import { useCrudStore, type CrudInstance, assocKey, validateGlobalModel, validateInstance } from '@/stores/crudStore'
 import type { CrudAttribute, CrudAssociation, CrudClass, CrudEnum } from '@/api/types'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
@@ -86,6 +86,19 @@ export function InstanceEditor() {
     .filter((a) => a.multiplicity.min > 0)
     .filter((a) => (instances[a.targetClass] ?? []).length === 0 && (a.isReflexive ? (instances[cls!.name] ?? []).length === 0 : true))
 
+  const pendingGlobalValidation = useMemo(() => {
+    if (!schema || !cls || !editingInstance || Object.keys(formData).length === 0) return { messages: [], count: 0 }
+
+    return validateGlobalModel(schema, instances, {
+      className: cls.name,
+      instanceId: editingInstance.instanceId,
+      newInstance: {
+        _id: editingInstance.instanceId ?? -1,
+        ...formData,
+      } as CrudInstance,
+    })
+  }, [cls, editingInstance, formData, instances, schema])
+
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) closeEditor() }}>
       <SheetContent side="right" className="sm:max-w-md">
@@ -104,6 +117,19 @@ export function InstanceEditor() {
                   <li key={a.roleName}>
                     {a.multiplicity.raw} {a.targetClass} ({a.roleName})
                   </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {pendingGlobalValidation.messages.length > 0 && (
+            <div className="rounded-md border border-status-error/30 bg-status-error/5 px-3 py-2 text-xs text-status-error">
+              <p className="font-medium mb-1">
+                Model-wide issue{pendingGlobalValidation.count === 1 ? '' : 's'} after this change:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5">
+                {pendingGlobalValidation.messages.map((message) => (
+                  <li key={message}>{message}</li>
                 ))}
               </ul>
             </div>
