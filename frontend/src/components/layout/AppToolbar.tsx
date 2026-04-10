@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
 import { useCompile } from '../../hooks/useExecute'
@@ -9,24 +9,17 @@ import { AiConfigForm } from '@/components/sidebar/AiConfigForm'
 import { useTaskStore } from '../../stores/taskStore'
 import { ToolbarDivider } from '@/components/diagram/CanvasToolbar'
 import { Hammer, Loader2, Check, ChevronDown, Code, Sparkles, ClipboardList, Plus, Search, BookOpen } from 'lucide-react'
+import { Combobox, type ComboboxGroup } from '@/components/ui/combobox'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover'
 import { Tip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
-import { VIEW_MODE_GROUPS, getViewModeOption } from '../../constants/diagram'
+import { VIEW_MODE_GROUPS } from '../../constants/diagram'
 
 const pillBase = 'flex items-center bg-surface-0 rounded-lg border border-border shadow-sm px-1 py-1'
 const toolbarBtn = 'flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer'
@@ -40,7 +33,45 @@ export function AppToolbar() {
   const viewMode = useSessionStore((s) => s.viewMode)
   const setViewMode = useSessionStore((s) => s.setViewMode)
   const handleGenerate = useGenerate()
-  const { categories: exampleCategories, loadExample } = useExamples()
+  const { categories: exampleCategories, loadExample, loading: loadingExamples } = useExamples()
+
+  const viewModeGroups = useMemo<ComboboxGroup[]>(
+    () => VIEW_MODE_GROUPS.map((group) => ({
+      label: group.label,
+      options: group.modes.map((mode) => ({
+        value: mode.value,
+        label: mode.longLabel ?? mode.label,
+        triggerLabel: mode.label,
+        testId: `diagram-view-${mode.value}`,
+        keywords: [mode.label, mode.longLabel, group.label].filter(Boolean) as string[],
+      })),
+    })),
+    [],
+  )
+
+  const exampleGroups = useMemo<ComboboxGroup[]>(
+    () => exampleCategories.map((category) => ({
+      label: category.name,
+      options: category.examples.map((example) => ({
+        value: JSON.stringify({ name: example.name, category: category.name }),
+        label: example.label || example.name,
+        keywords: [example.name, category.name],
+      })),
+    })),
+    [exampleCategories],
+  )
+
+  const generateGroups = useMemo<ComboboxGroup[]>(
+    () => GENERATE_ONLY_TARGET_GROUPS.map((group) => ({
+      label: group.label,
+      options: group.targets.map((target) => ({
+        value: target.id,
+        label: target.label,
+        keywords: [target.id, group.label],
+      })),
+    })),
+    [],
+  )
 
   // Compile success micro-interaction
   const prevCompilingRef = useRef(compiling)
@@ -94,35 +125,28 @@ export function AppToolbar() {
 
         <ToolbarDivider />
 
-        <DropdownMenu>
-          <Tip content="Load example" side="bottom">
-            <DropdownMenuTrigger asChild>
-              <button className={toolbarBtn} aria-label="Examples">
-                <BookOpen className="size-3.5" />
-                Examples
-                <ChevronDown className="size-3 shrink-0" />
-              </button>
-            </DropdownMenuTrigger>
-          </Tip>
-          <DropdownMenuContent align="start" className="w-48">
-            {exampleCategories.length === 0 ? (
-              <DropdownMenuItem disabled>Loading examples...</DropdownMenuItem>
-            ) : (
-              exampleCategories.map((cat) => (
-                <DropdownMenuSub key={cat.name}>
-                  <DropdownMenuSubTrigger>{cat.name}</DropdownMenuSubTrigger>
-                  <DropdownMenuSubContent className="w-56 max-h-72">
-                    {cat.examples.map((ex) => (
-                      <DropdownMenuItem key={ex.name} onSelect={() => loadExample(ex.name, cat.name)}>
-                        {ex.label || ex.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuSubContent>
-                </DropdownMenuSub>
-              ))
-            )}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Combobox
+          groups={exampleGroups}
+          onSelect={(selection) => {
+            const parsed = JSON.parse(selection) as { name: string; category: string }
+            void loadExample(parsed.name, parsed.category)
+          }}
+          placeholder="Examples"
+          searchPlaceholder="Search examples..."
+          emptyText={loadingExamples ? 'Loading examples...' : 'No examples.'}
+          disabled={loadingExamples && exampleGroups.length === 0}
+          className={cn(toolbarBtn, 'w-auto h-auto border-0 bg-transparent px-1.5 py-0.5 focus:border-transparent focus:ring-0')}
+          contentClassName="w-64 min-w-[16rem]"
+          listClassName="max-h-72"
+          triggerChildren={(
+            <>
+              <BookOpen className="size-3.5" />
+              Examples
+              <ChevronDown className="size-3 shrink-0" />
+            </>
+          )}
+          ariaLabel="Examples"
+        />
       </div>
 
       <div className={cn(pillBase, 'gap-0.5')}>
@@ -149,43 +173,33 @@ export function AppToolbar() {
           </button>
         </Tip>
 
-        <DropdownMenu>
-          <Tip content="Diagram view" side="bottom">
-            <DropdownMenuTrigger
-              data-tour="diagram-view"
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer outline-none"
-              aria-label="Diagram view"
-            >
-              <span className="truncate">{getViewModeOption(viewMode)?.label ?? 'Class'}</span>
-              <ChevronDown className="size-3 shrink-0" />
-            </DropdownMenuTrigger>
-          </Tip>
-          <DropdownMenuContent align="start" className="w-48">
-            <DropdownMenuRadioGroup value={viewMode} onValueChange={(v) => setViewMode(v as DiagramView)}>
-              {VIEW_MODE_GROUPS.map((group, index) => (
-                <DropdownMenuGroup key={group.label}>
-                  {index > 0 && <DropdownMenuSeparator />}
-                  <DropdownMenuLabel>{group.label}</DropdownMenuLabel>
-                  {group.modes.map((m) => (
-                    <DropdownMenuRadioItem key={m.value} value={m.value} data-testid={`diagram-view-${m.value}`}>
-                      {m.label}
-                    </DropdownMenuRadioItem>
-                  ))}
-                </DropdownMenuGroup>
-              ))}
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Combobox
+          groups={viewModeGroups}
+          value={viewMode}
+          onSelect={(value) => setViewMode(value as DiagramView)}
+          searchPlaceholder="Search views..."
+          className="w-auto h-auto border-0 bg-transparent px-2 py-1 font-medium text-ink-muted hover:text-ink hover:bg-surface-2 focus:border-transparent focus:ring-0"
+          contentClassName="w-64 min-w-[16rem]"
+          listClassName="max-h-80"
+          ariaLabel="Diagram view"
+          data-tour="diagram-view"
+        />
 
         <ToolbarDivider />
 
-        <DropdownMenu>
-          <Tip content="Generate code" side="bottom">
-            <DropdownMenuTrigger
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-ink-muted rounded-md hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer outline-none disabled:cursor-not-allowed disabled:opacity-70"
-              aria-label="Generate"
-              disabled={generatingCode}
-            >
+        <Combobox
+          groups={generateGroups}
+          onSelect={(targetId) => {
+            void handleGenerate(targetId)
+          }}
+          placeholder="Generate"
+          searchPlaceholder="Search targets..."
+          disabled={generatingCode}
+          className="w-auto h-auto border-0 bg-transparent px-2 py-1 font-medium text-ink-muted hover:text-ink hover:bg-surface-2 focus:border-transparent focus:ring-0"
+          contentClassName="w-72 min-w-[18rem]"
+          listClassName="max-h-80"
+          triggerChildren={(
+            <>
               {generatingCode ? (
                 <Loader2 className="size-3.5 shrink-0 animate-spin" />
               ) : (
@@ -193,25 +207,10 @@ export function AppToolbar() {
               )}
               <span className="truncate">{generatingCode ? 'Generating...' : 'Generate'}</span>
               <ChevronDown className="size-3 shrink-0" />
-            </DropdownMenuTrigger>
-          </Tip>
-          <DropdownMenuContent align="end" className="w-52 max-h-80">
-            {GENERATE_ONLY_TARGET_GROUPS.map((group, gi) => (
-              <DropdownMenuGroup key={group.label}>
-                {gi > 0 && <DropdownMenuSeparator />}
-                <DropdownMenuLabel className="text-xxs">{group.label}</DropdownMenuLabel>
-                {group.targets.map((target) => (
-                  <DropdownMenuItem
-                    key={target.id}
-                    onSelect={() => handleGenerate(target.id)}
-                  >
-                    {target.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuGroup>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+            </>
+          )}
+          ariaLabel="Generate"
+        />
       </div>
 
       <div className={cn(pillBase, 'absolute right-3 top-1/2 -translate-y-1/2')}>

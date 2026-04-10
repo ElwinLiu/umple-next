@@ -123,11 +123,26 @@ async function getToggleState(page: Page, prefKey: string): Promise<boolean> {
 
 /** Switch diagram view mode via the "Diagram view" button. */
 async function switchViewMode(page: Page, viewLabel: string) {
+  const viewIds: Record<string, string> = {
+    Class: 'diagram-view-class',
+    'Entity Relationship': 'diagram-view-erd',
+    'CRUD UI': 'diagram-view-crud',
+    State: 'diagram-view-state',
+    'State Tables': 'diagram-view-stateTables',
+    Structure: 'diagram-view-structure',
+    Feature: 'diagram-view-feature',
+    Instance: 'diagram-view-instance',
+    'Event Sequence': 'diagram-view-eventSequence',
+  }
+
   // The view mode button is labeled "Diagram view" and shows the current mode
   const viewBtn = page.getByRole('button', { name: 'Diagram view' })
   await viewBtn.click()
-  // Click the desired view in the dropdown
-  await page.getByText(viewLabel, { exact: false }).first().click()
+  const targetId = viewIds[viewLabel]
+  if (!targetId) {
+    throw new Error(`Unknown view label: ${viewLabel}`)
+  }
+  await page.getByTestId(targetId).click()
   await page.waitForTimeout(500)
 }
 
