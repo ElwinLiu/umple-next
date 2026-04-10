@@ -217,15 +217,15 @@ export function ObjectExplorer() {
           )}
           {hasAdjustmentMessages && (
             <ul className={`list-disc pl-4 space-y-1 ${hasGlobalErrors ? 'mt-1' : ''}`}>
-              {adjustmentMessages.map((message) => (
-                <li key={message}>{message}</li>
+              {adjustmentMessages.map((message, index) => (
+                <li key={`${index}:${message}`}>{message}</li>
               ))}
             </ul>
           )}
           {hasGlobalErrors && (
             <ul className={`list-disc pl-4 space-y-1 ${hasAdjustmentMessages ? 'mt-2' : 'mt-1'}`}>
-              {globalValidationErrors.map((message) => (
-                <li key={message}>{message}</li>
+              {globalValidationErrors.map((message, index) => (
+                <li key={`${index}:${message}`}>{message}</li>
               ))}
             </ul>
           )}

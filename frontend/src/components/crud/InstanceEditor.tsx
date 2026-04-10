@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { useCrudStore, type CrudInstance, assocKey, validateGlobalModel, validateInstance } from '@/stores/crudStore'
+import { useCrudStore, type CrudInstance, assocKey, getAssocIds, validateGlobalModel, validateInstance } from '@/stores/crudStore'
 import type { CrudAttribute, CrudAssociation, CrudClass, CrudEnum } from '@/api/types'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
@@ -35,8 +35,9 @@ export function InstanceEditor() {
       }
       for (const assoc of cls.associations) {
         if (!assoc.isNavigable) continue
-        const key = assocKey(assoc.roleName)
-        data[key] = existing[key] ?? (assoc.multiplicity.max === 1 ? undefined : [])
+        const key = assocKey(assoc)
+        const ids = getAssocIds(existing, assoc)
+        data[key] = assoc.multiplicity.max === 1 ? ids[0] : ids
       }
       setFormData(data)
     } else {
@@ -46,7 +47,7 @@ export function InstanceEditor() {
       }
       for (const assoc of cls.associations) {
         if (!assoc.isNavigable) continue
-        data[assocKey(assoc.roleName)] = assoc.multiplicity.max === 1 ? undefined : []
+        data[assocKey(assoc)] = assoc.multiplicity.max === 1 ? undefined : []
       }
       setFormData(data)
     }
@@ -114,8 +115,9 @@ export function InstanceEditor() {
               <p className="font-medium text-status-warning mb-1">Required associations need instances first:</p>
               <ul className="list-disc list-inside space-y-0.5">
                 {missingTargets.map((a) => (
-                  <li key={a.roleName}>
-                    {a.multiplicity.raw} {a.targetClass} ({a.roleName})
+                  <li key={a.endId ?? a.id ?? `${a.targetClass}:${a.roleName}`}>
+                    {a.multiplicity.raw} {a.targetClass}
+                    {a.roleName ? ` (${a.roleName})` : ''}
                   </li>
                 ))}
               </ul>
@@ -128,8 +130,8 @@ export function InstanceEditor() {
                 Model-wide issue{pendingGlobalValidation.count === 1 ? '' : 's'} after this change:
               </p>
               <ul className="list-disc list-inside space-y-0.5">
-                {pendingGlobalValidation.messages.map((message) => (
-                  <li key={message}>{message}</li>
+                {pendingGlobalValidation.messages.map((message, index) => (
+                  <li key={`${index}:${message}`}>{message}</li>
                 ))}
               </ul>
             </div>
@@ -153,14 +155,14 @@ export function InstanceEditor() {
               </div>
               {navigableAssocs.map((assoc) => (
                 <AssociationField
-                  key={`${assoc.targetClass}-${assoc.roleName}`}
+                  key={assoc.endId ?? assoc.id ?? `${assoc.targetClass}:${assoc.roleName}`}
                   assoc={assoc}
-                  value={formData[assocKey(assoc.roleName)]}
-                  onChange={(v) => setField(assocKey(assoc.roleName), v)}
+                  value={formData[assocKey(assoc)]}
+                  onChange={(v) => setField(assocKey(assoc), v)}
                   targetInstances={instances[assoc.targetClass] ?? []}
                   targetClassName={assoc.targetClass}
                   currentInstanceId={editingInstance?.instanceId ?? undefined}
-                  error={fieldError(assocKey(assoc.roleName))}
+                  error={fieldError(assocKey(assoc))}
                 />
               ))}
             </>

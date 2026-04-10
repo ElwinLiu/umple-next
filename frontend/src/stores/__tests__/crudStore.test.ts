@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CrudSchema } from '@/api/types'
 import {
   assocKey,
@@ -239,6 +239,139 @@ const personWithMandatoryLockerSchema: CrudSchema = {
         { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
       ],
       associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const deliveryOrderSchemaWithUnnamedRoles: CrudSchema = {
+  classes: [
+    {
+      name: 'Order',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'assoc-delivery-order',
+          endId: 'assoc-delivery-order:classTwo',
+          sourceClassId: 'Order',
+          targetClassId: 'Delivery',
+          targetClass: 'Delivery',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Delivery',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'assoc-delivery-order',
+          endId: 'assoc-delivery-order:classOne',
+          sourceClassId: 'Delivery',
+          targetClassId: 'Order',
+          targetClass: 'Order',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: -1, raw: '1..*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
+const duplicateUnnamedOrderAssociationsSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Delivery',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'assoc-order-a',
+          endId: 'assoc-order-a:classOne',
+          sourceClassId: 'Delivery',
+          targetClassId: 'Order',
+          targetClass: 'Order',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: -1, raw: '1..*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+        {
+          id: 'assoc-order-b',
+          endId: 'assoc-order-b:classOne',
+          sourceClassId: 'Delivery',
+          targetClassId: 'Order',
+          targetClass: 'Order',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: -1, raw: '1..*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Order',
+      isAbstract: false,
+      attributes: [],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const randomBidirectionalSchema: CrudSchema = {
+  classes: [
+    {
+      id: 'class-left',
+      name: 'Left',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'assoc-left-right',
+          endId: 'assoc-left-right:right',
+          sourceClassId: 'class-left',
+          targetClassId: 'class-right',
+          targetClass: 'Right',
+          roleName: 'right',
+          reverseRoleName: 'left',
+          multiplicity: { min: 1, max: 1, raw: '1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      id: 'class-right',
+      name: 'Right',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'assoc-left-right',
+          endId: 'assoc-left-right:left',
+          sourceClassId: 'class-right',
+          targetClassId: 'class-left',
+          targetClass: 'Left',
+          roleName: 'left',
+          reverseRoleName: 'right',
+          multiplicity: { min: 1, max: 1, raw: '1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
     },
   ],
   enums: [],
@@ -951,6 +1084,8 @@ describe('crudStore', () => {
   })
 
   it('preserves association links when a class is renamed heuristically', () => {
+    const userAssoc = userLockerSchemaWithoutClassIds.classes[0]!.associations[0]!
+    const lockerAssoc = userLockerSchemaWithoutClassIds.classes[1]!.associations[0]!
     const instances = {
       Person: [{ _id: 1, name: 'Alice', [assocKey('owner')]: 2 }],
       Locker: [{ _id: 2, number: 'L1', [assocKey('assignedLocker')]: 1 }],
@@ -959,8 +1094,8 @@ describe('crudStore', () => {
     const reconciled = reconcileInstances(personLockerSchemaWithoutClassIds, userLockerSchemaWithoutClassIds, instances)
 
     expect(reconciled).toEqual({
-      User: [{ _id: 1, name: 'Alice', [assocKey('owner')]: 2 }],
-      Locker: [{ _id: 2, number: 'L1', [assocKey('assignedLocker')]: 1 }],
+      User: [{ _id: 1, name: 'Alice', [assocKey(userAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
     })
   })
 
@@ -986,6 +1121,8 @@ describe('crudStore', () => {
   })
 
   it('preserves association links across role rename when association ids match', () => {
+    const personAssoc = personLockerSchemaWithRenamedRoles.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchemaWithRenamedRoles.classes[1]!.associations[0]!
     const instances = {
       Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: 2 }],
       Locker: [{ _id: 2, number: 'L1', [assocKey('owner')]: 1 }],
@@ -998,8 +1135,8 @@ describe('crudStore', () => {
     )
 
     expect(reconciled).toEqual({
-      Person: [{ _id: 1, name: 'Alice', [assocKey('locker')]: 2 }],
-      Locker: [{ _id: 2, number: 'L1', [assocKey('assignedPerson')]: 1 }],
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
     })
   })
 
@@ -1015,5 +1152,83 @@ describe('crudStore', () => {
     expect(result.messages).toEqual([
       `Conflict: Person cannot exist without Locker according to the updated association. Create at least one Locker instance and associate it with the existing Person instances.`,
     ])
+  })
+
+  it('accepts unnamed association links stored under the association end id during global validation', () => {
+    const deliveryAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[1]!.associations[0]!
+    const instances = {
+      Order: [{ _id: 2 }],
+      Delivery: [{ _id: 3, [assocKey(deliveryAssoc)]: [2] }],
+    }
+
+    const result = validateGlobalModel(deliveryOrderSchemaWithUnnamedRoles, instances)
+
+    expect(result.count).toBe(0)
+    expect(result.messages).toEqual([])
+  })
+
+  it('keeps duplicate unnamed association violations as separate messages', () => {
+    const instances = {
+      Delivery: [{ _id: 1 }],
+      Order: [{ _id: 2 }],
+    }
+
+    const result = validateGlobalModel(duplicateUnnamedOrderAssociationsSchema, instances)
+
+    expect(result.count).toBe(2)
+    expect(result.messages).toHaveLength(2)
+    expect(result.messages[0]).not.toContain("''")
+    expect(result.messages[0]).toBe('Please associate Delivery #1 with at least 1 Order instances.')
+    expect(result.messages[1]).toBe('Please associate Delivery #1 with at least 1 Order instances.')
+  })
+
+  it('normalizes legacy role-based association keys on import', () => {
+    useCrudStore.setState({ schema: personLockerSchemaWithStableAssocIds })
+
+    const imported = useCrudStore.getState().importJson(JSON.stringify({
+      instances: {
+        Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: 2 }],
+        Locker: [{ _id: 2, number: 'L1', [assocKey('owner')]: 1 }],
+      },
+      nextId: 3,
+    }))
+
+    const personAssoc = personLockerSchemaWithStableAssocIds.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchemaWithStableAssocIds.classes[1]!.associations[0]!
+    const state = useCrudStore.getState()
+
+    expect(imported).toBe(true)
+    expect(state.instances.Person).toEqual([{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }])
+    expect(state.instances.Locker).toEqual([{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }])
+  })
+
+  it('deduplicates bidirectional random generation by association identity', () => {
+    useCrudStore.setState({ schema: randomBidirectionalSchema })
+    const randomValues = [0.9, 0.9, 0.1, 0.1, 0.1, 0.9, 0.1]
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1)
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const leftAssoc = randomBidirectionalSchema.classes[0]!.associations[0]!
+    const rightAssoc = randomBidirectionalSchema.classes[1]!.associations[0]!
+
+    expect(state.instances.Left).toHaveLength(2)
+    expect(state.instances.Right).toHaveLength(2)
+
+    for (const left of state.instances.Left ?? []) {
+      const rightId = left[assocKey(leftAssoc)]
+      expect(typeof rightId).toBe('number')
+
+      const right = state.instances.Right?.find((candidate) => candidate._id === rightId)
+      expect(right?.[assocKey(rightAssoc)]).toBe(left._id)
+    }
+
+    const linkedRightIds = (state.instances.Left ?? []).map((left) => left[assocKey(leftAssoc)])
+    expect(new Set(linkedRightIds).size).toBe(2)
   })
 })

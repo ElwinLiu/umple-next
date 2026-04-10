@@ -8,6 +8,8 @@ export interface CrudInstance {
   [key: string]: unknown
 }
 
+type AssocKeyInput = string | Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'targetClass'>
+
 /** Stable key for the model input used to fetch a CRUD schema.
  *  Keyed on code only — the modelId is a backend implementation detail
  *  and should not trigger refetches when it changes (e.g. crudModelId
@@ -17,8 +19,19 @@ export function buildCrudSchemaRequestKey(code: string) {
 }
 
 /** Key used to store an association value inside a CrudInstance. */
-export function assocKey(roleName: string) {
-  return `__assoc__${roleName}` as const
+function getAssociationIdentity(assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'targetClass'>) {
+  return assoc.endId ?? assoc.id ?? (assoc.roleName || assoc.targetClass)
+}
+
+export function assocKey(input: AssocKeyInput) {
+  const identity = typeof input === 'string' ? input : getAssociationIdentity(input)
+  return `__assoc__${identity}` as const
+}
+
+function getLegacyAssocKey(input: AssocKeyInput) {
+  if (typeof input === 'string' || !input.roleName) return null
+  const identity = getAssociationIdentity(input)
+  return identity !== input.roleName ? assocKey(input.roleName) : null
 }
 
 export interface ValidationError {
@@ -76,8 +89,10 @@ interface CrudState {
 // ── Helpers ──────────────────────────────────────────────────────────
 
 /** Get the IDs stored in an association slot (normalises to number[]). */
-function getAssocIds(instance: CrudInstance, role: string): number[] {
-  const val = instance[assocKey(role)]
+export function getAssocIds(instance: CrudInstance, assoc: AssocKeyInput): number[] {
+  const key = assocKey(assoc)
+  const legacyKey = getLegacyAssocKey(assoc)
+  const val = instance[key] ?? (legacyKey ? instance[legacyKey] : undefined)
   if (val === undefined || val === null) return []
   if (Array.isArray(val)) return val as number[]
   if (typeof val === 'number') return [val]
@@ -85,29 +100,62 @@ function getAssocIds(instance: CrudInstance, role: string): number[] {
 }
 
 /** Set association IDs on an instance (mutates). */
-function setAssocIds(instance: CrudInstance, role: string, ids: number[], max = -1) {
+function setAssocIds(instance: CrudInstance, assoc: AssocKeyInput, ids: number[], max = -1) {
+  const key = assocKey(assoc)
+  const legacyKey = getLegacyAssocKey(assoc)
   if (ids.length === 0) {
-    instance[assocKey(role)] = undefined
+    instance[key] = undefined
+    if (legacyKey) delete instance[legacyKey]
     return
   }
-  instance[assocKey(role)] = max === 1 ? ids[0] : ids
+  instance[key] = max === 1 ? ids[0] : ids
+  if (legacyKey) delete instance[legacyKey]
 }
 
 /** Remove a single ID from an association slot on an instance (mutates). */
-function removeAssocId(instance: CrudInstance, role: string, targetId: number, max = -1) {
-  const ids = getAssocIds(instance, role).filter((id) => id !== targetId)
-  setAssocIds(instance, role, ids, max)
+function removeAssocId(instance: CrudInstance, assoc: AssocKeyInput, targetId: number, max = -1) {
+  const ids = getAssocIds(instance, assoc).filter((id) => id !== targetId)
+  setAssocIds(instance, assoc, ids, max)
 }
 
-/** Find the association definition on a class by role name. */
-function findAssoc(schema: CrudSchema, className: string, roleName: string): CrudAssociation | undefined {
-  const cls = schema.classes.find((c) => c.name === className)
-  return cls?.associations.find((a) => a.roleName === roleName)
+function findAssociationSourceClassName(schema: CrudSchema, assoc: CrudAssociation): string | undefined {
+  if (assoc.sourceClassId) return assoc.sourceClassId
+
+  const identity = getAssociationIdentity(assoc)
+  for (const cls of schema.classes) {
+    const match = cls.associations.find((candidate) =>
+      candidate === assoc ||
+      (
+        getAssociationIdentity(candidate) === identity &&
+        candidate.targetClass === assoc.targetClass &&
+        candidate.roleName === assoc.roleName &&
+        candidate.reverseRoleName === assoc.reverseRoleName
+      ),
+    )
+    if (match) return cls.name
+  }
+
+  return undefined
 }
 
 function findReverseAssoc(schema: CrudSchema, assoc: CrudAssociation): CrudAssociation | undefined {
+  const targetClass = schema.classes.find((cls) => cls.name === assoc.targetClass)
+  if (!targetClass) return undefined
+
+  if (assoc.id) {
+    const reverseById = targetClass.associations.find((candidate) =>
+      candidate.id === assoc.id && candidate.endId !== assoc.endId,
+    )
+    if (reverseById) return reverseById
+  }
+
   if (!assoc.reverseRoleName) return undefined
-  return findAssoc(schema, assoc.targetClass, assoc.reverseRoleName)
+  const sourceClassName = findAssociationSourceClassName(schema, assoc)
+  return targetClass.associations.find((candidate) =>
+    candidate.roleName === assoc.reverseRoleName &&
+    candidate.reverseRoleName === assoc.roleName &&
+    (!sourceClassName || candidate.targetClass === sourceClassName),
+  )
 }
 
 export function classHasCompositionChildren(schema: CrudSchema | null, className: string): boolean {
@@ -123,7 +171,7 @@ function wouldCreateCycle(
   instances: CrudInstance[],
   sourceId: number,
   targetId: number,
-  role: string,
+  assoc: AssocKeyInput,
 ): boolean {
   const visited = new Set<number>()
   let current: number | undefined = targetId
@@ -133,7 +181,7 @@ function wouldCreateCycle(
     visited.add(current)
     const inst = instances.find((i) => i._id === current)
     if (!inst) return false
-    const parentIds = getAssocIds(inst, role)
+    const parentIds = getAssocIds(inst, assoc)
     // For to-one reflexive (parent pointer), follow first link
     current = parentIds[0]
   }
@@ -238,6 +286,17 @@ function formatAssociationRequirement(assoc: CrudAssociation) {
   return `at least ${min} ${assoc.targetClass} ${instanceWord}`
 }
 
+function formatAssociationReference(assoc: CrudAssociation) {
+  return assoc.roleName
+    ? `association '${assoc.roleName}'`
+    : `association to ${assoc.targetClass}`
+}
+
+function formatAssociationMessage(base: string, assoc: CrudAssociation) {
+  if (!assoc.roleName) return `${base}.`
+  return `${base} to satisfy ${formatAssociationReference(assoc)}.`
+}
+
 function computeGlobalValidationState(
   schema: CrudSchema | null,
   instances: Record<string, CrudInstance[]>,
@@ -267,7 +326,7 @@ export function validateInstance(
   // Check association multiplicity constraints
   for (const assoc of cls.associations) {
     if (!assoc.isNavigable) continue
-    const key = assocKey(assoc.roleName)
+    const key = assocKey(assoc)
     const ids = toIdArray(data[key])
 
     const { min, max } = assoc.multiplicity
@@ -291,12 +350,13 @@ export function validateInstance(
       for (const tid of ids) {
         const targetInst = targetInstances.find((inst) => inst._id === tid)
         if (!targetInst) continue
-        const reverseIds = getAssocIds(targetInst, assoc.reverseRoleName)
+        const reverseIds = getAssocIds(targetInst, reverseAssoc ?? assoc.reverseRoleName)
         const occupiedByOthers = reverseIds.filter((id) => id !== editingId)
         if (occupiedByOthers.length >= reverseAssoc.multiplicity.max) {
+          const reverseLabel = reverseAssoc?.roleName || assoc.reverseRoleName || className
           errors.push({
             field: key,
-            message: `${assoc.targetClass} #${tid} already has the maximum number of ${assoc.reverseRoleName} links`,
+            message: `${assoc.targetClass} #${tid} already has the maximum number of ${reverseLabel} links`,
           })
         }
       }
@@ -310,7 +370,7 @@ export function validateInstance(
       for (const tid of ids) {
         if (tid === editingId) {
           errors.push({ field: key, message: `Cannot associate with itself` })
-        } else if (wouldCreateCycle(classInstances, editingId, tid, assoc.roleName)) {
+        } else if (wouldCreateCycle(classInstances, editingId, tid, assoc)) {
           errors.push({ field: key, message: `Would create a circular reference` })
         }
       }
@@ -365,7 +425,7 @@ export function validateGlobalModel(
       let firstOverMaxId: number | null = null
 
       for (const instance of sourceList) {
-        const ids = getAssocIds(instance, assoc.roleName)
+        const ids = getAssocIds(instance, assoc)
         const linkCount = ids.length
 
         if (linkCount < min) {
@@ -391,8 +451,10 @@ export function validateGlobalModel(
         } else {
           const targetLabel = firstMissingId === null ? cls.name : `${cls.name} #${firstMissingId}`
           messages.push(
-            `Please associate ${targetLabel} with ${formatAssociationRequirement(assoc)} ` +
-            `to satisfy association '${assoc.roleName}'.`,
+            formatAssociationMessage(
+              `Please associate ${targetLabel} with ${formatAssociationRequirement(assoc)}`,
+              assoc,
+            ),
           )
         }
       }
@@ -402,22 +464,22 @@ export function validateGlobalModel(
         const maxText = max === 1 ? 'one' : String(max)
 
         if (firstOverMaxId === null) {
-          messages.push(
-            `Some ${cls.name} instances exceed the maximum allowed number of ${assoc.targetClass} links ` +
-            `for association '${assoc.roleName}'.`,
-          )
+          messages.push(formatAssociationMessage(
+            `Some ${cls.name} instances exceed the maximum allowed number of ${assoc.targetClass} links`,
+            assoc,
+          ))
         } else {
-          messages.push(
-            `Please reduce the number of associated ${assoc.targetClass} instances for ${cls.name} #${firstOverMaxId} ` +
-            `to at most ${maxText} to satisfy association '${assoc.roleName}'.`,
-          )
+          messages.push(formatAssociationMessage(
+            `Please reduce the number of associated ${assoc.targetClass} instances for ${cls.name} #${firstOverMaxId} to at most ${maxText}`,
+            assoc,
+          ))
         }
       }
     }
   }
 
   return {
-    messages: [...new Set(messages)],
+    messages,
     count: totalViolations,
   }
 }
@@ -430,8 +492,39 @@ function buildAttributeMap(cls: CrudClass) {
   return new Map(cls.attributes.map((attr) => [attr.name, attr]))
 }
 
+function getAssociationCompatibilityKey(
+  assoc: Pick<CrudAssociation, 'targetClass' | 'targetClassId' | 'roleName' | 'reverseRoleName' | 'multiplicity' | 'isComposition'>,
+) {
+  return [
+    assoc.targetClassId ?? assoc.targetClass,
+    assoc.roleName,
+    assoc.reverseRoleName,
+    assoc.multiplicity.min,
+    assoc.multiplicity.max,
+    assoc.isComposition ? '1' : '0',
+  ].join('|')
+}
+
+function getAssociationLookupKeys(
+  assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'targetClass' | 'targetClassId' | 'reverseRoleName' | 'multiplicity' | 'isComposition'>,
+) {
+  return [
+    assoc.endId,
+    assoc.id,
+    getAssociationCompatibilityKey(assoc),
+    assoc.roleName || undefined,
+    getAssociationIdentity(assoc),
+  ].filter((key): key is string => Boolean(key))
+}
+
 function buildAssociationMap(cls: CrudClass) {
-  return new Map(cls.associations.map((assoc) => [assoc.endId ?? assoc.id ?? assoc.roleName, assoc]))
+  const associations = new Map<string, CrudAssociation>()
+  for (const assoc of cls.associations) {
+    for (const key of getAssociationLookupKeys(assoc)) {
+      associations.set(key, assoc)
+    }
+  }
+  return associations
 }
 
 function buildInstanceKey(className: string, instanceId: number) {
@@ -440,10 +533,6 @@ function buildInstanceKey(className: string, instanceId: number) {
 
 function getClassIdentity(cls: Pick<CrudClass, 'id' | 'name'>) {
   return cls.id ?? cls.name
-}
-
-function getAssociationIdentity(assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName'>) {
-  return assoc.endId ?? assoc.id ?? assoc.roleName
 }
 
 function getAssociationTargetIdentity(assoc: Pick<CrudAssociation, 'targetClass' | 'targetClassId'>) {
@@ -664,11 +753,11 @@ function coerceAttributeValue(value: unknown, attr: CrudAttribute, schema: CrudS
   return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' ? value : undefined
 }
 
-function addAssocId(instance: CrudInstance, role: string, targetId: number, max = -1): boolean {
-  const ids = getAssocIds(instance, role)
+function addAssocId(instance: CrudInstance, assoc: AssocKeyInput, targetId: number, max = -1): boolean {
+  const ids = getAssocIds(instance, assoc)
   if (ids.includes(targetId)) return true
   if (max !== -1 && ids.length >= max) return false
-  setAssocIds(instance, role, [...ids, targetId], max)
+  setAssocIds(instance, assoc, [...ids, targetId], max)
   return true
 }
 
@@ -680,6 +769,34 @@ function clearAssociationFields(instances: Record<string, CrudInstance[]>) {
       }
     }
   }
+}
+
+function normalizeInstancesForSchema(
+  schema: CrudSchema,
+  instances: Record<string, CrudInstance[]>,
+): Record<string, CrudInstance[]> {
+  const normalized: Record<string, CrudInstance[]> = {}
+
+  for (const cls of schema.classes) {
+    const list = instances[cls.name] ?? []
+    normalized[cls.name] = list.map((instance) => {
+      const nextInstance: CrudInstance = {}
+
+      for (const [key, value] of Object.entries(instance)) {
+        if (!key.startsWith('__assoc__')) nextInstance[key] = value
+      }
+
+      for (const assoc of cls.associations) {
+        const ids = getAssocIds(instance, assoc)
+        if (ids.length === 0) continue
+        setAssocIds(nextInstance, assoc, [...new Set(ids)], assoc.multiplicity.max)
+      }
+
+      return nextInstance
+    })
+  }
+
+  return normalized
 }
 
 export function reconcileInstancesDetailed(
@@ -766,9 +883,13 @@ export function reconcileInstancesDetailed(
       const instanceAssocCandidates: Record<string, number[]> = {}
       for (const assoc of newClass.associations) {
         const assocIdentity = getAssociationIdentity(assoc)
-        const oldAssoc = oldAssociations.get(assocIdentity) ?? oldAssociations.get(assoc.roleName)
-        if (!oldAssoc || !associationTargetsMatch(oldAssoc, assoc, classSourceMap)) continue
-        const ids = toIdArray(oldInstance[assocKey(oldAssoc.roleName)])
+        const oldAssoc = getAssociationLookupKeys(assoc)
+          .map((key) => oldAssociations.get(key))
+          .find((candidate): candidate is CrudAssociation =>
+            Boolean(candidate) && associationTargetsMatch(candidate, assoc, classSourceMap),
+          )
+        if (!oldAssoc) continue
+        const ids = getAssocIds(oldInstance, oldAssoc)
         if (ids.length > 0) instanceAssocCandidates[assocIdentity] = ids
       }
 
@@ -829,10 +950,10 @@ export function reconcileInstancesDetailed(
           ? filteredIds
           : filteredIds.slice(0, assoc.multiplicity.max)
 
-        const adjustmentKey = `${cls.name}:${assoc.roleName}`
+        const adjustmentKey = `${cls.name}:${getAssociationIdentity(assoc)}`
         const adjustment = associationAdjustments.get(adjustmentKey) ?? {
           fromClass: cls.name,
-          roleName: assoc.roleName,
+          roleName: assoc.roleName || assoc.targetClass,
           targetClass: assoc.targetClass,
           removedCount: 0,
         }
@@ -842,13 +963,13 @@ export function reconcileInstancesDetailed(
         for (const targetId of trimmedIds) {
           const target = targetById.get(targetId)
           if (!target) continue
-          const added = addAssocId(source, assoc.roleName, targetId, assoc.multiplicity.max)
+          const added = addAssocId(source, assoc, targetId, assoc.multiplicity.max)
           if (!added) continue
 
           if (assoc.reverseRoleName && reverseAssoc) {
-            const accepted = addAssocId(target, assoc.reverseRoleName, source._id, reverseAssoc.multiplicity.max)
+            const accepted = addAssocId(target, reverseAssoc, source._id, reverseAssoc.multiplicity.max)
             if (!accepted) {
-              removeAssocId(source, assoc.roleName, targetId, assoc.multiplicity.max)
+              removeAssocId(source, assoc, targetId, assoc.multiplicity.max)
               adjustment.removedCount++
             }
           }
@@ -860,7 +981,9 @@ export function reconcileInstancesDetailed(
   for (const adjustment of associationAdjustments.values()) {
     if (adjustment.removedCount <= 0) continue
     adjustments.push(
-      `Existing links for association '${adjustment.roleName}' from ${adjustment.fromClass} to ${adjustment.targetClass} were trimmed to satisfy the updated multiplicity constraints.`,
+      adjustment.roleName && adjustment.roleName !== adjustment.targetClass
+        ? `Existing links for association '${adjustment.roleName}' from ${adjustment.fromClass} to ${adjustment.targetClass} were trimmed to satisfy the updated multiplicity constraints.`
+        : `Existing links from ${adjustment.fromClass} to ${adjustment.targetClass} were trimmed to satisfy the updated multiplicity constraints.`,
     )
   }
 
@@ -952,9 +1075,10 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         selected = schema.classes.find((c) => !c.isAbstract)?.name ?? null
       }
       const restored = restoreFromSession(schemaRequestKey)
+      const restoredInstances = restored ? normalizeInstancesForSchema(schema, restored.instances) : {}
       const reconciliation = state.schema
         ? reconcileInstancesDetailed(state.schema, schema, state.instances)
-        : { instances: restored?.instances ?? {}, adjustments: [] }
+        : { instances: restoredInstances, adjustments: [] }
       const reconciledInstances = reconciliation.instances
       const globalValidation = validateGlobalModel(schema, reconciledInstances)
       set({
@@ -1018,16 +1142,22 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       if (idx === -1) return s
 
       const oldInst = list[idx]!
-      const newInst: CrudInstance = { ...oldInst, ...data }
+      const oldAssocData: Record<string, unknown> = {}
+      for (const key of Object.keys(oldInst)) {
+        if (key.startsWith('__assoc__')) oldAssocData[key] = oldInst[key]
+      }
+
+      const preservedFields: CrudInstance = {}
+      for (const [key, value] of Object.entries(oldInst)) {
+        if (!key.startsWith('__assoc__')) preservedFields[key] = value
+      }
+
+      const newInst: CrudInstance = { ...preservedFields, ...data }
       list[idx] = newInst
       newInstances[className] = list
 
       // Bidirectional sync: diff old vs new association values
       if (schema) {
-        const oldAssocData: Record<string, unknown> = {}
-        for (const key of Object.keys(oldInst)) {
-          if (key.startsWith('__assoc__')) oldAssocData[key] = oldInst[key]
-        }
         syncReverseLinks(schema, newInstances, className, instanceId, data, oldAssocData)
       }
 
@@ -1114,12 +1244,15 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         }
         data.instances = filtered
       }
+      const normalizedInstances = schema
+        ? normalizeInstancesForSchema(schema, data.instances as Record<string, CrudInstance[]>)
+        : data.instances as Record<string, CrudInstance[]>
       set({
-        instances: data.instances as Record<string, CrudInstance[]>,
+        instances: normalizedInstances,
         nextId: typeof data.nextId === 'number' ? data.nextId : 1,
         editingInstance: null,
         validationErrors: [],
-        ...computeGlobalValidationState(schema, data.instances as Record<string, CrudInstance[]>),
+        ...computeGlobalValidationState(schema, normalizedInstances),
       })
       return true
     } catch {
@@ -1188,18 +1321,19 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       for (const assoc of cls.associations) {
         if (!assoc.isNavigable) continue
 
-        // Deduplicate bidirectional: skip if reverse direction already handled
-        if (assoc.reverseRoleName) {
-          const reverseKey = `${assoc.targetClass}:${assoc.reverseRoleName}`
-          if (processed.has(reverseKey)) continue
-          processed.add(`${cls.name}:${assoc.roleName}`)
-        }
+        const reverseAssoc = findReverseAssoc(schema, assoc)
+        const processingKey = reverseAssoc
+          ? [`${cls.name}:${getAssociationIdentity(assoc)}`, `${assoc.targetClass}:${getAssociationIdentity(reverseAssoc)}`]
+            .sort()
+            .join('<->')
+          : `${cls.name}:${getAssociationIdentity(assoc)}`
+        if (processed.has(processingKey)) continue
+        processed.add(processingKey)
 
         const sourceList = newInstances[cls.name] ?? []
         const targetList = collectTargetInstances(schema, newInstances, assoc.targetClass)
         if (sourceList.length === 0 || targetList.length === 0) continue
 
-        const reverseAssoc = findReverseAssoc(schema, assoc)
         const maxReverse = reverseAssoc?.multiplicity.max ?? -1
 
         // Track how many reverse links each target has accumulated
@@ -1226,14 +1360,14 @@ export const useCrudStore = create<CrudState>((set, get) => ({
           const picked = shuffled.slice(0, linkCount)
 
           if (picked.length > 0) {
-            setAssocIds(source, assoc.roleName, picked.map((t) => t._id), max)
+            setAssocIds(source, assoc, picked.map((t) => t._id), max)
 
             if (reverseAssoc) {
               for (const target of picked) {
-                const existing = getAssocIds(target, assoc.reverseRoleName)
+                const existing = getAssocIds(target, reverseAssoc)
                 setAssocIds(
                   target,
-                  assoc.reverseRoleName,
+                  reverseAssoc,
                   [...existing, source._id],
                   reverseAssoc.multiplicity.max,
                 )
@@ -1290,7 +1424,7 @@ function syncReverseLinks(
 
   for (const assoc of clsDef.associations) {
     if (!assoc.reverseRoleName) continue
-    const key = assocKey(assoc.roleName)
+    const key = assocKey(assoc)
     const reverseAssoc = findReverseAssoc(schema, assoc)
 
     const oldVal = oldData[key]
@@ -1308,7 +1442,7 @@ function syncReverseLinks(
     for (const tid of added) {
       const target = targetList.find((i) => i._id === tid)
       if (!target) continue
-      const reverseIds = getAssocIds(target, assoc.reverseRoleName)
+      const reverseIds = getAssocIds(target, reverseAssoc ?? assoc.reverseRoleName)
       const occupiedByOthers = reverseIds.filter((id) => id !== instanceId)
 
       if (
@@ -1318,7 +1452,7 @@ function syncReverseLinks(
       ) {
         // Reject the forward link when the reverse end is already full.
         if (source) {
-          removeAssocId(source, assoc.roleName, tid, assoc.multiplicity.max)
+          removeAssocId(source, assoc, tid, assoc.multiplicity.max)
         }
         continue
       }
@@ -1326,7 +1460,7 @@ function syncReverseLinks(
       if (!reverseIds.includes(instanceId)) {
         setAssocIds(
           target,
-          assoc.reverseRoleName,
+          reverseAssoc ?? assoc.reverseRoleName,
           [...reverseIds, instanceId],
           reverseAssoc?.multiplicity.max,
         )
@@ -1337,7 +1471,7 @@ function syncReverseLinks(
     for (const tid of removed) {
       const target = targetList.find((i) => i._id === tid)
       if (target) {
-        removeAssocId(target, assoc.reverseRoleName, instanceId, reverseAssoc?.multiplicity.max)
+        removeAssocId(target, reverseAssoc ?? assoc.reverseRoleName, instanceId, reverseAssoc?.multiplicity.max)
       }
     }
   }
@@ -1362,7 +1496,7 @@ function enqueueCompositionChildren(
     for (const assoc of childCls.associations) {
       if (!assoc.isComposition || assoc.targetClass !== className) continue
       for (const child of instances[childCls.name] ?? []) {
-        if (getAssocIds(child, assoc.roleName).includes(instanceId)) {
+        if (getAssocIds(child, assoc).includes(instanceId)) {
           cascadeQueue.push({ cls: childCls.name, id: child._id })
         }
       }
@@ -1382,13 +1516,13 @@ function removeReverseLinksForInstance(
   for (const assoc of clsDef.associations) {
     if (!assoc.reverseRoleName) continue
     const reverseAssoc = findReverseAssoc(schema, assoc)
-    const targetIds = getAssocIds(inst, assoc.roleName)
+    const targetIds = getAssocIds(inst, assoc)
 
     for (const tid of targetIds) {
       const targetList = instances[assoc.targetClass]
       const targetInst = targetList?.find((candidate) => candidate._id === tid)
       if (targetInst) {
-        removeAssocId(targetInst, assoc.reverseRoleName, inst._id, reverseAssoc?.multiplicity.max)
+        removeAssocId(targetInst, reverseAssoc ?? assoc.reverseRoleName, inst._id, reverseAssoc?.multiplicity.max)
       }
     }
   }

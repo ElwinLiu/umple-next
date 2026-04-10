@@ -1,14 +1,22 @@
-import type { CrudSchema } from '@/api/types'
-import { assocKey, toIdArray, type CrudInstance } from '@/stores/crudStore'
+import type { CrudAssociation, CrudSchema } from '@/api/types'
+import { getAssocIds, type CrudInstance } from '@/stores/crudStore'
 
 function escapeLabel(s: string): string {
   return s.replace(/[\\"{}<>|]/g, '\\$&')
 }
 
-function associationEdgeKey(srcNode: string, tgtNode: string, roleName: string, reverseRoleName: string): string {
+function associationIdentity(assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'reverseRoleName' | 'targetClass'>): string {
+  if (assoc.id) return assoc.id
+  if (assoc.endId) {
+    const separatorIndex = assoc.endId.lastIndexOf(':')
+    return separatorIndex === -1 ? assoc.endId : assoc.endId.slice(0, separatorIndex)
+  }
+  return [assoc.targetClass, assoc.roleName, assoc.reverseRoleName].join('|')
+}
+
+function associationEdgeKey(srcNode: string, tgtNode: string, assoc: CrudAssociation): string {
   const nodeKey = [srcNode, tgtNode].sort().join('->')
-  const roleKey = [roleName, reverseRoleName].filter(Boolean).sort().join('|')
-  return `${nodeKey}::${roleKey}`
+  return `${nodeKey}::${associationIdentity(assoc)}`
 }
 
 export function generateInstanceDiagramDot(
@@ -48,17 +56,12 @@ export function generateInstanceDiagramDot(
     for (const inst of list) {
       for (const assoc of cls.associations) {
         if (!assoc.isNavigable) continue
-        const ids = toIdArray(inst[assocKey(assoc.roleName)])
+        const ids = getAssocIds(inst, assoc)
 
         for (const tid of ids) {
           const srcNode = `${cls.name}_${inst._id}`
           const tgtNode = `${assoc.targetClass}_${tid}`
-          const edgeKey = associationEdgeKey(
-            srcNode,
-            tgtNode,
-            assoc.roleName,
-            assoc.reverseRoleName,
-          )
+          const edgeKey = associationEdgeKey(srcNode, tgtNode, assoc)
           if (drawnEdges.has(edgeKey)) continue
           drawnEdges.add(edgeKey)
           const label = assoc.roleName ? ` [label="${escapeLabel(assoc.roleName)}"]` : ''

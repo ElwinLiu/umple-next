@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Trash, ChevronRight, ChevronDown, Shuffle } from 'lucide-react'
-import { useCrudStore, type CrudInstance, assocKey, toIdArray, classHasCompositionChildren } from '@/stores/crudStore'
+import { useCrudStore, type CrudInstance, getAssocIds, classHasCompositionChildren } from '@/stores/crudStore'
 import type { CrudClass } from '@/api/types'
 import {
   DropdownMenu,
@@ -212,14 +212,15 @@ function AssociationDetail({ inst, assocs, allInstances }: {
   return (
     <div className="space-y-2">
       {assocs.map((assoc) => {
-        const ids = toIdArray(inst[assocKey(assoc.roleName)])
+        const ids = getAssocIds(inst, assoc)
         const targetInstances = allInstances[assoc.targetClass] ?? []
+        const assocRowKey = assoc.endId ?? assoc.id ?? `${assoc.targetClass}:${assoc.roleName}`
 
         return (
-          <div key={assoc.roleName}>
+          <div key={assocRowKey}>
             <div className="flex items-center gap-2 mb-0.5">
               <span className="text-xxs font-semibold text-ink-muted uppercase tracking-wider">
-                {assoc.roleName}
+                {assoc.roleName || assoc.targetClass}
               </span>
               <span className="text-xxs text-ink-faint">
                 {assoc.multiplicity.raw} {assoc.targetClass}
