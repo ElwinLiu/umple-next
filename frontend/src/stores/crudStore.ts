@@ -1423,9 +1423,9 @@ function syncReverseLinks(
   const source = sourceList.find((inst) => inst._id === instanceId)
 
   for (const assoc of clsDef.associations) {
-    if (!assoc.reverseRoleName) continue
-    const key = assocKey(assoc)
     const reverseAssoc = findReverseAssoc(schema, assoc)
+    if (!assoc.reverseRoleName && !reverseAssoc) continue
+    const key = assocKey(assoc)
 
     const oldVal = oldData[key]
     const newVal = newData[key]

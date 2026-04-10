@@ -1167,6 +1167,27 @@ describe('crudStore', () => {
     expect(result.messages).toEqual([])
   })
 
+  it('syncs reverse links for unnamed bidirectional associations', () => {
+    useCrudStore.setState({ schema: deliveryOrderSchemaWithUnnamedRoles })
+
+    const orderAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[0]!.associations[0]!
+    const deliveryAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[1]!.associations[0]!
+
+    const orderId = useCrudStore.getState().createInstance('Order', {})
+    const deliveryId = useCrudStore.getState().createInstance('Delivery', {
+      [assocKey(deliveryAssoc)]: [orderId],
+    })
+
+    const state = useCrudStore.getState()
+
+    expect(state.instances.Delivery).toEqual([
+      { _id: deliveryId, [assocKey(deliveryAssoc)]: [orderId] },
+    ])
+    expect(state.instances.Order).toEqual([
+      { _id: orderId, [assocKey(orderAssoc)]: deliveryId },
+    ])
+  })
+
   it('keeps duplicate unnamed association violations as separate messages', () => {
     const instances = {
       Delivery: [{ _id: 1 }],
