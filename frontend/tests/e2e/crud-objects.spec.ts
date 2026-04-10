@@ -92,7 +92,7 @@ test('Objects tab loads schema after compiling an example', async ({ page }) => 
   const canvasDropdown = page.getByRole('button', { name: /Diagram view/i })
   await expect(canvasDropdown).toBeVisible()
   await canvasDropdown.click()
-  const crudItem = page.getByRole('menuitemradio', { name: /CRUD UI/i })
+  const crudItem = page.getByTestId('diagram-view-crud')
   await expect(crudItem).toBeVisible()
 
   // Set up schema response waiter before triggering navigation
