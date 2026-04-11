@@ -65,6 +65,9 @@ func (h *ModelHandler) Get(w http.ResponseWriter, r *http.Request) {
 				writeError(w, http.StatusInternalServerError, fmt.Sprintf("failed to read tab %q: %v", t.Name, err))
 				return
 			}
+			if userCode, _, hasDelimiter := splitModelSections(code); hasDelimiter {
+				code = userCode
+			}
 			tabs[i] = apiTab{ID: t.ID, Name: t.Name, Code: code}
 		}
 		resp["tabs"] = tabs
