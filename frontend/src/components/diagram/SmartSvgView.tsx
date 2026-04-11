@@ -1,9 +1,33 @@
 import { memo, useRef, useState, useCallback, useMemo, useEffect, useLayoutEffect } from 'react'
 import { ZoomIn, ZoomOut, Maximize } from 'lucide-react'
 import { ControlButton } from './DiagramControls'
+import { ContextMenuShell } from './menus/ContextMenuShell'
+import { MenuItem } from './menus/MenuItem'
+import { useMenuClose } from '@/hooks/useMenuClose'
+import { getYDoc } from '@/hooks/useCollab'
+import { replaceYText } from '@/hooks/useCollabTabs'
+import { useSessionStore } from '@/stores/sessionStore'
+import { useCollabStore } from '@/stores/collabStore'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
+import type { DiagramView } from '@/constants/diagram'
+import { getSvgDiagramAdapter } from './svg-adapters'
+import type {
+  SvgAdapterContext,
+  SvgInteractionTarget,
+  SvgMenuAction,
+  SvgTextInputRequest,
+} from './svg-adapters/types'
+import { SvgTextInputDialog } from './SvgTextInputDialog'
 
 interface SmartSvgViewProps {
   svg: string
+  viewMode?: DiagramView
+}
+
+interface SmartSvgMenuState {
+  position: { x: number; y: number }
+  actions: SvgMenuAction[]
+  ariaLabel: string
 }
 
 export function formatDiagramIdentifierForDisplay(raw: string): string {
@@ -116,6 +140,14 @@ function processSvg(raw: string): { html: string; dims: { width: number; height:
   })
   doc.querySelectorAll('foreignObject').forEach((fo) => fo.remove())
 
+  doc.querySelectorAll('g.node, g.edge, g.cluster').forEach((g) => {
+    const link = g.querySelector('a')
+    const linkTitle = link?.getAttribute('xlink:title') ?? link?.getAttribute('title')
+    if (linkTitle) {
+      g.setAttribute('data-link-title', linkTitle)
+    }
+  })
+
   // Strip `<a>` wrappers (Graphviz wraps nodes in links) — unwrap children, remove the <a>
   doc.querySelectorAll('a').forEach((a) => {
     while (a.firstChild) a.parentNode?.insertBefore(a.firstChild, a)
@@ -201,7 +233,64 @@ function processSvg(raw: string): { html: string; dims: { width: number; height:
 const PADDING = 24
 const DRAG_THRESHOLD = 3
 
-const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
+function getInteractionTarget(target: Element): SvgInteractionTarget | null {
+  const nodeGroup = target.closest('g.node, g.cluster')
+  if (nodeGroup) {
+    const rawId = nodeGroup.getAttribute('data-node-id')
+    if (!rawId) return null
+    return {
+      kind: 'node',
+      rawId,
+      anchorTitle: nodeGroup.getAttribute('data-link-title'),
+    }
+  }
+
+  const edgeGroup = target.closest('g.edge')
+  if (edgeGroup) {
+    const rawId = edgeGroup.getAttribute('data-edge-id')
+    if (!rawId) return null
+    return {
+      kind: 'edge',
+      rawId,
+      anchorTitle: edgeGroup.getAttribute('data-link-title'),
+    }
+  }
+
+  return null
+}
+
+function SmartSvgContextMenu({
+  menuState,
+  onClose,
+}: {
+  menuState: SmartSvgMenuState | null
+  onClose: () => void
+}) {
+  const menuRef = useRef<HTMLDivElement>(null)
+  useMenuClose(menuRef, menuState?.position ?? null, onClose)
+
+  if (!menuState) return null
+
+  return (
+    <ContextMenuShell menuRef={menuRef} position={menuState.position} ariaLabel={menuState.ariaLabel}>
+      {menuState.actions.map((action) => (
+        <MenuItem
+          key={action.id}
+          onClick={() => {
+            onClose()
+            void action.run()
+          }}
+          icon={null}
+          variant={action.variant}
+        >
+          {action.label}
+        </MenuItem>
+      ))}
+    </ContextMenuShell>
+  )
+}
+
+const SmartSvgViewInner = ({ svg, viewMode }: SmartSvgViewProps) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const [transform, _setTransform] = useState({ x: 0, y: 0, scale: 1 })
@@ -214,6 +303,10 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
     })
   }, [])
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [menuState, setMenuState] = useState<SmartSvgMenuState | null>(null)
+  const adapter = useMemo(() => getSvgDiagramAdapter(viewMode), [viewMode])
+  const [textInputRequest, setTextInputRequest] = useState<SvgTextInputRequest | null>(null)
+  const textInputResolverRef = useRef<((value: string | null) => void) | null>(null)
 
   // Drag state kept in refs to avoid re-renders during mouse interactions.
   // Re-renders during mousedown break React's event delegation for SVG
@@ -221,8 +314,48 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
   const dragRef = useRef({ pressed: false, active: false, startX: 0, startY: 0, originX: 0, originY: 0 })
   const { html: sanitizedSvg, dims: svgDims } = useMemo(() => processSvg(svg), [svg])
 
+  const closeMenu = useCallback(() => {
+    setMenuState(null)
+  }, [])
+
+  const closeTextInput = useCallback((value: string | null) => {
+    textInputResolverRef.current?.(value)
+    textInputResolverRef.current = null
+    setTextInputRequest(null)
+  }, [])
+
+  const replaceDiagramCode = useCallback((next: string) => {
+    const session = useSessionStore.getState()
+    session.setCodeFromSync(next)
+
+    if (!useCollabStore.getState().isCollaborating) return
+
+    const doc = getYDoc()
+    if (!doc) return
+
+    replaceYText(doc.getText(`tab:${session.activeTabId}`), next)
+  }, [])
+
   // Clear selection when SVG changes
-  useEffect(() => { setSelectedId(null) }, [svg])
+  useEffect(() => {
+    setSelectedId(null)
+    setMenuState(null)
+    closeTextInput(null)
+  }, [closeTextInput, svg, viewMode])
+
+  const adapterContext = useMemo<SvgAdapterContext>(() => ({
+    getCode: () => useSessionStore.getState().code,
+    replaceCode: replaceDiagramCode,
+    requestTextInput: async (request) => {
+      setTextInputRequest(request)
+      return await new Promise<string | null>((resolve) => {
+        textInputResolverRef.current = resolve
+      })
+    },
+    report: (message) => {
+      useEphemeralStore.getState().setExecutionOutput('', message)
+    },
+  }), [replaceDiagramCode])
 
   // Reapply data-selected when selection or SVG content changes.
   // Direct DOM mutation gets wiped when React re-renders dangerouslySetInnerHTML.
@@ -285,6 +418,7 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (e.button !== 0) return
+
     const d = dragRef.current
     const t = transformRef.current
     d.pressed = true
@@ -356,35 +490,57 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
         break
       case 'Escape':
         setSelectedId(null)
+        closeMenu()
         break
     }
-  }, [handleZoomIn, handleZoomOut, fitToView])
+  }, [closeMenu, handleZoomIn, handleZoomOut, fitToView])
 
   // Native click listener — React's onClick doesn't reliably receive events
   // from SVG elements inside dangerouslySetInnerHTML when re-renders occur.
   useEffect(() => {
     const el = containerRef.current
     if (!el) return
-    const handler = (e: MouseEvent) => {
-      const target = e.target as Element
-      const nodeGroup = target.closest('g.node, g.cluster')
-      const edgeGroup = target.closest('g.edge')
+    const clickHandler = (e: MouseEvent) => {
+      const interactionTarget = getInteractionTarget(e.target as Element)
 
-      if (nodeGroup) {
-        const id = nodeGroup.getAttribute('data-node-id')
-        setSelectedId(id)
-        if (id) window.dispatchEvent(new CustomEvent('umple:diagram-select', { detail: { name: id, kind: 'node' } }))
-      } else if (edgeGroup) {
-        const id = edgeGroup.getAttribute('data-edge-id')
-        setSelectedId(id)
-        if (id) window.dispatchEvent(new CustomEvent('umple:diagram-select', { detail: { name: id, kind: 'edge' } }))
+      if (interactionTarget) {
+        setSelectedId(interactionTarget.rawId)
+        window.dispatchEvent(new CustomEvent('umple:diagram-select', {
+          detail: {
+            name: interactionTarget.rawId,
+            kind: interactionTarget.kind,
+          },
+        }))
       } else {
         setSelectedId(null)
       }
     }
-    el.addEventListener('click', handler)
-    return () => el.removeEventListener('click', handler)
-  }, [])
+    const menuHandler = (e: MouseEvent) => {
+      if (!adapter) return
+      const interactionTarget = getInteractionTarget(e.target as Element)
+      if (!interactionTarget) return
+
+      const actions = adapter.getContextMenuActions(interactionTarget, adapterContext)
+      if (actions.length === 0) return
+
+      e.preventDefault()
+      setSelectedId(interactionTarget.rawId)
+      setMenuState({
+        position: { x: e.clientX, y: e.clientY },
+        actions,
+        ariaLabel: interactionTarget.kind === 'edge' ? 'State transition menu' : 'State menu',
+      })
+    }
+
+    el.addEventListener('click', clickHandler)
+    el.addEventListener('contextmenu', menuHandler)
+    el.addEventListener('dblclick', menuHandler)
+    return () => {
+      el.removeEventListener('click', clickHandler)
+      el.removeEventListener('contextmenu', menuHandler)
+      el.removeEventListener('dblclick', menuHandler)
+    }
+  }, [adapter, adapterContext])
 
   if (!svg) {
     return (
@@ -439,6 +595,13 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
           transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
         }}
         dangerouslySetInnerHTML={{ __html: sanitizedSvg }}
+      />
+
+      <SmartSvgContextMenu menuState={menuState} onClose={closeMenu} />
+      <SvgTextInputDialog
+        request={textInputRequest}
+        onCancel={() => closeTextInput(null)}
+        onSubmit={(value) => closeTextInput(value)}
       />
     </div>
   )

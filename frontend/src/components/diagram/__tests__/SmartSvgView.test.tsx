@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { SmartSvgView, formatDiagramIdentifierForDisplay } from '../SmartSvgView'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -8,11 +8,20 @@ const svgGraphicsPrototype = SVGGraphicsElement.prototype as SVGGraphicsElement 
   getBBox?: () => { x: number; y: number; width: number; height: number }
 }
 const originalGetBBox = svgGraphicsPrototype.getBBox
+const originalMatchMedia = window.matchMedia
 
 beforeAll(() => {
   Object.defineProperty(svgGraphicsPrototype, 'getBBox', {
     configurable: true,
     value: () => ({ x: 0, y: 0, width: 120, height: 80 }),
+  })
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: vi.fn().mockImplementation(() => ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    })),
   })
 })
 
@@ -25,6 +34,10 @@ afterAll(() => {
   } else {
     Reflect.deleteProperty(svgGraphicsPrototype, 'getBBox')
   }
+  Object.defineProperty(window, 'matchMedia', {
+    configurable: true,
+    value: originalMatchMedia,
+  })
 })
 
 afterEach(() => {
