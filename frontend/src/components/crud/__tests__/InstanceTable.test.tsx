@@ -89,6 +89,57 @@ const unnamedAssociationSchema: CrudSchema = {
   enums: [],
 }
 
+const inheritedAssociationSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Segment',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'segment-end',
+          endId: 'segment-end:segment',
+          sourceClassId: 'Segment',
+          targetClassId: 'SegEnd',
+          targetClass: 'SegEnd',
+          roleName: 'ends',
+          reverseRoleName: 'segments',
+          multiplicity: { min: 1, max: -1, raw: '1..*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'SegEnd',
+      isAbstract: false,
+      attributes: [{ name: 'name', type: 'String', typeKind: 'primitive', isInherited: false }],
+      associations: [
+        {
+          id: 'segment-end',
+          endId: 'segment-end:seg-end',
+          sourceClassId: 'SegEnd',
+          targetClassId: 'Segment',
+          targetClass: 'Segment',
+          roleName: 'segments',
+          reverseRoleName: 'ends',
+          multiplicity: { min: 0, max: -1, raw: '*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Bend',
+      isAbstract: false,
+      extendsClass: 'SegEnd',
+      attributes: [{ name: 'name', type: 'String', typeKind: 'primitive', isInherited: true, inheritedFrom: 'SegEnd' }],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
 afterEach(() => {
   cleanup()
   useCrudStore.setState({ ...baseCrudState })
@@ -116,5 +167,27 @@ describe('InstanceTable', () => {
 
     expect(screen.getByText('Account #5 - Ada')).toBeTruthy()
     expect(screen.queryAllByText('#5 (deleted)')).toHaveLength(0)
+  })
+
+  it('resolves inherited target instances instead of showing them as deleted', () => {
+    const segmentAssoc = inheritedAssociationSchema.classes[0]!.associations[0]!
+
+    useCrudStore.setState({
+      schema: inheritedAssociationSchema,
+      instances: {
+        Segment: [{ _id: 4, [assocKey(segmentAssoc)]: 12 }],
+        SegEnd: [],
+        Bend: [{ _id: 12, name: 'omega-725' }],
+      },
+    })
+
+    const { container } = render(<InstanceTable cls={inheritedAssociationSchema.classes[0]!} />)
+
+    const expandButton = container.querySelector('tbody button')
+    expect(expandButton).toBeTruthy()
+    fireEvent.click(expandButton as HTMLButtonElement)
+
+    expect(screen.getByText('SegEnd #12 - omega-725')).toBeTruthy()
+    expect(screen.queryAllByText('#12 (deleted)')).toHaveLength(0)
   })
 })

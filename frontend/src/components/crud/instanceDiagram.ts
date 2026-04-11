@@ -14,9 +14,35 @@ function associationIdentity(assoc: Pick<CrudAssociation, 'id' | 'endId' | 'role
   return [assoc.targetClass, assoc.roleName, assoc.reverseRoleName].join('|')
 }
 
+function associationMemberKey(assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'reverseRoleName' | 'targetClass'>): string {
+  return assoc.endId ?? assoc.id ?? [assoc.targetClass, assoc.roleName, assoc.reverseRoleName].join('|')
+}
+
 function associationEdgeKey(srcNode: string, tgtNode: string, assoc: CrudAssociation): string {
   const nodeKey = [srcNode, tgtNode].sort().join('->')
   return `${nodeKey}::${associationIdentity(assoc)}`
+}
+
+function collectClassAssociations(schema: CrudSchema, className: string): CrudAssociation[] {
+  const associations: CrudAssociation[] = []
+  const seen = new Set<string>()
+
+  let currentClassName: string | undefined = className
+  while (currentClassName) {
+    const cls = schema.classes.find((candidate) => candidate.name === currentClassName)
+    if (!cls) break
+
+    for (const assoc of cls.associations) {
+      const identity = associationMemberKey(assoc)
+      if (seen.has(identity)) continue
+      seen.add(identity)
+      associations.push(assoc)
+    }
+
+    currentClassName = cls.extendsClass
+  }
+
+  return associations
 }
 
 export function generateInstanceDiagramDot(
@@ -30,11 +56,13 @@ export function generateInstanceDiagramDot(
     '  edge [fontsize=8, fontname="Helvetica"];',
     '',
   ]
+  const nodeIdByInstanceId = new Map<number, string>()
 
   for (const cls of schema.classes) {
     const list = instances[cls.name] ?? []
     for (const inst of list) {
       const nodeId = `${cls.name}_${inst._id}`
+      nodeIdByInstanceId.set(inst._id, nodeId)
       const header = `${cls.name} #${inst._id}`
       const attrLines = cls.attributes
         .map((a) => {
@@ -54,13 +82,14 @@ export function generateInstanceDiagramDot(
   for (const cls of schema.classes) {
     const list = instances[cls.name] ?? []
     for (const inst of list) {
-      for (const assoc of cls.associations) {
+      for (const assoc of collectClassAssociations(schema, cls.name)) {
         if (!assoc.isNavigable) continue
         const ids = getAssocIds(inst, assoc)
 
         for (const tid of ids) {
-          const srcNode = `${cls.name}_${inst._id}`
-          const tgtNode = `${assoc.targetClass}_${tid}`
+          const srcNode = nodeIdByInstanceId.get(inst._id) ?? `${cls.name}_${inst._id}`
+          const tgtNode = nodeIdByInstanceId.get(tid)
+          if (!tgtNode) continue
           const edgeKey = associationEdgeKey(srcNode, tgtNode, assoc)
           if (drawnEdges.has(edgeKey)) continue
           drawnEdges.add(edgeKey)

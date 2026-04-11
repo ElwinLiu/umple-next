@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { useCrudStore, type CrudInstance, assocKey, getAssocIds, validateGlobalModel, validateInstance } from '@/stores/crudStore'
+import { useCrudStore, type CrudInstance, assocKey, collectClassAssociations, collectClassInstances, getAssocIds, validateGlobalModel, validateInstance } from '@/stores/crudStore'
 import type { CrudAttribute, CrudAssociation, CrudClass, CrudEnum } from '@/api/types'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
@@ -23,6 +23,10 @@ export function InstanceEditor() {
   const existing = !isNew && cls
     ? (instances[cls.name] ?? []).find((i) => i._id === editingInstance?.instanceId)
     : undefined
+  const classAssociations = useMemo(
+    () => (schema && cls ? collectClassAssociations(schema, cls.name) : []),
+    [schema, cls],
+  )
 
   const [formData, setFormData] = useState<Record<string, unknown>>({})
 
@@ -33,7 +37,7 @@ export function InstanceEditor() {
       for (const attr of cls.attributes) {
         data[attr.name] = existing[attr.name] ?? getDefaultValue(attr)
       }
-      for (const assoc of cls.associations) {
+      for (const assoc of classAssociations) {
         if (!assoc.isNavigable) continue
         const key = assocKey(assoc)
         const ids = getAssocIds(existing, assoc)
@@ -45,13 +49,13 @@ export function InstanceEditor() {
       for (const attr of cls.attributes) {
         data[attr.name] = getDefaultValue(attr)
       }
-      for (const assoc of cls.associations) {
+      for (const assoc of classAssociations) {
         if (!assoc.isNavigable) continue
         data[assocKey(assoc)] = assoc.multiplicity.max === 1 ? undefined : []
       }
       setFormData(data)
     }
-  }, [cls, existing])
+  }, [classAssociations, cls, existing])
 
   const handleSave = () => {
     if (!cls || !editingInstance || !schema) return
@@ -80,12 +84,12 @@ export function InstanceEditor() {
 
   const fieldError = (field: string) => validationErrors.find((e) => e.field === field)?.message
 
-  const navigableAssocs = cls?.associations.filter((a) => a.isNavigable) ?? []
+  const navigableAssocs = classAssociations.filter((assoc) => assoc.isNavigable)
 
   // Check if required associations can be satisfied
   const missingTargets = navigableAssocs
     .filter((a) => a.multiplicity.min > 0)
-    .filter((a) => (instances[a.targetClass] ?? []).length === 0 && (a.isReflexive ? (instances[cls!.name] ?? []).length === 0 : true))
+    .filter((a) => schema ? collectClassInstances(schema, instances, a.targetClass).length === 0 : true)
 
   const pendingGlobalValidation = useMemo(() => {
     if (!schema || !cls || !editingInstance || Object.keys(formData).length === 0) return { messages: [], count: 0 }
@@ -159,7 +163,7 @@ export function InstanceEditor() {
                   assoc={assoc}
                   value={formData[assocKey(assoc)]}
                   onChange={(v) => setField(assocKey(assoc), v)}
-                  targetInstances={instances[assoc.targetClass] ?? []}
+                  targetInstances={schema ? collectClassInstances(schema, instances, assoc.targetClass) : []}
                   targetClassName={assoc.targetClass}
                   currentInstanceId={editingInstance?.instanceId ?? undefined}
                   error={fieldError(assocKey(assoc))}

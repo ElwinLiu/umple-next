@@ -225,7 +225,7 @@ function randomValue(type: string, typeKind: string, schema: import('@/api/types
 }
 
 /** Collect instances for a class, including concrete subclass instances. */
-function collectClassInstances(
+export function collectClassInstances(
   schema: CrudSchema,
   instances: Record<string, CrudInstance[]>,
   className: string,
@@ -237,6 +237,37 @@ function collectClassInstances(
     }
   }
   return result
+}
+
+function findInstanceInClassFamily(
+  schema: CrudSchema,
+  instances: Record<string, CrudInstance[]>,
+  className: string,
+  instanceId: number,
+): CrudInstance | undefined {
+  return collectClassInstances(schema, instances, className).find((instance) => instance._id === instanceId)
+}
+
+export function collectClassAssociations(schema: CrudSchema, className: string): CrudAssociation[] {
+  const associations: CrudAssociation[] = []
+  const seen = new Set<string>()
+
+  let currentClassName: string | undefined = className
+  while (currentClassName) {
+    const cls = schema.classes.find((candidate) => candidate.name === currentClassName)
+    if (!cls) break
+
+    for (const assoc of cls.associations) {
+      const identity = getAssociationIdentity(assoc)
+      if (seen.has(identity)) continue
+      seen.add(identity)
+      associations.push(assoc)
+    }
+
+    currentClassName = cls.extendsClass
+  }
+
+  return associations
 }
 
 interface PendingGlobalValidation {
@@ -321,9 +352,10 @@ export function validateInstance(
   const cls = schema.classes.find((c) => c.name === className)
   if (!cls) return []
   const errors: ValidationError[] = []
+  const classAssociations = collectClassAssociations(schema, cls.name)
 
   // Check association multiplicity constraints
-  for (const assoc of cls.associations) {
+  for (const assoc of classAssociations) {
     if (!assoc.isNavigable) continue
     const key = assocKey(assoc)
     const ids = toIdArray(data[key])
@@ -345,9 +377,8 @@ export function validateInstance(
 
     const reverseAssoc = findReverseAssoc(schema, assoc)
     if (reverseAssoc && reverseAssoc.multiplicity.max !== -1) {
-      const targetInstances = instances[assoc.targetClass] ?? []
       for (const tid of ids) {
-        const targetInst = targetInstances.find((inst) => inst._id === tid)
+        const targetInst = findInstanceInClassFamily(schema, instances, assoc.targetClass, tid)
         if (!targetInst) continue
         const reverseIds = getAssocIds(targetInst, reverseAssoc ?? assoc.reverseRoleName)
         const occupiedByOthers = reverseIds.filter((id) => id !== editingId)
@@ -1015,7 +1046,7 @@ function normalizeInstancesForSchema(
         if (key !== '_id' && !key.startsWith('__assoc__')) nextInstance[key] = value
       }
 
-      for (const assoc of cls.associations) {
+      for (const assoc of collectClassAssociations(schema, cls.name)) {
         const ids = getAssocIds(instance, assoc)
         if (ids.length === 0) continue
         setAssocIds(nextInstance, assoc, [...new Set(ids)], assoc.multiplicity.max)
@@ -1348,7 +1379,7 @@ export const useCrudStore = create<CrudState>((set, get) => ({
 
       // Bidirectional association sync
       if (schema) {
-        syncReverseLinks(schema, newInstances, className, id, data, {})
+        syncReverseLinks(schema, newInstances, className, id, instance, {})
       }
 
       return {
@@ -1381,13 +1412,22 @@ export const useCrudStore = create<CrudState>((set, get) => ({
         if (key !== '_id' && !key.startsWith('__assoc__')) preservedFields[key] = value
       }
 
-      const newInst: CrudInstance = { ...preservedFields, ...data }
+      const preservedAssociations: Record<string, unknown> = {}
+      if (schema) {
+        for (const assoc of collectClassAssociations(schema, className)) {
+          const ids = getAssocIds(oldInst, assoc)
+          if (ids.length === 0) continue
+          preservedAssociations[assocKey(assoc)] = assoc.multiplicity.max === 1 ? ids[0] : ids
+        }
+      }
+
+      const newInst: CrudInstance = { ...preservedFields, ...preservedAssociations, ...data }
       list[idx] = newInst
       newInstances[className] = list
 
       // Bidirectional sync: diff old vs new association values
       if (schema) {
-        syncReverseLinks(schema, newInstances, className, instanceId, data, oldAssocData)
+        syncReverseLinks(schema, newInstances, className, instanceId, newInst, oldAssocData)
       }
 
       return {
@@ -1585,12 +1625,10 @@ function syncReverseLinks(
   newData: Record<string, unknown>,
   oldData: Record<string, unknown>,
 ) {
-  const clsDef = schema.classes.find((c) => c.name === className)
-  if (!clsDef) return
   const sourceList = newInstances[className] ?? []
   const source = sourceList.find((inst) => inst._id === instanceId)
 
-  for (const assoc of clsDef.associations) {
+  for (const assoc of collectClassAssociations(schema, className)) {
     const reverseAssoc = findReverseAssoc(schema, assoc)
     if (!assoc.reverseRoleName && !reverseAssoc) continue
     const key = assocKey(assoc)
@@ -1604,11 +1642,9 @@ function syncReverseLinks(
     const added = newIds.filter((id) => !oldIds.includes(id))
     const removed = oldIds.filter((id) => !newIds.includes(id))
 
-    const targetList = newInstances[assoc.targetClass] ?? []
-
     // Add reverse links for newly added targets
     for (const tid of added) {
-      const target = targetList.find((i) => i._id === tid)
+      const target = findInstanceInClassFamily(schema, newInstances, assoc.targetClass, tid)
       if (!target) continue
       const reverseIds = getAssocIds(target, reverseAssoc ?? assoc.reverseRoleName)
       const occupiedByOthers = reverseIds.filter((id) => id !== instanceId)
@@ -1637,7 +1673,7 @@ function syncReverseLinks(
 
     // Remove reverse links for removed targets
     for (const tid of removed) {
-      const target = targetList.find((i) => i._id === tid)
+      const target = findInstanceInClassFamily(schema, newInstances, assoc.targetClass, tid)
       if (target) {
         removeAssocId(target, reverseAssoc ?? assoc.reverseRoleName, instanceId, reverseAssoc?.multiplicity.max)
       }
@@ -1661,7 +1697,7 @@ function enqueueCompositionChildren(
   cascadeQueue: Array<{ cls: string; id: number }>,
 ) {
   for (const childCls of schema.classes) {
-    for (const assoc of childCls.associations) {
+    for (const assoc of collectClassAssociations(schema, childCls.name)) {
       if (!assoc.isComposition || assoc.targetClass !== className) continue
       for (const child of instances[childCls.name] ?? []) {
         if (getAssocIds(child, assoc).includes(instanceId)) {
@@ -1678,17 +1714,13 @@ function removeReverseLinksForInstance(
   className: string,
   inst: CrudInstance,
 ) {
-  const clsDef = schema.classes.find((c) => c.name === className)
-  if (!clsDef) return
-
-  for (const assoc of clsDef.associations) {
+  for (const assoc of collectClassAssociations(schema, className)) {
     if (!assoc.reverseRoleName) continue
     const reverseAssoc = findReverseAssoc(schema, assoc)
     const targetIds = getAssocIds(inst, assoc)
 
     for (const tid of targetIds) {
-      const targetList = instances[assoc.targetClass]
-      const targetInst = targetList?.find((candidate) => candidate._id === tid)
+      const targetInst = findInstanceInClassFamily(schema, instances, assoc.targetClass, tid)
       if (targetInst) {
         removeAssocId(targetInst, reverseAssoc ?? assoc.reverseRoleName, inst._id, reverseAssoc?.multiplicity.max)
       }

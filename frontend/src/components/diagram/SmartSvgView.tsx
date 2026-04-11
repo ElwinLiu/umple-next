@@ -6,6 +6,34 @@ interface SmartSvgViewProps {
   svg: string
 }
 
+export function formatDiagramIdentifierForDisplay(raw: string): string {
+  const formatToken = (token: string) => {
+    const trimmed = token.trim()
+    const match = trimmed.match(/^(.*)_(\d+)$/)
+    if (!match) return trimmed
+    const [, className, instanceId] = match
+    return `${className} #${instanceId}`
+  }
+
+  if (raw.includes('->')) {
+    return raw.split('->').map(formatToken).join(' -> ')
+  }
+
+  if (raw.includes('--')) {
+    return raw.split('--').map(formatToken).join(' -- ')
+  }
+
+  return formatToken(raw)
+}
+
+function escapeSelectorValue(raw: string): string {
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(raw)
+  }
+
+  return raw.replace(/[^a-zA-Z0-9_-]/g, (char) => `\\${char}`)
+}
+
 /**
  * CSS theme rules injected into every Graphviz SVG.
  * Uses the app's CSS custom properties so light/dark mode works automatically.
@@ -126,13 +154,17 @@ function processSvg(raw: string): { html: string; dims: { width: number; height:
   doc.querySelectorAll('g.node').forEach((g) => {
     const title = g.querySelector('title')
     if (title?.textContent) {
-      g.setAttribute('data-node-id', title.textContent.trim())
+      const rawId = title.textContent.trim()
+      g.setAttribute('data-node-id', rawId)
+      title.textContent = formatDiagramIdentifierForDisplay(rawId)
     }
   })
   doc.querySelectorAll('g.edge').forEach((g) => {
     const title = g.querySelector('title')
     if (title?.textContent) {
-      g.setAttribute('data-edge-id', title.textContent.trim())
+      const rawId = title.textContent.trim()
+      g.setAttribute('data-edge-id', rawId)
+      title.textContent = formatDiagramIdentifierForDisplay(rawId)
     }
   })
 
@@ -197,7 +229,8 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
       el.removeAttribute('data-selected')
     })
     if (selectedId) {
-      const el = contentEl.querySelector(`[data-node-id="${CSS.escape(selectedId)}"], [data-edge-id="${CSS.escape(selectedId)}"]`)
+      const escapedId = escapeSelectorValue(selectedId)
+      const el = contentEl.querySelector(`[data-node-id="${escapedId}"], [data-edge-id="${escapedId}"]`)
       el?.setAttribute('data-selected', 'true')
     }
   }, [selectedId, sanitizedSvg])
@@ -387,8 +420,11 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
 
       {/* Selected element indicator */}
       {selectedId && (
-        <div className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-surface-1 border border-border rounded-md text-xs text-ink-muted font-mono truncate max-w-64">
-          {selectedId}
+        <div
+          data-testid="smart-svg-selected-id"
+          className="absolute top-3 left-3 z-10 px-2.5 py-1 bg-surface-1 border border-border rounded-md text-xs text-ink-muted font-mono truncate max-w-64"
+        >
+          {formatDiagramIdentifierForDisplay(selectedId)}
         </div>
       )}
 

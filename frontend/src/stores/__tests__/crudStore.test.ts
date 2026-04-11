@@ -447,6 +447,53 @@ const canalInheritedAssociationSchema: CrudSchema = {
   enums: [],
 }
 
+const inheritedDeleteSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Owner',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'owner-asset',
+          endId: 'owner-asset:owner',
+          targetClass: 'Asset',
+          roleName: 'asset',
+          reverseRoleName: 'owner',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Asset',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          id: 'owner-asset',
+          endId: 'owner-asset:asset',
+          targetClass: 'Owner',
+          roleName: 'owner',
+          reverseRoleName: 'asset',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Computer',
+      isAbstract: false,
+      extendsClass: 'Asset',
+      attributes: [{ name: 'name', type: 'String', typeKind: 'primitive', isInherited: false }],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
 const personWithNewClassSchema: CrudSchema = {
   classes: [
     {
@@ -926,6 +973,59 @@ describe('crudStore', () => {
 
     expect(useCrudStore.getState().instances.Company).toEqual([])
     expect(useCrudStore.getState().instances.Department).toEqual([])
+  })
+
+  it('removes superclass association links when deleting a subclass target instance', () => {
+    const ownerAssoc = inheritedDeleteSchema.classes[0]!.associations[0]!
+    const assetAssoc = inheritedDeleteSchema.classes[1]!.associations[0]!
+
+    useCrudStore.setState({
+      schema: inheritedDeleteSchema,
+      instances: {
+        Owner: [{ _id: 1, [assocKey(ownerAssoc)]: 2 }],
+        Asset: [],
+        Computer: [{ _id: 2, [assocKey(assetAssoc)]: 1 }],
+      },
+    })
+
+    useCrudStore.getState().deleteInstance('Computer', 2)
+
+    const state = useCrudStore.getState()
+    expect(state.instances.Computer).toEqual([])
+    expect(state.instances.Owner?.[0]?.[assocKey(ownerAssoc)]).toBeUndefined()
+  })
+
+  it('preserves inherited association links when updating a subclass instance', () => {
+    const ownerAssoc = inheritedDeleteSchema.classes[0]!.associations[0]!
+    const assetAssoc = inheritedDeleteSchema.classes[1]!.associations[0]!
+
+    useCrudStore.setState({ schema: inheritedDeleteSchema })
+
+    const ownerId = useCrudStore.getState().createInstance('Owner', {})
+    const computerId = useCrudStore.getState().createInstance('Computer', {
+      name: 'Workstation',
+      [assocKey(assetAssoc)]: ownerId,
+    })
+
+    let state = useCrudStore.getState()
+    expect(state.instances.Owner?.[0]?.[assocKey(ownerAssoc)]).toBe(computerId)
+    expect(state.instances.Computer?.[0]?.[assocKey(assetAssoc)]).toBe(ownerId)
+
+    useCrudStore.getState().updateInstance('Computer', computerId, { name: 'Renamed workstation' })
+
+    state = useCrudStore.getState()
+    expect(state.instances.Computer?.[0]?.name).toBe('Renamed workstation')
+    expect(state.instances.Computer?.[0]?.[assocKey(assetAssoc)]).toBe(ownerId)
+    expect(state.instances.Owner?.[0]?.[assocKey(ownerAssoc)]).toBe(computerId)
+
+    useCrudStore.getState().updateInstance('Computer', computerId, {
+      name: 'Detached workstation',
+      [assocKey(assetAssoc)]: undefined,
+    })
+
+    state = useCrudStore.getState()
+    expect(state.instances.Computer?.[0]?.[assocKey(assetAssoc)]).toBeUndefined()
+    expect(state.instances.Owner?.[0]?.[assocKey(ownerAssoc)]).toBeUndefined()
   })
 
   it('rejects a second reverse to-one link during validation and reverse sync', () => {

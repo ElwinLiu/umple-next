@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Trash, ChevronRight, ChevronDown, Shuffle } from 'lucide-react'
-import { useCrudStore, type CrudInstance, getAssocIds, classHasCompositionChildren } from '@/stores/crudStore'
-import type { CrudClass } from '@/api/types'
+import { useCrudStore, type CrudInstance, getAssocIds, classHasCompositionChildren, collectClassAssociations, collectClassInstances } from '@/stores/crudStore'
+import type { CrudAssociation, CrudClass, CrudSchema } from '@/api/types'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,7 +25,9 @@ export function InstanceTable({ cls }: { cls: CrudClass }) {
 
   const visibleAttrs = cls.attributes.slice(0, 8)
   const hiddenAttrCount = cls.attributes.length - visibleAttrs.length
-  const navigableAssocs = cls.associations.filter((a) => a.isNavigable)
+  const navigableAssocs = schema
+    ? collectClassAssociations(schema, cls.name).filter((assoc) => assoc.isNavigable)
+    : cls.associations.filter((assoc) => assoc.isNavigable)
   const hasAssocs = navigableAssocs.length > 0
   const deletesComposedChildren = classHasCompositionChildren(schema, cls.name)
 
@@ -117,6 +119,7 @@ export function InstanceTable({ cls }: { cls: CrudClass }) {
                     onDelete={() => deleteInstance(cls.name, inst._id)}
                     allInstances={allInstances}
                     deletesComposedChildren={deletesComposedChildren}
+                    schema={schema}
                   />
                 )
               })}
@@ -130,20 +133,21 @@ export function InstanceTable({ cls }: { cls: CrudClass }) {
 
 function InstanceRow({
   inst, cls, visibleAttrs, hiddenAttrCount, hasAssocs, navigableAssocs, isExpanded,
-  onToggleExpand, onEdit, onDelete, allInstances, deletesComposedChildren,
+  onToggleExpand, onEdit, onDelete, allInstances, deletesComposedChildren, schema,
 }: {
   inst: CrudInstance
   cls: CrudClass
   visibleAttrs: CrudClass['attributes']
   hiddenAttrCount: number
   hasAssocs: boolean
-  navigableAssocs: CrudClass['associations']
+  navigableAssocs: CrudAssociation[]
   isExpanded: boolean
   onToggleExpand: () => void
   onEdit: () => void
   onDelete: () => void
   allInstances: Record<string, CrudInstance[]>
   deletesComposedChildren: boolean
+  schema: CrudSchema | null
 }) {
   const colSpan = (hasAssocs ? 1 : 0) + 1 + visibleAttrs.length + (hiddenAttrCount > 0 ? 1 : 0) + 1
 
@@ -196,7 +200,7 @@ function InstanceRow({
       {isExpanded && (
         <tr className="bg-surface-1/20">
           <td colSpan={colSpan} className="px-4 py-2">
-            <AssociationDetail inst={inst} assocs={navigableAssocs} allInstances={allInstances} />
+            <AssociationDetail inst={inst} assocs={navigableAssocs} allInstances={allInstances} schema={schema} />
           </td>
         </tr>
       )}
@@ -204,16 +208,19 @@ function InstanceRow({
   )
 }
 
-function AssociationDetail({ inst, assocs, allInstances }: {
+function AssociationDetail({ inst, assocs, allInstances, schema }: {
   inst: CrudInstance
-  assocs: CrudClass['associations']
+  assocs: CrudAssociation[]
   allInstances: Record<string, CrudInstance[]>
+  schema: CrudSchema | null
 }) {
   return (
     <div className="space-y-2">
       {assocs.map((assoc) => {
         const ids = getAssocIds(inst, assoc)
-        const targetInstances = allInstances[assoc.targetClass] ?? []
+        const targetInstances = schema
+          ? collectClassInstances(schema, allInstances, assoc.targetClass)
+          : (allInstances[assoc.targetClass] ?? [])
         const assocRowKey = assoc.endId ?? assoc.id ?? `${assoc.targetClass}:${assoc.roleName}`
 
         return (
@@ -232,7 +239,7 @@ function AssociationDetail({ inst, assocs, allInstances }: {
             ) : (
               <div className="flex flex-wrap gap-1">
                 {ids.map((id) => {
-                  const target = targetInstances.find((i) => i._id === id)
+                  const target = targetInstances.find((instance) => instance._id === id)
                   const label = target
                     ? `${assoc.targetClass} #${id}${target.name ? ` - ${String(target.name)}` : ''}`
                     : `#${id} (deleted)`
