@@ -25,6 +25,12 @@ function associationPairKey(
   return `${nodeKey}::${assocKey}`
 }
 
+function formatEndpointLabel(multiplicity?: string, roleName?: string): string | undefined {
+  const parts = [multiplicity, roleName].filter(Boolean)
+  if (parts.length === 0) return undefined
+  return escapeLabel(parts.join(' '))
+}
+
 export function generateInstanceDiagramDot(
   schema: CrudSchema,
   instances: Record<string, CrudInstance[]>,
@@ -73,8 +79,15 @@ export function generateInstanceDiagramDot(
           const edgeKey = associationPairKey(schema, srcNode, tgtNode, assoc)
           if (drawnEdges.has(edgeKey)) continue
           drawnEdges.add(edgeKey)
-          const label = assoc.roleName ? ` [label="${escapeLabel(assoc.roleName)}"]` : ''
-          lines.push(`  ${srcNode} -> ${tgtNode}${label};`)
+          const reverseAssoc = findReverseAssoc(schema, assoc)
+          const tailLabel = formatEndpointLabel(reverseAssoc?.multiplicity.raw, reverseAssoc?.roleName ?? assoc.reverseRoleName)
+          const headLabel = formatEndpointLabel(assoc.multiplicity.raw, assoc.roleName)
+          const attrs = ['dir=none']
+
+          if (tailLabel) attrs.push(`taillabel="${tailLabel}"`)
+          if (headLabel) attrs.push(`headlabel="${headLabel}"`)
+
+          lines.push(`  ${srcNode} -> ${tgtNode} [${attrs.join(', ')}];`)
         }
       }
     }
