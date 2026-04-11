@@ -106,9 +106,9 @@ CI (`.github/workflows/ci.yml`) runs on pull requests and validates the repo: Ty
 
 Publish Images (`.github/workflows/publish-images.yml`) runs on every push to `master`: it re-runs CI, builds the three production images, and pushes immutable GHCR tags in the form `sha-<full_commit_sha>`. It also refreshes `latest` for convenience, but production releases must always use the immutable `sha-*` tags.
 
-Release (`.github/workflows/release.yml`) is the production promotion step: Actions → Release → choose a branch/tag/commit, and the workflow deploys the exact published images for that commit to the server. It then creates a GitHub Release entry, which acts as the production changelog and release ledger.
+Release (`.github/workflows/release.yml`) is the production promotion step: create a Git tag for the version you want to ship, then run Actions → Release and choose that existing tag (for example `v0.0.7`). The workflow deploys the exact published images for that tag's commit to the server and then creates the matching GitHub Release entry, which acts as the production changelog and release ledger.
 
-Rollback uses the same Release workflow: run it again and select an older commit that already has published images.
+Rollback uses the same Release workflow: run it again and select an older release tag whose commit already has published images.
 
 Registry Cleanup (`.github/workflows/registry-cleanup.yml`) runs on a schedule and deletes old GHCR image versions while keeping the recent production history and the newest unpublished candidates.
 
@@ -157,4 +157,4 @@ Required host dependencies:
 4. Copy any existing `data/models` contents if you need persisted models on the new server
 5. Configure a reverse proxy (nginx or Cloudflare Tunnel) to forward the domain to that server's configured `FRONTEND_HOST_PORT` on localhost
 6. Update the 6 GitHub secrets to point to the new server
-7. Run the Release workflow for the commit you want in production
+7. Create or identify the Git tag for the version you want in production, then run the Release workflow for that tag
