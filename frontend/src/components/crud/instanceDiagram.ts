@@ -1,48 +1,28 @@
 import type { CrudAssociation, CrudSchema } from '@/api/types'
-import { getAssocIds, type CrudInstance } from '@/stores/crudStore'
+import {
+  collectClassAssociations,
+  findReverseAssoc,
+  getAssocIds,
+  getAssociationRuntimeIdentity,
+  type CrudInstance,
+} from '@/stores/crudStore'
 
 function escapeLabel(s: string): string {
   return s.replace(/[\\"{}<>|]/g, '\\$&')
 }
 
-function associationIdentity(assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'reverseRoleName' | 'targetClass'>): string {
-  if (assoc.id) return assoc.id
-  if (assoc.endId) {
-    const separatorIndex = assoc.endId.lastIndexOf(':')
-    return separatorIndex === -1 ? assoc.endId : assoc.endId.slice(0, separatorIndex)
-  }
-  return [assoc.targetClass, assoc.roleName, assoc.reverseRoleName].join('|')
-}
-
-function associationMemberKey(assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'reverseRoleName' | 'targetClass'>): string {
-  return assoc.endId ?? assoc.id ?? [assoc.targetClass, assoc.roleName, assoc.reverseRoleName].join('|')
-}
-
-function associationEdgeKey(srcNode: string, tgtNode: string, assoc: CrudAssociation): string {
+function associationPairKey(
+  schema: CrudSchema,
+  srcNode: string,
+  tgtNode: string,
+  assoc: CrudAssociation,
+): string {
   const nodeKey = [srcNode, tgtNode].sort().join('->')
-  return `${nodeKey}::${associationIdentity(assoc)}`
-}
-
-function collectClassAssociations(schema: CrudSchema, className: string): CrudAssociation[] {
-  const associations: CrudAssociation[] = []
-  const seen = new Set<string>()
-
-  let currentClassName: string | undefined = className
-  while (currentClassName) {
-    const cls = schema.classes.find((candidate) => candidate.name === currentClassName)
-    if (!cls) break
-
-    for (const assoc of cls.associations) {
-      const identity = associationMemberKey(assoc)
-      if (seen.has(identity)) continue
-      seen.add(identity)
-      associations.push(assoc)
-    }
-
-    currentClassName = cls.extendsClass
-  }
-
-  return associations
+  const reverseAssoc = findReverseAssoc(schema, assoc)
+  const assocKey = reverseAssoc
+    ? [getAssociationRuntimeIdentity(assoc), getAssociationRuntimeIdentity(reverseAssoc)].sort().join('<->')
+    : getAssociationRuntimeIdentity(assoc)
+  return `${nodeKey}::${assocKey}`
 }
 
 export function generateInstanceDiagramDot(
@@ -90,7 +70,7 @@ export function generateInstanceDiagramDot(
           const srcNode = nodeIdByInstanceId.get(inst._id) ?? `${cls.name}_${inst._id}`
           const tgtNode = nodeIdByInstanceId.get(tid)
           if (!tgtNode) continue
-          const edgeKey = associationEdgeKey(srcNode, tgtNode, assoc)
+          const edgeKey = associationPairKey(schema, srcNode, tgtNode, assoc)
           if (drawnEdges.has(edgeKey)) continue
           drawnEdges.add(edgeKey)
           const label = assoc.roleName ? ` [label="${escapeLabel(assoc.roleName)}"]` : ''

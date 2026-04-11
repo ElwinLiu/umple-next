@@ -60,8 +60,6 @@ const duplicateUnnamedAssociationSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'assoc-account-a',
-          endId: 'assoc-account-a:classTwo',
           targetClass: 'Account',
           roleName: '',
           reverseRoleName: '',
@@ -70,8 +68,6 @@ const duplicateUnnamedAssociationSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'assoc-account-b',
-          endId: 'assoc-account-b:classTwo',
           targetClass: 'Account',
           roleName: '',
           reverseRoleName: '',
@@ -99,8 +95,6 @@ const inheritedTargetSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'segment-end',
-          endId: 'segment-end:segment',
           targetClass: 'SegEnd',
           roleName: 'ends',
           reverseRoleName: 'segments',
@@ -116,8 +110,6 @@ const inheritedTargetSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'segment-end',
-          endId: 'segment-end:seg-end',
           targetClass: 'Segment',
           roleName: 'segments',
           reverseRoleName: 'ends',
@@ -146,8 +138,6 @@ const inheritedSourceSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'asset-owner',
-          endId: 'asset-owner:asset',
           targetClass: 'Owner',
           roleName: 'owner',
           reverseRoleName: 'assets',
@@ -170,8 +160,6 @@ const inheritedSourceSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'asset-owner',
-          endId: 'asset-owner:owner',
           targetClass: 'Asset',
           roleName: 'assets',
           reverseRoleName: 'owner',
@@ -193,8 +181,6 @@ const inheritedReflexiveSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'person-advisor',
-          endId: 'person-advisor:advisor',
           targetClass: 'Person',
           roleName: 'advisor',
           reverseRoleName: 'advisees',
@@ -204,8 +190,6 @@ const inheritedReflexiveSchema: CrudSchema = {
           isReflexive: true,
         },
         {
-          id: 'person-advisor',
-          endId: 'person-advisor:advisees',
           targetClass: 'Person',
           roleName: 'advisees',
           reverseRoleName: 'advisor',
@@ -229,12 +213,14 @@ const inheritedReflexiveSchema: CrudSchema = {
 
 describe('generateInstanceDiagramDot', () => {
   it('keeps distinct role-based associations between the same two instances', () => {
+    const advisorAssoc = reflexiveSchema.classes[0]!.associations[0]!
+    const mentorAssoc = reflexiveSchema.classes[0]!.associations[2]!
     const dot = generateInstanceDiagramDot(reflexiveSchema, {
       Person: [
         {
           _id: 1,
-          [assocKey('advisor')]: 2,
-          [assocKey('mentor')]: 2,
+          [assocKey(advisorAssoc)]: 2,
+          [assocKey(mentorAssoc)]: 2,
         },
         { _id: 2 },
       ],
@@ -245,7 +231,7 @@ describe('generateInstanceDiagramDot', () => {
     expect((dot.match(/Person_1 -> Person_2/g) ?? [])).toHaveLength(2)
   })
 
-  it('keeps distinct unlabeled associations between the same two instances when ids differ', () => {
+  it('keeps distinct unlabeled associations between the same two instances when declaration order differs', () => {
     const assocA = duplicateUnnamedAssociationSchema.classes[0]!.associations[0]!
     const assocB = duplicateUnnamedAssociationSchema.classes[0]!.associations[1]!
 
@@ -291,7 +277,7 @@ describe('generateInstanceDiagramDot', () => {
     expect(dot).toContain('Computer_7 -> Owner_3 [label="owner"];')
   })
 
-  it('keeps both inherited self-association ends distinct when endIds differ', () => {
+  it('keeps both inherited self-association ends distinct when the inherited roles differ', () => {
     const advisorAssoc = inheritedReflexiveSchema.classes[0]!.associations[0]!
     const adviseesAssoc = inheritedReflexiveSchema.classes[0]!.associations[1]!
 

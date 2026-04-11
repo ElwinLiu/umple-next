@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CrudSchema } from '@/api/types'
 import {
   assocKey,
+  prepareCrudSchema,
   reconcileInstances,
   reconcileInstancesDetailed,
   resolveSelectedClassName,
@@ -17,6 +18,10 @@ function createDeterministicRandom(seed: number) {
     state = (1664525 * state + 1013904223) >>> 0
     return state / 2 ** 32
   }
+}
+
+function cloneSchema<T>(schema: T): T {
+  return JSON.parse(JSON.stringify(schema)) as T
 }
 
 const baseCrudState = useCrudStore.getState()
@@ -261,10 +266,6 @@ const deliveryOrderSchemaWithUnnamedRoles: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'assoc-delivery-order',
-          endId: 'assoc-delivery-order:classTwo',
-          sourceClassId: 'Order',
-          targetClassId: 'Delivery',
           targetClass: 'Delivery',
           roleName: '',
           reverseRoleName: '',
@@ -280,10 +281,6 @@ const deliveryOrderSchemaWithUnnamedRoles: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'assoc-delivery-order',
-          endId: 'assoc-delivery-order:classOne',
-          sourceClassId: 'Delivery',
-          targetClassId: 'Order',
           targetClass: 'Order',
           roleName: '',
           reverseRoleName: '',
@@ -305,10 +302,6 @@ const duplicateUnnamedOrderAssociationsSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'assoc-order-a',
-          endId: 'assoc-order-a:classOne',
-          sourceClassId: 'Delivery',
-          targetClassId: 'Order',
           targetClass: 'Order',
           roleName: '',
           reverseRoleName: '',
@@ -317,10 +310,6 @@ const duplicateUnnamedOrderAssociationsSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'assoc-order-b',
-          endId: 'assoc-order-b:classOne',
-          sourceClassId: 'Delivery',
-          targetClassId: 'Order',
           targetClass: 'Order',
           roleName: '',
           reverseRoleName: '',
@@ -343,16 +332,11 @@ const duplicateUnnamedOrderAssociationsSchema: CrudSchema = {
 const randomBidirectionalSchema: CrudSchema = {
   classes: [
     {
-      id: 'class-left',
       name: 'Left',
       isAbstract: false,
       attributes: [],
       associations: [
         {
-          id: 'assoc-left-right',
-          endId: 'assoc-left-right:right',
-          sourceClassId: 'class-left',
-          targetClassId: 'class-right',
           targetClass: 'Right',
           roleName: 'right',
           reverseRoleName: 'left',
@@ -363,16 +347,11 @@ const randomBidirectionalSchema: CrudSchema = {
       ],
     },
     {
-      id: 'class-right',
       name: 'Right',
       isAbstract: false,
       attributes: [],
       associations: [
         {
-          id: 'assoc-left-right',
-          endId: 'assoc-left-right:left',
-          sourceClassId: 'class-right',
-          targetClassId: 'class-left',
           targetClass: 'Left',
           roleName: 'left',
           reverseRoleName: 'right',
@@ -394,8 +373,6 @@ const canalInheritedAssociationSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'umpleAssociation_3',
-          endId: 'umpleAssociation_3:classTwo',
           targetClass: 'Segment',
           roleName: '',
           reverseRoleName: '',
@@ -411,8 +388,6 @@ const canalInheritedAssociationSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'umpleAssociation_3',
-          endId: 'umpleAssociation_3:classOne',
           targetClass: 'SegEnd',
           roleName: '',
           reverseRoleName: '',
@@ -455,8 +430,6 @@ const inheritedDeleteSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'owner-asset',
-          endId: 'owner-asset:owner',
           targetClass: 'Asset',
           roleName: 'asset',
           reverseRoleName: 'owner',
@@ -472,8 +445,6 @@ const inheritedDeleteSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'owner-asset',
-          endId: 'owner-asset:asset',
           targetClass: 'Owner',
           roleName: 'owner',
           reverseRoleName: 'asset',
@@ -716,90 +687,9 @@ const ambiguousNewRenameSchema: CrudSchema = {
   enums: [],
 }
 
-const personSchemaWithStableId: CrudSchema = {
-  classes: [
-    {
-      id: 'class-person-1',
-      name: 'Person',
-      isAbstract: false,
-      attributes: [
-        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
-      ],
-      associations: [],
-    },
-  ],
-  enums: [],
-}
-
-const renamedUserSchemaWithStableId: CrudSchema = {
-  classes: [
-    {
-      id: 'class-person-1',
-      name: 'User',
-      isAbstract: false,
-      attributes: [
-        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
-      ],
-      associations: [],
-    },
-  ],
-  enums: [],
-}
-
-const personLockerSchemaWithStableAssocIds: CrudSchema = {
-  classes: [
-    {
-      id: 'class-person-1',
-      name: 'Person',
-      isAbstract: false,
-      attributes: [
-        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
-      ],
-      associations: [
-        {
-          id: 'assoc-locker-1',
-          endId: 'assoc-locker-1:right',
-          sourceClassId: 'class-person-1',
-          targetClassId: 'class-locker-1',
-          targetClass: 'Locker',
-          roleName: 'assignedLocker',
-          reverseRoleName: 'owner',
-          multiplicity: { min: 0, max: 1, raw: '0..1' },
-          isNavigable: true,
-          isComposition: false,
-        },
-      ],
-    },
-    {
-      id: 'class-locker-1',
-      name: 'Locker',
-      isAbstract: false,
-      attributes: [
-        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
-      ],
-      associations: [
-        {
-          id: 'assoc-locker-1',
-          endId: 'assoc-locker-1:left',
-          sourceClassId: 'class-locker-1',
-          targetClassId: 'class-person-1',
-          targetClass: 'Person',
-          roleName: 'owner',
-          reverseRoleName: 'assignedLocker',
-          multiplicity: { min: 0, max: 1, raw: '0..1' },
-          isNavigable: true,
-          isComposition: false,
-        },
-      ],
-    },
-  ],
-  enums: [],
-}
-
 const personLockerSchemaWithRenamedRoles: CrudSchema = {
   classes: [
     {
-      id: 'class-person-1',
       name: 'Person',
       isAbstract: false,
       attributes: [
@@ -807,10 +697,6 @@ const personLockerSchemaWithRenamedRoles: CrudSchema = {
       ],
       associations: [
         {
-          id: 'assoc-locker-1',
-          endId: 'assoc-locker-1:right',
-          sourceClassId: 'class-person-1',
-          targetClassId: 'class-locker-1',
           targetClass: 'Locker',
           roleName: 'locker',
           reverseRoleName: 'assignedPerson',
@@ -821,7 +707,6 @@ const personLockerSchemaWithRenamedRoles: CrudSchema = {
       ],
     },
     {
-      id: 'class-locker-1',
       name: 'Locker',
       isAbstract: false,
       attributes: [
@@ -829,10 +714,6 @@ const personLockerSchemaWithRenamedRoles: CrudSchema = {
       ],
       associations: [
         {
-          id: 'assoc-locker-1',
-          endId: 'assoc-locker-1:left',
-          sourceClassId: 'class-locker-1',
-          targetClassId: 'class-person-1',
           targetClass: 'Person',
           roleName: 'assignedPerson',
           reverseRoleName: 'locker',
@@ -856,10 +737,6 @@ const personLockerSchemaWithoutClassIds: CrudSchema = {
       ],
       associations: [
         {
-          id: 'assoc-locker-1',
-          endId: 'assoc-locker-1:classOne',
-          sourceClassId: 'Person',
-          targetClassId: 'Locker',
           targetClass: 'Locker',
           roleName: 'owner',
           reverseRoleName: 'assignedLocker',
@@ -877,10 +754,6 @@ const personLockerSchemaWithoutClassIds: CrudSchema = {
       ],
       associations: [
         {
-          id: 'assoc-locker-1',
-          endId: 'assoc-locker-1:classTwo',
-          sourceClassId: 'Locker',
-          targetClassId: 'Person',
           targetClass: 'Person',
           roleName: 'assignedLocker',
           reverseRoleName: 'owner',
@@ -904,10 +777,6 @@ const userLockerSchemaWithoutClassIds: CrudSchema = {
       ],
       associations: [
         {
-          id: 'assoc-locker-1',
-          endId: 'assoc-locker-1:classOne',
-          sourceClassId: 'User',
-          targetClassId: 'Locker',
           targetClass: 'Locker',
           roleName: 'owner',
           reverseRoleName: 'assignedLocker',
@@ -925,10 +794,6 @@ const userLockerSchemaWithoutClassIds: CrudSchema = {
       ],
       associations: [
         {
-          id: 'assoc-locker-1',
-          endId: 'assoc-locker-1:classTwo',
-          sourceClassId: 'Locker',
-          targetClassId: 'User',
           targetClass: 'User',
           roleName: 'assignedLocker',
           reverseRoleName: 'owner',
@@ -948,25 +813,28 @@ afterEach(() => {
 
 describe('crudStore', () => {
   it('cascades composition deletes from the owner to its parts only', () => {
+    const companyAssoc = compositionSchema.classes[0]!.associations[0]!
+    const departmentAssoc = compositionSchema.classes[1]!.associations[0]!
+
     useCrudStore.setState({ schema: compositionSchema })
 
     const companyId = useCrudStore.getState().createInstance('Company', {})
     const departmentId = useCrudStore.getState().createInstance('Department', {
-      [assocKey('company')]: companyId,
+      [assocKey(departmentAssoc)]: companyId,
     })
 
     useCrudStore.getState().deleteInstance('Department', departmentId)
 
     expect(useCrudStore.getState().instances.Company?.[0]).toMatchObject({ _id: companyId })
-    expect(useCrudStore.getState().instances.Company?.[0]?.[assocKey('departments')]).toBeUndefined()
+    expect(useCrudStore.getState().instances.Company?.[0]?.[assocKey(companyAssoc)]).toBeUndefined()
     expect(useCrudStore.getState().instances.Department).toEqual([])
 
     const replacementDepartmentId = useCrudStore.getState().createInstance('Department', {
-      [assocKey('company')]: companyId,
+      [assocKey(departmentAssoc)]: companyId,
     })
 
     expect(useCrudStore.getState().instances.Company).toEqual([
-      { _id: companyId, [assocKey('departments')]: [replacementDepartmentId] },
+      { _id: companyId, [assocKey(companyAssoc)]: [replacementDepartmentId] },
     ])
 
     useCrudStore.getState().deleteInstance('Company', companyId)
@@ -1029,38 +897,41 @@ describe('crudStore', () => {
   })
 
   it('rejects a second reverse to-one link during validation and reverse sync', () => {
+    const personAssoc = toOneReverseSchema.classes[0]!.associations[0]!
+    const lockerAssoc = toOneReverseSchema.classes[1]!.associations[0]!
+
     useCrudStore.setState({ schema: toOneReverseSchema })
 
     const lockerId = useCrudStore.getState().createInstance('Locker', {})
     const aliceId = useCrudStore.getState().createInstance('Person', {
-      [assocKey('assignedLocker')]: lockerId,
+      [assocKey(personAssoc)]: lockerId,
     })
 
     const errors = validateInstance(
       toOneReverseSchema,
       'Person',
-      { [assocKey('assignedLocker')]: lockerId },
+      { [assocKey(personAssoc)]: lockerId },
       useCrudStore.getState().instances,
       null,
     )
 
     expect(errors).toContainEqual({
-      field: assocKey('assignedLocker'),
+      field: assocKey(personAssoc),
       message: `Locker #${lockerId} already has the maximum number of owner links`,
     })
 
     const bobId = useCrudStore.getState().createInstance('Person', {
-      [assocKey('assignedLocker')]: lockerId,
+      [assocKey(personAssoc)]: lockerId,
     })
 
     const locker = useCrudStore.getState().instances.Locker?.[0]
     const alice = useCrudStore.getState().instances.Person?.find((inst) => inst._id === aliceId)
     const bob = useCrudStore.getState().instances.Person?.find((inst) => inst._id === bobId)
 
-    expect(locker).toEqual({ _id: lockerId, [assocKey('owner')]: aliceId })
-    expect(alice).toEqual({ _id: aliceId, [assocKey('assignedLocker')]: lockerId })
+    expect(locker).toEqual({ _id: lockerId, [assocKey(lockerAssoc)]: aliceId })
+    expect(alice).toEqual({ _id: aliceId, [assocKey(personAssoc)]: lockerId })
     expect(bob).toMatchObject({ _id: bobId })
-    expect(bob?.[assocKey('assignedLocker')]).toBeUndefined()
+    expect(bob?.[assocKey(personAssoc)]).toBeUndefined()
   })
 
   it('keeps class instances when a new attribute is added', () => {
@@ -1164,9 +1035,11 @@ describe('crudStore', () => {
   })
 
   it('removes deleted classes and prunes links from surviving instances', () => {
+    const personAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchema.classes[1]!.associations[0]!
     const instances = {
-      Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: 2 }],
-      Locker: [{ _id: 2, number: 'L1', [assocKey('owner')]: 1 }],
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
     }
 
     const reconciled = reconcileInstances(personLockerSchema, personOnlySchema, instances)
@@ -1177,9 +1050,11 @@ describe('crudStore', () => {
   })
 
   it('drops removed associations but keeps the instances', () => {
+    const personAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchema.classes[1]!.associations[0]!
     const instances = {
-      Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: 2 }],
-      Locker: [{ _id: 2, number: 'L1', [assocKey('owner')]: 1 }],
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
     }
 
     const reconciled = reconcileInstances(personLockerSchema, personSchemaWithoutAssociations, instances)
@@ -1191,9 +1066,11 @@ describe('crudStore', () => {
   })
 
   it('clears association links when the target class changes', () => {
+    const personAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchema.classes[1]!.associations[0]!
     const instances = {
-      Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: 2 }],
-      Locker: [{ _id: 2, number: 'L1', [assocKey('owner')]: 1 }],
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
       Cabinet: [],
     }
 
@@ -1207,25 +1084,30 @@ describe('crudStore', () => {
   })
 
   it('records association adjustments when links are trimmed by a tighter multiplicity', () => {
+    const oldPersonAssoc = personManyLockersSchema.classes[0]!.associations[0]!
+    const oldLockerAssoc = personManyLockersSchema.classes[1]!.associations[0]!
+    const personAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchema.classes[1]!.associations[0]!
+
     const instances = {
-      Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: [2, 3] }],
+      Person: [{ _id: 1, name: 'Alice', [assocKey(oldPersonAssoc)]: [2, 3] }],
       Locker: [
-        { _id: 2, number: 'L1', [assocKey('owner')]: 1 },
-        { _id: 3, number: 'L2', [assocKey('owner')]: 1 },
+        { _id: 2, number: 'L1', [assocKey(oldLockerAssoc)]: 1 },
+        { _id: 3, number: 'L2', [assocKey(oldLockerAssoc)]: 1 },
       ],
     }
 
     const reconciled = reconcileInstancesDetailed(personManyLockersSchema, personLockerSchema, instances)
 
     expect(reconciled.instances).toEqual({
-      Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: 2 }],
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
       Locker: [
-        { _id: 2, number: 'L1', [assocKey('owner')]: 1 },
+        { _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 },
         { _id: 3, number: 'L2' },
       ],
     })
     expect(reconciled.adjustments).toContain(
-      `Existing links for association 'assignedLocker' from Person to Locker were trimmed to satisfy the updated multiplicity constraints.`,
+      `Existing links for association 'owner' from Locker to Person were trimmed to satisfy the updated multiplicity constraints.`,
     )
   })
 
@@ -1241,24 +1123,14 @@ describe('crudStore', () => {
     })
   })
 
-  it('preserves class instances across rename when class ids match', () => {
-    const instances = {
-      Person: [{ _id: 1, name: 'Alice' }],
-    }
-
-    const reconciled = reconcileInstances(personSchemaWithStableId, renamedUserSchemaWithStableId, instances)
-
-    expect(reconciled).toEqual({
-      User: [{ _id: 1, name: 'Alice' }],
-    })
-  })
-
   it('preserves association links when a class is renamed heuristically', () => {
+    const oldPersonAssoc = personLockerSchemaWithoutClassIds.classes[0]!.associations[0]!
+    const oldLockerAssoc = personLockerSchemaWithoutClassIds.classes[1]!.associations[0]!
     const userAssoc = userLockerSchemaWithoutClassIds.classes[0]!.associations[0]!
     const lockerAssoc = userLockerSchemaWithoutClassIds.classes[1]!.associations[0]!
     const instances = {
-      Person: [{ _id: 1, name: 'Alice', [assocKey('owner')]: 2 }],
-      Locker: [{ _id: 2, number: 'L1', [assocKey('assignedLocker')]: 1 }],
+      Person: [{ _id: 1, name: 'Alice', [assocKey(oldPersonAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(oldLockerAssoc)]: 1 }],
     }
 
     const reconciled = reconcileInstances(personLockerSchemaWithoutClassIds, userLockerSchemaWithoutClassIds, instances)
@@ -1290,16 +1162,18 @@ describe('crudStore', () => {
     expect(resolveSelectedClassName(ambiguousOldRenameSchema, ambiguousNewRenameSchema, 'Person')).toBeNull()
   })
 
-  it('preserves association links across role rename when association ids match', () => {
+  it('preserves association links across role rename when the association shape still matches uniquely', () => {
+    const oldPersonAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const oldLockerAssoc = personLockerSchema.classes[1]!.associations[0]!
     const personAssoc = personLockerSchemaWithRenamedRoles.classes[0]!.associations[0]!
     const lockerAssoc = personLockerSchemaWithRenamedRoles.classes[1]!.associations[0]!
     const instances = {
-      Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: 2 }],
-      Locker: [{ _id: 2, number: 'L1', [assocKey('owner')]: 1 }],
+      Person: [{ _id: 1, name: 'Alice', [assocKey(oldPersonAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(oldLockerAssoc)]: 1 }],
     }
 
     const reconciled = reconcileInstances(
-      personLockerSchemaWithStableAssocIds,
+      personLockerSchema,
       personLockerSchemaWithRenamedRoles,
       instances,
     )
@@ -1324,7 +1198,7 @@ describe('crudStore', () => {
     ])
   })
 
-  it('accepts unnamed association links stored under the association end id during global validation', () => {
+  it('accepts unnamed association links stored under the derived association key during global validation', () => {
     const deliveryAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[1]!.associations[0]!
     const instances = {
       Order: [{ _id: 2 }],
@@ -1335,6 +1209,36 @@ describe('crudStore', () => {
 
     expect(result.count).toBe(0)
     expect(result.messages).toEqual([])
+  })
+
+  it('keeps association keys stable across identical schema reloads and import normalization', () => {
+    const initialSchema = prepareCrudSchema(cloneSchema(personLockerSchema))
+    const reloadedSchema = prepareCrudSchema(cloneSchema(personLockerSchema))
+    const initialPersonAssoc = initialSchema.classes[0]!.associations[0]!
+    const initialLockerAssoc = initialSchema.classes[1]!.associations[0]!
+    const reloadedPersonAssoc = reloadedSchema.classes[0]!.associations[0]!
+    const reloadedLockerAssoc = reloadedSchema.classes[1]!.associations[0]!
+
+    expect(assocKey(initialPersonAssoc)).toBe(assocKey(reloadedPersonAssoc))
+    expect(assocKey(initialLockerAssoc)).toBe(assocKey(reloadedLockerAssoc))
+
+    useCrudStore.setState({ schema: reloadedSchema })
+
+    const imported = useCrudStore.getState().importJson(JSON.stringify({
+      instances: {
+        Person: [{ _id: 1, name: 'Alice', [assocKey(initialPersonAssoc)]: 2 }],
+        Locker: [{ _id: 2, number: 'L1', [assocKey(initialLockerAssoc)]: 1 }],
+      },
+      nextId: 3,
+    }))
+
+    expect(imported).toBe(true)
+    expect(useCrudStore.getState().instances.Person).toEqual([
+      { _id: 1, name: 'Alice', [assocKey(reloadedPersonAssoc)]: 2 },
+    ])
+    expect(useCrudStore.getState().instances.Locker).toEqual([
+      { _id: 2, number: 'L1', [assocKey(reloadedLockerAssoc)]: 1 },
+    ])
   })
 
   it('syncs reverse links for unnamed bidirectional associations', () => {
@@ -1371,26 +1275,6 @@ describe('crudStore', () => {
     expect(result.messages[0]).not.toContain("''")
     expect(result.messages[0]).toBe('Please associate Delivery #1 with at least 1 Order instances.')
     expect(result.messages[1]).toBe('Please associate Delivery #1 with at least 1 Order instances.')
-  })
-
-  it('normalizes legacy role-based association keys on import', () => {
-    useCrudStore.setState({ schema: personLockerSchemaWithStableAssocIds })
-
-    const imported = useCrudStore.getState().importJson(JSON.stringify({
-      instances: {
-        Person: [{ _id: 1, name: 'Alice', [assocKey('assignedLocker')]: 2 }],
-        Locker: [{ _id: 2, number: 'L1', [assocKey('owner')]: 1 }],
-      },
-      nextId: 3,
-    }))
-
-    const personAssoc = personLockerSchemaWithStableAssocIds.classes[0]!.associations[0]!
-    const lockerAssoc = personLockerSchemaWithStableAssocIds.classes[1]!.associations[0]!
-    const state = useCrudStore.getState()
-
-    expect(imported).toBe(true)
-    expect(state.instances.Person).toEqual([{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }])
-    expect(state.instances.Locker).toEqual([{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }])
   })
 
   it('deduplicates bidirectional random generation by association identity', () => {

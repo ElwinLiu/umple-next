@@ -267,7 +267,6 @@ func TestFlattenAttributes(t *testing.T) {
 func TestResolveAssociations(t *testing.T) {
 	assocs := []RawAssociation{
 		{
-			ID:               "assoc1",
 			ClassOneID:       "Employee",
 			ClassTwoID:       "Department",
 			MultiplicityOne:  "*",
@@ -278,7 +277,6 @@ func TestResolveAssociations(t *testing.T) {
 			IsRightNavigable: "true",
 		},
 		{
-			ID:                "assoc2",
 			ClassOneID:        "Department",
 			ClassTwoID:        "Company",
 			MultiplicityOne:   "*",
@@ -297,18 +295,6 @@ func TestResolveAssociations(t *testing.T) {
 			t.Fatalf("got %d associations, want 1", len(got))
 		}
 		a := got[0]
-		if a.ID != "assoc1" {
-			t.Errorf("ID = %q, want assoc1", a.ID)
-		}
-		if a.EndID != "assoc1:classOne" {
-			t.Errorf("EndID = %q, want assoc1:classOne", a.EndID)
-		}
-		if a.SourceClassID != "Employee" {
-			t.Errorf("SourceClassID = %q, want Employee", a.SourceClassID)
-		}
-		if a.TargetClassID != "Department" {
-			t.Errorf("TargetClassID = %q, want Department", a.TargetClassID)
-		}
 		if a.TargetClass != "Department" {
 			t.Errorf("TargetClass = %q, want Department", a.TargetClass)
 		}
@@ -341,12 +327,6 @@ func TestResolveAssociations(t *testing.T) {
 		}
 
 		emp := targets["Employee"]
-		if emp.ID != "assoc1" {
-			t.Errorf("Employee assoc ID = %q, want assoc1", emp.ID)
-		}
-		if emp.EndID != "assoc1:classTwo" {
-			t.Errorf("Employee assoc EndID = %q, want assoc1:classTwo", emp.EndID)
-		}
 		if emp.RoleName != "employees" {
 			t.Errorf("Employee role = %q, want employees", emp.RoleName)
 		}
@@ -363,7 +343,6 @@ func TestResolveAssociations(t *testing.T) {
 	t.Run("self referencing", func(t *testing.T) {
 		selfAssoc := []RawAssociation{
 			{
-				ID:               "self1",
 				ClassOneID:       "Employee",
 				ClassTwoID:       "Employee",
 				MultiplicityOne:  "0..1",
@@ -399,7 +378,6 @@ func TestResolveAssociations(t *testing.T) {
 	t.Run("unidirectional", func(t *testing.T) {
 		uniAssoc := []RawAssociation{
 			{
-				ID:               "uni1",
 				ClassOneID:       "Order",
 				ClassTwoID:       "Product",
 				MultiplicityOne:  "1",
@@ -443,7 +421,6 @@ func TestTransformSchema(t *testing.T) {
 		raw := RawModel{
 			UmpleClasses: []RawClass{
 				{
-					ID:   "class-person-1",
 					Name: "Person",
 					Attributes: []RawAttribute{
 						{Name: "name", Type: "String"},
@@ -457,9 +434,6 @@ func TestTransformSchema(t *testing.T) {
 			t.Fatalf("expected 1 class, got %d", len(schema.Classes))
 		}
 		c := schema.Classes[0]
-		if c.ID != "class-person-1" {
-			t.Errorf("class id = %q, want class-person-1", c.ID)
-		}
 		if c.Name != "Person" {
 			t.Errorf("class name = %q, want Person", c.Name)
 		}

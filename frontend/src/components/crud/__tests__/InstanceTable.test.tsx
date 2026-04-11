@@ -30,10 +30,6 @@ const unnamedAssociationSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'order-account',
-          endId: 'order-account:order',
-          sourceClassId: 'Order',
-          targetClassId: 'Account',
           targetClass: 'Account',
           roleName: '',
           reverseRoleName: '',
@@ -42,10 +38,6 @@ const unnamedAssociationSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'order-item',
-          endId: 'order-item:order',
-          sourceClassId: 'Order',
-          targetClassId: 'OrderItem',
           targetClass: 'OrderItem',
           roleName: '',
           reverseRoleName: '',
@@ -54,10 +46,6 @@ const unnamedAssociationSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'order-delivery',
-          endId: 'order-delivery:order',
-          sourceClassId: 'Order',
-          targetClassId: 'Delivery',
           targetClass: 'Delivery',
           roleName: '',
           reverseRoleName: '',
@@ -97,10 +85,6 @@ const inheritedAssociationSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'segment-end',
-          endId: 'segment-end:segment',
-          sourceClassId: 'Segment',
-          targetClassId: 'SegEnd',
           targetClass: 'SegEnd',
           roleName: 'ends',
           reverseRoleName: 'segments',
@@ -116,10 +100,6 @@ const inheritedAssociationSchema: CrudSchema = {
       attributes: [{ name: 'name', type: 'String', typeKind: 'primitive', isInherited: false }],
       associations: [
         {
-          id: 'segment-end',
-          endId: 'segment-end:seg-end',
-          sourceClassId: 'SegEnd',
-          targetClassId: 'Segment',
           targetClass: 'Segment',
           roleName: 'segments',
           reverseRoleName: 'ends',

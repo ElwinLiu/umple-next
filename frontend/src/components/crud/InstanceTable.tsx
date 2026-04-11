@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Plus, Pencil, Trash2, Trash, ChevronRight, ChevronDown, Shuffle } from 'lucide-react'
-import { useCrudStore, type CrudInstance, getAssocIds, classHasCompositionChildren, collectClassAssociations, collectClassInstances } from '@/stores/crudStore'
+import { useCrudStore, type CrudInstance, assocKey, getAssocIds, classHasCompositionChildren, collectClassAssociations, collectClassInstances } from '@/stores/crudStore'
 import type { CrudAssociation, CrudClass, CrudSchema } from '@/api/types'
 import {
   DropdownMenu,
@@ -221,7 +221,7 @@ function AssociationDetail({ inst, assocs, allInstances, schema }: {
         const targetInstances = schema
           ? collectClassInstances(schema, allInstances, assoc.targetClass)
           : (allInstances[assoc.targetClass] ?? [])
-        const assocRowKey = assoc.endId ?? assoc.id ?? `${assoc.targetClass}:${assoc.roleName}`
+        const assocRowKey = assocKey(assoc)
 
         return (
           <div key={assocRowKey}>

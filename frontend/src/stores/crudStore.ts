@@ -8,7 +8,14 @@ export interface CrudInstance {
   [key: string]: unknown
 }
 
-type AssocKeyInput = string | Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'targetClass'>
+type AssocKeyInput = string | Pick<
+  CrudAssociation,
+  'targetClass' | 'roleName' | 'reverseRoleName' | 'multiplicity' | 'isNavigable' | 'isComposition' | 'isReflexive'
+>
+
+const associationRuntimeIds = new WeakMap<object, string>()
+const associationLegacyRuntimeIds = new WeakMap<object, string>()
+const standaloneAssociationRuntimeCounts = new Map<string, number>()
 
 /** Stable key for the model input used to fetch a CRUD schema.
  *  Keyed on code only — the modelId is a backend implementation detail
@@ -19,19 +26,82 @@ export function buildCrudSchemaRequestKey(code: string) {
 }
 
 /** Key used to store an association value inside a CrudInstance. */
-function getAssociationIdentity(assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'targetClass'>) {
-  return assoc.endId ?? assoc.id ?? (assoc.roleName || assoc.targetClass)
+function buildAssociationBaseSignature(
+  assoc: Pick<CrudAssociation, 'targetClass' | 'roleName' | 'reverseRoleName' | 'multiplicity' | 'isNavigable' | 'isComposition' | 'isReflexive'>,
+) {
+  return [
+    assoc.targetClass,
+    assoc.roleName,
+    assoc.reverseRoleName,
+    assoc.multiplicity.min,
+    assoc.multiplicity.max,
+    assoc.isNavigable ? '1' : '0',
+    assoc.isComposition ? '1' : '0',
+    assoc.isReflexive ? '1' : '0',
+  ].join('|')
+}
+
+/** Assign deterministic per-schema association identities used for CRUD storage keys.
+ *  The current key includes the source class so reloading the same schema yields the
+ *  same keys, while the legacy key mirrors the earlier shape-only runtime identity so
+ *  imported/session data saved before this fix can still be read and re-keyed. */
+export function prepareCrudSchema<T extends CrudSchema | null>(schema: T): T {
+  if (!schema) return schema
+
+  const scopedCounts = new Map<string, number>()
+  const legacyCounts = new Map<string, number>()
+
+  for (const cls of schema.classes) {
+    for (const assoc of cls.associations) {
+      const baseSignature = buildAssociationBaseSignature(assoc)
+      const scopedKey = `${cls.name}|${baseSignature}`
+      const scopedOccurrence = scopedCounts.get(scopedKey) ?? 0
+      scopedCounts.set(scopedKey, scopedOccurrence + 1)
+      associationRuntimeIds.set(assoc, `${scopedKey}::${scopedOccurrence}`)
+
+      const legacyOccurrence = legacyCounts.get(baseSignature) ?? 0
+      legacyCounts.set(baseSignature, legacyOccurrence + 1)
+      associationLegacyRuntimeIds.set(assoc, `${baseSignature}::${legacyOccurrence}`)
+    }
+  }
+
+  return schema
+}
+
+export function getAssociationRuntimeIdentity(
+  assoc: Pick<CrudAssociation, 'targetClass' | 'roleName' | 'reverseRoleName' | 'multiplicity' | 'isNavigable' | 'isComposition' | 'isReflexive'>,
+) {
+  const cached = associationRuntimeIds.get(assoc)
+  if (cached) return cached
+
+  const baseSignature = buildAssociationBaseSignature(assoc)
+  const occurrenceIndex = standaloneAssociationRuntimeCounts.get(baseSignature) ?? 0
+  standaloneAssociationRuntimeCounts.set(baseSignature, occurrenceIndex + 1)
+
+  const runtimeIdentity = `${baseSignature}::${occurrenceIndex}`
+  associationRuntimeIds.set(assoc, runtimeIdentity)
+  return runtimeIdentity
 }
 
 export function assocKey(input: AssocKeyInput) {
-  const identity = typeof input === 'string' ? input : getAssociationIdentity(input)
+  const identity = typeof input === 'string' ? input : getAssociationRuntimeIdentity(input)
   return `__assoc__${identity}` as const
 }
 
-function getLegacyAssocKey(input: AssocKeyInput) {
-  if (typeof input === 'string' || !input.roleName) return null
-  const identity = getAssociationIdentity(input)
-  return identity !== input.roleName ? assocKey(input.roleName) : null
+function getAssociationLegacyKeys(input: AssocKeyInput) {
+  if (typeof input === 'string') return []
+
+  const currentKey = assocKey(input)
+  const keys = new Set<string>()
+
+  const legacyRuntimeIdentity = associationLegacyRuntimeIds.get(input)
+  if (legacyRuntimeIdentity) keys.add(`__assoc__${legacyRuntimeIdentity}`)
+
+  const roleOrTargetIdentity = input.roleName || input.targetClass
+  if (roleOrTargetIdentity) keys.add(`__assoc__${roleOrTargetIdentity}`)
+
+  keys.delete(currentKey)
+  return [...keys]
 }
 
 export interface ValidationError {
@@ -91,8 +161,15 @@ interface CrudState {
 /** Get the IDs stored in an association slot (normalises to number[]). */
 export function getAssocIds(instance: CrudInstance, assoc: AssocKeyInput): number[] {
   const key = assocKey(assoc)
-  const legacyKey = getLegacyAssocKey(assoc)
-  const val = instance[key] ?? (legacyKey ? instance[legacyKey] : undefined)
+  let val = instance[key]
+  if (val === undefined) {
+    for (const legacyKey of getAssociationLegacyKeys(assoc)) {
+      if (legacyKey in instance) {
+        val = instance[legacyKey]
+        break
+      }
+    }
+  }
   if (val === undefined || val === null) return []
   if (Array.isArray(val)) return val as number[]
   if (typeof val === 'number') return [val]
@@ -102,14 +179,13 @@ export function getAssocIds(instance: CrudInstance, assoc: AssocKeyInput): numbe
 /** Set association IDs on an instance (mutates). */
 function setAssocIds(instance: CrudInstance, assoc: AssocKeyInput, ids: number[], max = -1) {
   const key = assocKey(assoc)
-  const legacyKey = getLegacyAssocKey(assoc)
   if (ids.length === 0) {
-    instance[key] = undefined
-    if (legacyKey) delete instance[legacyKey]
+    delete instance[key]
+    for (const legacyKey of getAssociationLegacyKeys(assoc)) delete instance[legacyKey]
     return
   }
   instance[key] = max === 1 ? ids[0] : ids
-  if (legacyKey) delete instance[legacyKey]
+  for (const legacyKey of getAssociationLegacyKeys(assoc)) delete instance[legacyKey]
 }
 
 /** Remove a single ID from an association slot on an instance (mutates). */
@@ -118,44 +194,74 @@ function removeAssocId(instance: CrudInstance, assoc: AssocKeyInput, targetId: n
   setAssocIds(instance, assoc, ids, max)
 }
 
-function findAssociationSourceClassName(schema: CrudSchema, assoc: CrudAssociation): string | undefined {
-  if (assoc.sourceClassId) return assoc.sourceClassId
+function associationEndpointsMatch(
+  left: Pick<CrudAssociation, 'targetClass' | 'roleName' | 'reverseRoleName' | 'multiplicity' | 'isNavigable' | 'isComposition' | 'isReflexive'>,
+  right: Pick<CrudAssociation, 'targetClass' | 'roleName' | 'reverseRoleName' | 'multiplicity' | 'isNavigable' | 'isComposition' | 'isReflexive'>,
+) {
+  return (
+    left.targetClass === right.targetClass &&
+    left.roleName === right.roleName &&
+    left.reverseRoleName === right.reverseRoleName &&
+    left.multiplicity.min === right.multiplicity.min &&
+    left.multiplicity.max === right.multiplicity.max &&
+    left.isNavigable === right.isNavigable &&
+    left.isComposition === right.isComposition &&
+    Boolean(left.isReflexive) === Boolean(right.isReflexive)
+  )
+}
 
-  const identity = getAssociationIdentity(assoc)
+function findAssociationSourceClassName(schema: CrudSchema, assoc: CrudAssociation): string | undefined {
   for (const cls of schema.classes) {
-    const match = cls.associations.find((candidate) =>
-      candidate === assoc ||
-      (
-        getAssociationIdentity(candidate) === identity &&
-        candidate.targetClass === assoc.targetClass &&
-        candidate.roleName === assoc.roleName &&
-        candidate.reverseRoleName === assoc.reverseRoleName
-      ),
-    )
+    const match = cls.associations.find((candidate) => candidate === assoc || associationEndpointsMatch(candidate, assoc))
     if (match) return cls.name
   }
 
   return undefined
 }
 
-function findReverseAssoc(schema: CrudSchema, assoc: CrudAssociation): CrudAssociation | undefined {
+function getAssociationOrdinal(
+  associations: CrudAssociation[],
+  assoc: CrudAssociation,
+  matches: (candidate: CrudAssociation, assoc: CrudAssociation) => boolean,
+) {
+  let ordinal = 0
+
+  for (const candidate of associations) {
+    if (!matches(candidate, assoc)) continue
+    if (candidate === assoc) return ordinal
+    ordinal++
+  }
+
+  return -1
+}
+
+export function findReverseAssoc(schema: CrudSchema, assoc: CrudAssociation): CrudAssociation | undefined {
   const targetClass = schema.classes.find((cls) => cls.name === assoc.targetClass)
   if (!targetClass) return undefined
 
-  if (assoc.id) {
-    const reverseById = targetClass.associations.find((candidate) =>
-      candidate.id === assoc.id && candidate.endId !== assoc.endId,
-    )
-    if (reverseById) return reverseById
-  }
-
-  if (!assoc.reverseRoleName) return undefined
   const sourceClassName = findAssociationSourceClassName(schema, assoc)
-  return targetClass.associations.find((candidate) =>
+  const reverseCandidates = targetClass.associations.filter((candidate) =>
     candidate.roleName === assoc.reverseRoleName &&
     candidate.reverseRoleName === assoc.roleName &&
     (!sourceClassName || candidate.targetClass === sourceClassName),
   )
+
+  if (reverseCandidates.length <= 1) return reverseCandidates[0]
+  if (!sourceClassName) return reverseCandidates[0]
+
+  const sourceClass = schema.classes.find((cls) => cls.name === sourceClassName)
+  if (!sourceClass) return reverseCandidates[0]
+
+  const ordinal = getAssociationOrdinal(
+    sourceClass.associations,
+    assoc,
+    (candidate, current) =>
+      candidate.targetClass === current.targetClass &&
+      candidate.roleName === current.roleName &&
+      candidate.reverseRoleName === current.reverseRoleName,
+  )
+
+  return reverseCandidates[ordinal] ?? reverseCandidates[0]
 }
 
 export function classHasCompositionChildren(schema: CrudSchema | null, className: string): boolean {
@@ -249,18 +355,23 @@ function findInstanceInClassFamily(
 }
 
 export function collectClassAssociations(schema: CrudSchema, className: string): CrudAssociation[] {
+  prepareCrudSchema(schema)
   const associations: CrudAssociation[] = []
-  const seen = new Set<string>()
+  const seenAssociations = new Set<string>()
+  const visitedClasses = new Set<string>()
 
   let currentClassName: string | undefined = className
   while (currentClassName) {
+    if (visitedClasses.has(currentClassName)) break
+    visitedClasses.add(currentClassName)
+
     const cls = schema.classes.find((candidate) => candidate.name === currentClassName)
     if (!cls) break
 
     for (const assoc of cls.associations) {
-      const identity = getAssociationIdentity(assoc)
-      if (seen.has(identity)) continue
-      seen.add(identity)
+      const identity = getAssociationRuntimeIdentity(assoc)
+      if (seenAssociations.has(identity)) continue
+      seenAssociations.add(identity)
       associations.push(assoc)
     }
 
@@ -358,7 +469,7 @@ export function validateInstance(
   for (const assoc of classAssociations) {
     if (!assoc.isNavigable) continue
     const key = assocKey(assoc)
-    const ids = toIdArray(data[key])
+    const ids = getAssocIds(data as CrudInstance, assoc)
 
     const { min, max } = assoc.multiplicity
 
@@ -416,6 +527,7 @@ export function validateGlobalModel(
   instances: Record<string, CrudInstance[]>,
   pendingUpdate?: PendingGlobalValidation,
 ): GlobalValidationResult {
+  prepareCrudSchema(schema)
   if (!schema) return EMPTY_GLOBAL_VALIDATION_RESULT
 
   const snapshot = cloneInstances(instances)
@@ -514,59 +626,56 @@ export function validateGlobalModel(
   }
 }
 
-function buildClassMap(schema: CrudSchema) {
-  return new Map(schema.classes.map((cls) => [cls.id ?? cls.name, cls]))
-}
-
 function buildAttributeMap(cls: CrudClass) {
   return new Map(cls.attributes.map((attr) => [attr.name, attr]))
 }
 
-function getAssociationCompatibilityKey(
-  assoc: Pick<CrudAssociation, 'targetClass' | 'targetClassId' | 'roleName' | 'reverseRoleName' | 'multiplicity' | 'isComposition'>,
+function buildAssociationExactSignature(
+  assoc: Pick<CrudAssociation, 'roleName' | 'reverseRoleName' | 'multiplicity' | 'isNavigable' | 'isComposition' | 'isReflexive'>,
 ) {
   return [
-    assoc.targetClassId ?? assoc.targetClass,
     assoc.roleName,
     assoc.reverseRoleName,
     assoc.multiplicity.min,
     assoc.multiplicity.max,
+    assoc.isNavigable ? '1' : '0',
     assoc.isComposition ? '1' : '0',
+    assoc.isReflexive ? '1' : '0',
   ].join('|')
 }
 
-function getAssociationLookupKeys(
-  assoc: Pick<CrudAssociation, 'id' | 'endId' | 'roleName' | 'targetClass' | 'targetClassId' | 'reverseRoleName' | 'multiplicity' | 'isComposition'>,
+function buildAssociationRenameSignature(
+  assoc: Pick<CrudAssociation, 'multiplicity' | 'isNavigable' | 'isComposition' | 'isReflexive'>,
 ) {
   return [
-    assoc.endId,
-    assoc.id,
-    getAssociationCompatibilityKey(assoc),
-    assoc.roleName || undefined,
-    getAssociationIdentity(assoc),
-  ].filter((key): key is string => Boolean(key))
-}
-
-function buildAssociationMap(cls: CrudClass) {
-  const associations = new Map<string, CrudAssociation>()
-  for (const assoc of cls.associations) {
-    for (const key of getAssociationLookupKeys(assoc)) {
-      associations.set(key, assoc)
-    }
-  }
-  return associations
+    assoc.multiplicity.min,
+    assoc.multiplicity.max,
+    assoc.isNavigable ? '1' : '0',
+    assoc.isComposition ? '1' : '0',
+    assoc.isReflexive ? '1' : '0',
+  ].join('|')
 }
 
 function buildInstanceKey(className: string, instanceId: number) {
   return `${className}:${instanceId}`
 }
 
-function getClassIdentity(cls: Pick<CrudClass, 'id' | 'name'>) {
-  return cls.id ?? cls.name
-}
+function getAssociationOrdinalBySignature(
+  associations: CrudAssociation[],
+  assoc: CrudAssociation,
+  signatureFor: (assoc: CrudAssociation) => string,
+) {
+  const signature = signatureFor(assoc)
+  let ordinal = 0
 
-function getAssociationTargetIdentity(assoc: Pick<CrudAssociation, 'targetClass' | 'targetClassId'>) {
-  return assoc.targetClassId ?? assoc.targetClass
+  for (const candidate of associations) {
+    if (candidate.targetClass !== assoc.targetClass) continue
+    if (signatureFor(candidate) !== signature) continue
+    if (candidate === assoc) return ordinal
+    ordinal++
+  }
+
+  return -1
 }
 
 function normalizeCrudTypeName(type: string) {
@@ -650,20 +759,11 @@ function buildClassSourceMap(oldSchema: CrudSchema | null, newSchema: CrudSchema
   const sourceMap = new Map<string, string>()
   if (!oldSchema) return sourceMap
 
-  const oldClassesByIdentity = buildClassMap(oldSchema)
   const oldClassesByName = new Map(oldSchema.classes.map((cls) => [cls.name, cls]))
   const matchedOldNames = new Set<string>()
   const matchedNewNames = new Set<string>()
 
   for (const newClass of newSchema.classes) {
-    const oldByIdentity = oldClassesByIdentity.get(getClassIdentity(newClass))
-    if (oldByIdentity) {
-      sourceMap.set(newClass.name, oldByIdentity.name)
-      matchedOldNames.add(oldByIdentity.name)
-      matchedNewNames.add(newClass.name)
-      continue
-    }
-
     const oldByName = oldClassesByName.get(newClass.name)
     if (oldByName) {
       sourceMap.set(newClass.name, oldByName.name)
@@ -698,8 +798,92 @@ function associationTargetsMatch(
   newAssoc: CrudAssociation,
   classSourceMap: Map<string, string>,
 ) {
-  if (getAssociationTargetIdentity(oldAssoc) === getAssociationTargetIdentity(newAssoc)) return true
+  if (oldAssoc.targetClass === newAssoc.targetClass) return true
   return classSourceMap.get(newAssoc.targetClass) === oldAssoc.targetClass
+}
+
+function associationsExactlyMatch(
+  oldAssoc: CrudAssociation,
+  newAssoc: CrudAssociation,
+  classSourceMap: Map<string, string>,
+) {
+  return (
+    associationTargetsMatch(oldAssoc, newAssoc, classSourceMap) &&
+    buildAssociationExactSignature(oldAssoc) === buildAssociationExactSignature(newAssoc)
+  )
+}
+
+function associationsMatchIgnoringRoleNames(
+  oldAssoc: CrudAssociation,
+  newAssoc: CrudAssociation,
+  classSourceMap: Map<string, string>,
+) {
+  return (
+    associationTargetsMatch(oldAssoc, newAssoc, classSourceMap) &&
+    buildAssociationRenameSignature(oldAssoc) === buildAssociationRenameSignature(newAssoc)
+  )
+}
+
+function pickAssociationMatchByOrdinal(
+  oldAssociations: CrudAssociation[],
+  newAssociations: CrudAssociation[],
+  newAssoc: CrudAssociation,
+  candidates: CrudAssociation[],
+  signatureFor: (assoc: CrudAssociation) => string,
+) {
+  if (candidates.length <= 1) return candidates[0]
+
+  const ordinal = getAssociationOrdinalBySignature(newAssociations, newAssoc, signatureFor)
+  if (ordinal < 0) return candidates[0]
+
+  const orderedCandidates = oldAssociations.filter((candidate) => candidates.includes(candidate))
+  return orderedCandidates[ordinal] ?? candidates[0]
+}
+
+function buildAssociationSourceMap(
+  oldClass: CrudClass,
+  newClass: CrudClass,
+  classSourceMap: Map<string, string>,
+) {
+  const sourceMap = new Map<CrudAssociation, CrudAssociation>()
+  const usedOldAssociations = new Set<CrudAssociation>()
+
+  for (const newAssoc of newClass.associations) {
+    const exactCandidates = oldClass.associations.filter((oldAssoc) =>
+      !usedOldAssociations.has(oldAssoc) && associationsExactlyMatch(oldAssoc, newAssoc, classSourceMap),
+    )
+    const exactMatch = pickAssociationMatchByOrdinal(
+      oldClass.associations,
+      newClass.associations,
+      newAssoc,
+      exactCandidates,
+      buildAssociationExactSignature,
+    )
+
+    if (exactMatch) {
+      sourceMap.set(newAssoc, exactMatch)
+      usedOldAssociations.add(exactMatch)
+      continue
+    }
+
+    const renamedCandidates = oldClass.associations.filter((oldAssoc) =>
+      !usedOldAssociations.has(oldAssoc) && associationsMatchIgnoringRoleNames(oldAssoc, newAssoc, classSourceMap),
+    )
+    const renamedMatch = pickAssociationMatchByOrdinal(
+      oldClass.associations,
+      newClass.associations,
+      newAssoc,
+      renamedCandidates,
+      buildAssociationRenameSignature,
+    )
+
+    if (!renamedMatch) continue
+
+    sourceMap.set(newAssoc, renamedMatch)
+    usedOldAssociations.add(renamedMatch)
+  }
+
+  return sourceMap
 }
 
 export function resolveSelectedClassName(
@@ -942,10 +1126,10 @@ function buildRandomAssociationProcessingKey(
   reverseAssoc?: CrudAssociation,
 ) {
   return reverseAssoc
-    ? [`${className}:${getAssociationIdentity(assoc)}`, `${assoc.targetClass}:${getAssociationIdentity(reverseAssoc)}`]
+    ? [`${className}:${getAssociationRuntimeIdentity(assoc)}`, `${assoc.targetClass}:${getAssociationRuntimeIdentity(reverseAssoc)}`]
       .sort()
       .join('<->')
-    : `${className}:${getAssociationIdentity(assoc)}`
+    : `${className}:${getAssociationRuntimeIdentity(assoc)}`
 }
 
 function forEachRandomAssociationPair(
@@ -1035,6 +1219,7 @@ function normalizeInstancesForSchema(
   schema: CrudSchema,
   instances: Record<string, CrudInstance[]>,
 ): Record<string, CrudInstance[]> {
+  prepareCrudSchema(schema)
   const normalized: Record<string, CrudInstance[]> = {}
 
   for (const cls of schema.classes) {
@@ -1064,6 +1249,8 @@ export function reconcileInstancesDetailed(
   newSchema: CrudSchema,
   oldInstances: Record<string, CrudInstance[]>,
 ): ReconcileResult {
+  prepareCrudSchema(oldSchema)
+  prepareCrudSchema(newSchema)
   const nextInstances: Record<string, CrudInstance[]> = {}
   const adjustments: string[] = []
 
@@ -1087,7 +1274,7 @@ export function reconcileInstancesDetailed(
 
     const sourceList = oldInstances[oldClass.name] ?? []
     const oldAttributes = buildAttributeMap(oldClass)
-    const oldAssociations = buildAssociationMap(oldClass)
+    const oldAssociationSources = buildAssociationSourceMap(oldClass, newClass, classSourceMap)
     const attributeRenameMap = buildAttributeRenameMap(oldClass, newClass)
     const migratedList: CrudInstance[] = []
     const attributeRenameMoves = new Map<string, { oldName: string; movedCount: number }>()
@@ -1142,12 +1329,8 @@ export function reconcileInstancesDetailed(
 
       const instanceAssocCandidates: Record<string, number[]> = {}
       for (const assoc of newClass.associations) {
-        const assocIdentity = getAssociationIdentity(assoc)
-        const oldAssoc = getAssociationLookupKeys(assoc)
-          .map((key) => oldAssociations.get(key))
-          .find((candidate): candidate is CrudAssociation =>
-            candidate !== undefined && associationTargetsMatch(candidate, assoc, classSourceMap),
-          )
+        const assocIdentity = getAssociationRuntimeIdentity(assoc)
+        const oldAssoc = oldAssociationSources.get(assoc)
         if (!oldAssoc) continue
         const ids = getAssocIds(oldInstance, oldAssoc)
         if (ids.length > 0) instanceAssocCandidates[assocIdentity] = ids
@@ -1201,7 +1384,7 @@ export function reconcileInstancesDetailed(
       )
 
       for (const source of sourceList) {
-        const candidateIds = associationCandidates.get(buildInstanceKey(cls.name, source._id))?.[getAssociationIdentity(assoc)] ?? []
+        const candidateIds = associationCandidates.get(buildInstanceKey(cls.name, source._id))?.[getAssociationRuntimeIdentity(assoc)] ?? []
         const filteredIds = [...new Set(candidateIds)]
           .filter((id) => targetById.has(id))
           .filter((id) => !assoc.isReflexive || id !== source._id)
@@ -1210,7 +1393,7 @@ export function reconcileInstancesDetailed(
           ? filteredIds
           : filteredIds.slice(0, assoc.multiplicity.max)
 
-        const adjustmentKey = `${cls.name}:${getAssociationIdentity(assoc)}`
+        const adjustmentKey = `${cls.name}:${getAssociationRuntimeIdentity(assoc)}`
         const adjustment = associationAdjustments.get(adjustmentKey) ?? {
           fromClass: cls.name,
           roleName: assoc.roleName || assoc.targetClass,
@@ -1328,7 +1511,7 @@ export const useCrudStore = create<CrudState>((set, get) => ({
       // Ignore stale responses: if another fetch was started while we were
       // awaiting, the stored schemaRequestKey will have changed.
       if (get().schemaRequestKey !== schemaRequestKey) return
-      const schema = res.schema
+      const schema = prepareCrudSchema(res.schema)
       const state = get()
       let selected = resolveSelectedClassName(state.schema, schema, state.selectedClass)
       if (!selected || !schema.classes.some((c) => c.name === selected)) {
@@ -1557,6 +1740,7 @@ export const useCrudStore = create<CrudState>((set, get) => ({
   generateRandomAll: () => {
     const { schema } = get()
     if (!schema) return
+    prepareCrudSchema(schema)
 
     const concreteClasses = schema.classes.filter((c) => !c.isAbstract)
     if (concreteClasses.length === 0) return

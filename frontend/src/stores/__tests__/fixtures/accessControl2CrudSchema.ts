@@ -3,7 +3,6 @@ import type { CrudSchema } from '@/api/types'
 export const accessControl2CrudSchema: CrudSchema = {
   classes: [
     {
-      id: 'User',
       name: 'User',
       isAbstract: false,
       attributes: [
@@ -11,10 +10,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
       associations: [
         {
-          id: 'umpleAssociation_0',
-          endId: 'umpleAssociation_0:classOne',
-          sourceClassId: 'User',
-          targetClassId: 'AccessPoint',
           targetClass: 'AccessPoint',
           roleName: '',
           reverseRoleName: 'mayEnterThrough',
@@ -23,10 +18,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_1',
-          endId: 'umpleAssociation_1:classOne',
-          sourceClassId: 'User',
-          targetClassId: 'AccessZone',
           targetClass: 'AccessZone',
           roleName: 'mayAccept',
           reverseRoleName: 'mayEnter',
@@ -35,10 +26,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_2',
-          endId: 'umpleAssociation_2:classOne',
-          sourceClassId: 'User',
-          targetClassId: 'Card',
           targetClass: 'Card',
           roleName: '',
           reverseRoleName: 'owns',
@@ -47,10 +34,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_8',
-          endId: 'umpleAssociation_8:classTwo',
-          sourceClassId: 'User',
-          targetClassId: 'ACSystem',
           targetClass: 'ACSystem',
           roleName: 'mayAcceptAndValidate',
           reverseRoleName: 'mayUse',
@@ -61,7 +44,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
     },
     {
-      id: 'AccessPoint',
       name: 'AccessPoint',
       isAbstract: false,
       attributes: [
@@ -69,10 +51,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
       associations: [
         {
-          id: 'umpleAssociation_0',
-          endId: 'umpleAssociation_0:classTwo',
-          sourceClassId: 'AccessPoint',
-          targetClassId: 'User',
           targetClass: 'User',
           roleName: 'mayEnterThrough',
           reverseRoleName: '',
@@ -81,10 +59,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_3',
-          endId: 'umpleAssociation_3:classOne',
-          sourceClassId: 'AccessPoint',
-          targetClassId: 'Door',
           targetClass: 'Door',
           roleName: '',
           reverseRoleName: 'controls',
@@ -93,10 +67,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_4',
-          endId: 'umpleAssociation_4:classOne',
-          sourceClassId: 'AccessPoint',
-          targetClassId: 'AccessPoint',
           targetClass: 'AccessPoint',
           roleName: '',
           reverseRoleName: 'authorizer',
@@ -106,10 +76,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isReflexive: true,
         },
         {
-          id: 'umpleAssociation_4',
-          endId: 'umpleAssociation_4:classTwo',
-          sourceClassId: 'AccessPoint',
-          targetClassId: 'AccessPoint',
           targetClass: 'AccessPoint',
           roleName: 'authorizer',
           reverseRoleName: '',
@@ -119,10 +85,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isReflexive: true,
         },
         {
-          id: 'umpleAssociation_6',
-          endId: 'umpleAssociation_6:classTwo',
-          sourceClassId: 'AccessPoint',
-          targetClassId: 'Authorizer',
           targetClass: 'Authorizer',
           roleName: 'controls',
           reverseRoleName: '',
@@ -133,16 +95,11 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
     },
     {
-      id: 'AccessZone',
       name: 'AccessZone',
       isAbstract: false,
       attributes: [],
       associations: [
         {
-          id: 'umpleAssociation_1',
-          endId: 'umpleAssociation_1:classTwo',
-          sourceClassId: 'AccessZone',
-          targetClassId: 'User',
           targetClass: 'User',
           roleName: 'mayEnter',
           reverseRoleName: 'mayAccept',
@@ -151,10 +108,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_5',
-          endId: 'umpleAssociation_5:classOne',
-          sourceClassId: 'AccessZone',
-          targetClassId: 'Door',
           targetClass: 'Door',
           roleName: '',
           reverseRoleName: 'accessedThrough',
@@ -163,10 +116,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_7',
-          endId: 'umpleAssociation_7:classTwo',
-          sourceClassId: 'AccessZone',
-          targetClassId: 'Authorizer',
           targetClass: 'Authorizer',
           roleName: 'hasKnowledge',
           reverseRoleName: '',
@@ -175,10 +124,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_9',
-          endId: 'umpleAssociation_9:classTwo',
-          sourceClassId: 'AccessZone',
-          targetClassId: 'ACSystem',
           targetClass: 'ACSystem',
           roleName: 'exitControls',
           reverseRoleName: 'exiting',
@@ -187,10 +132,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_10',
-          endId: 'umpleAssociation_10:classTwo',
-          sourceClassId: 'AccessZone',
-          targetClassId: 'ACSystem',
           targetClass: 'ACSystem',
           roleName: 'entryControls',
           reverseRoleName: 'enteriing',
@@ -201,7 +142,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
     },
     {
-      id: 'Authorizer',
       name: 'Authorizer',
       isAbstract: false,
       attributes: [
@@ -209,10 +149,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
       associations: [
         {
-          id: 'umpleAssociation_6',
-          endId: 'umpleAssociation_6:classOne',
-          sourceClassId: 'Authorizer',
-          targetClassId: 'AccessPoint',
           targetClass: 'AccessPoint',
           roleName: '',
           reverseRoleName: 'controls',
@@ -221,10 +157,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_7',
-          endId: 'umpleAssociation_7:classOne',
-          sourceClassId: 'Authorizer',
-          targetClassId: 'AccessZone',
           targetClass: 'AccessZone',
           roleName: '',
           reverseRoleName: 'hasKnowledge',
@@ -235,7 +167,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
     },
     {
-      id: 'Door',
       name: 'Door',
       isAbstract: false,
       attributes: [
@@ -243,10 +174,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
       associations: [
         {
-          id: 'umpleAssociation_3',
-          endId: 'umpleAssociation_3:classTwo',
-          sourceClassId: 'Door',
-          targetClassId: 'AccessPoint',
           targetClass: 'AccessPoint',
           roleName: 'controls',
           reverseRoleName: '',
@@ -255,10 +182,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_5',
-          endId: 'umpleAssociation_5:classTwo',
-          sourceClassId: 'Door',
-          targetClassId: 'AccessZone',
           targetClass: 'AccessZone',
           roleName: 'accessedThrough',
           reverseRoleName: '',
@@ -269,7 +192,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
     },
     {
-      id: 'ACSystem',
       name: 'ACSystem',
       isAbstract: false,
       attributes: [
@@ -277,10 +199,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
       associations: [
         {
-          id: 'umpleAssociation_8',
-          endId: 'umpleAssociation_8:classOne',
-          sourceClassId: 'ACSystem',
-          targetClassId: 'User',
           targetClass: 'User',
           roleName: 'mayUse',
           reverseRoleName: 'mayAcceptAndValidate',
@@ -289,10 +207,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_9',
-          endId: 'umpleAssociation_9:classOne',
-          sourceClassId: 'ACSystem',
-          targetClassId: 'AccessZone',
           targetClass: 'AccessZone',
           roleName: 'exiting',
           reverseRoleName: 'exitControls',
@@ -301,10 +215,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_10',
-          endId: 'umpleAssociation_10:classOne',
-          sourceClassId: 'ACSystem',
-          targetClassId: 'AccessZone',
           targetClass: 'AccessZone',
           roleName: 'enteriing',
           reverseRoleName: 'entryControls',
@@ -315,7 +225,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
     },
     {
-      id: 'Card',
       name: 'Card',
       isAbstract: false,
       attributes: [
@@ -323,10 +232,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
       associations: [
         {
-          id: 'umpleAssociation_2',
-          endId: 'umpleAssociation_2:classTwo',
-          sourceClassId: 'Card',
-          targetClassId: 'User',
           targetClass: 'User',
           roleName: 'owns',
           reverseRoleName: '',
@@ -335,10 +240,6 @@ export const accessControl2CrudSchema: CrudSchema = {
           isComposition: false,
         },
         {
-          id: 'umpleAssociation_11',
-          endId: 'umpleAssociation_11:classOne',
-          sourceClassId: 'Card',
-          targetClassId: 'Code',
           targetClass: 'Code',
           roleName: 'cardId',
           reverseRoleName: '',
@@ -349,7 +250,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
     },
     {
-      id: 'Code',
       name: 'Code',
       isAbstract: false,
       attributes: [
@@ -357,10 +257,6 @@ export const accessControl2CrudSchema: CrudSchema = {
       ],
       associations: [
         {
-          id: 'umpleAssociation_11',
-          endId: 'umpleAssociation_11:classTwo',
-          sourceClassId: 'Code',
-          targetClassId: 'Card',
           targetClass: 'Card',
           roleName: '',
           reverseRoleName: 'cardId',

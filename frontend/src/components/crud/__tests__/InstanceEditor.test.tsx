@@ -15,8 +15,6 @@ const inheritedEditorSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'owner-asset',
-          endId: 'owner-asset:owner',
           targetClass: 'Asset',
           roleName: 'asset',
           reverseRoleName: 'owner',
@@ -32,8 +30,6 @@ const inheritedEditorSchema: CrudSchema = {
       attributes: [],
       associations: [
         {
-          id: 'owner-asset',
-          endId: 'owner-asset:asset',
           targetClass: 'Owner',
           roleName: 'owner',
           reverseRoleName: 'asset',

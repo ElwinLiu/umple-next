@@ -119,7 +119,7 @@ export function InstanceEditor() {
               <p className="font-medium text-status-warning mb-1">Required associations need instances first:</p>
               <ul className="list-disc list-inside space-y-0.5">
                 {missingTargets.map((a) => (
-                  <li key={a.endId ?? a.id ?? `${a.targetClass}:${a.roleName}`}>
+                  <li key={assocKey(a)}>
                     {a.multiplicity.raw} {a.targetClass}
                     {a.roleName ? ` (${a.roleName})` : ''}
                   </li>
@@ -159,7 +159,7 @@ export function InstanceEditor() {
               </div>
               {navigableAssocs.map((assoc) => (
                 <AssociationField
-                  key={assoc.endId ?? assoc.id ?? `${assoc.targetClass}:${assoc.roleName}`}
+                  key={assocKey(assoc)}
                   assoc={assoc}
                   value={formData[assocKey(assoc)]}
                   onChange={(v) => setField(assocKey(assoc), v)}

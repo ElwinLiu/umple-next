@@ -218,7 +218,6 @@ export interface CrudSchema {
 }
 
 export interface CrudClass {
-  id?: string
   name: string
   isAbstract: boolean
   extendsClass?: string
@@ -235,10 +234,6 @@ export interface CrudAttribute {
 }
 
 export interface CrudAssociation {
-  id?: string
-  endId?: string
-  sourceClassId?: string
-  targetClassId?: string
   targetClass: string
   roleName: string
   reverseRoleName: string
