@@ -103,6 +103,11 @@ describe('ObjectExplorer', () => {
 
     render(<ObjectExplorer />)
 
+    expect(screen.getByTestId('crud-adjustment-banner').className).toContain('border-status-warning/30')
+    expect(screen.getByTestId('crud-adjustment-banner').className).toContain('bg-status-warning/5')
+    expect(screen.getByTestId('crud-validation-banner').className).toContain('border-status-error/30')
+    expect(screen.getByTestId('crud-validation-banner').className).toContain('bg-status-error/5')
+    expect(screen.getByText('Schema adjustments applied.')).toBeTruthy()
     expect(screen.getByText('Total 1 validation error.')).toBeTruthy()
     expect(screen.getByText('Class "Person" was renamed to "Student".')).toBeTruthy()
     expect(screen.getByText('Please associate Student #1 with exactly 1 Locker instance.')).toBeTruthy()

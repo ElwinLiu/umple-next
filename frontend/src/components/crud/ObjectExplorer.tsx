@@ -119,8 +119,6 @@ export function ObjectExplorer() {
   const selectedCls = schema?.classes.find((c) => c.name === selectedClass)
   const hasGlobalErrors = globalValidationErrors.length > 0
   const hasAdjustmentMessages = adjustmentMessages.length > 0
-  const hasBanner = hasGlobalErrors || hasAdjustmentMessages
-
   // Count total instances across all classes
   const totalInstances = Object.values(instances).reduce((sum, list) => sum + list.length, 0)
 
@@ -201,34 +199,33 @@ export function ObjectExplorer() {
         onChange={handleFileChange}
       />
 
-      {hasBanner && (
+      {hasAdjustmentMessages && (
         <div
-          className={[
-            'border-b px-3 py-2 text-xs',
-            hasGlobalErrors
-              ? 'border-status-error/30 bg-status-error/5 text-status-error'
-              : 'border-brand/20 bg-brand-light text-ink-muted',
-          ].join(' ')}
+          data-testid="crud-adjustment-banner"
+          className="border-b border-status-warning/30 bg-status-warning/5 px-3 py-2 text-xs text-ink-muted"
         >
-          {hasGlobalErrors && (
-            <p className="font-medium">
-              Total {globalValidationCount} validation error{globalValidationCount === 1 ? '' : 's'}.
-            </p>
-          )}
-          {hasAdjustmentMessages && (
-            <ul className={`list-disc pl-4 space-y-1 ${hasGlobalErrors ? 'mt-1' : ''}`}>
-              {adjustmentMessages.map((message, index) => (
-                <li key={`${index}:${message}`}>{message}</li>
-              ))}
-            </ul>
-          )}
-          {hasGlobalErrors && (
-            <ul className={`list-disc pl-4 space-y-1 ${hasAdjustmentMessages ? 'mt-2' : 'mt-1'}`}>
-              {globalValidationErrors.map((message, index) => (
-                <li key={`${index}:${message}`}>{message}</li>
-              ))}
-            </ul>
-          )}
+          <p className="font-medium text-status-warning">Schema adjustments applied.</p>
+          <ul className="mt-1 list-disc pl-4 space-y-1">
+            {adjustmentMessages.map((message, index) => (
+              <li key={`${index}:${message}`}>{message}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {hasGlobalErrors && (
+        <div
+          data-testid="crud-validation-banner"
+          className="border-b border-status-error/30 bg-status-error/5 px-3 py-2 text-xs text-status-error"
+        >
+          <p className="font-medium">
+            Total {globalValidationCount} validation error{globalValidationCount === 1 ? '' : 's'}.
+          </p>
+          <ul className="mt-1 list-disc pl-4 space-y-1">
+            {globalValidationErrors.map((message, index) => (
+              <li key={`${index}:${message}`}>{message}</li>
+            ))}
+          </ul>
         </div>
       )}
 
