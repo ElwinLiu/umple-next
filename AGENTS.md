@@ -137,7 +137,11 @@ Release automatically copies `docker-compose.prod.yml` from the repo, but the se
 
 ```bash
 mkdir -p ~/deploy/umpleonline
-echo "ALLOWED_ORIGINS=https://your-domain.example.com" > ~/deploy/umpleonline/.env
+cat > ~/deploy/umpleonline/.env <<'EOF'
+ALLOWED_ORIGINS=https://your-domain.example.com
+FRONTEND_BIND_HOST=127.0.0.1
+FRONTEND_HOST_PORT=3100
+EOF
 ```
 
 Required host dependencies:
@@ -151,6 +155,6 @@ Required host dependencies:
 2. Install TXL on the host at `/usr/local/bin/txl` and `/usr/local/lib/txl`
 3. Create the deploy directory, `.env`, and `data/models` directory (see above)
 4. Copy any existing `data/models` contents if you need persisted models on the new server
-5. Configure a reverse proxy (nginx or Cloudflare Tunnel) to forward the domain to `localhost:3100`
+5. Configure a reverse proxy (nginx or Cloudflare Tunnel) to forward the domain to that server's configured `FRONTEND_HOST_PORT` on localhost
 6. Update the 6 GitHub secrets to point to the new server
 7. Run the Release workflow for the commit you want in production
