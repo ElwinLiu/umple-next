@@ -135,7 +135,7 @@ export function DiagramPanel() {
           )}
           {mountGv && (
             <DiagramLayer active={showGv}>
-              <SmartSvgView svg={currentSvg} />
+              <SmartSvgView svg={currentSvg} viewMode={viewMode} />
             </DiagramLayer>
           )}
           {editableLoading && (
