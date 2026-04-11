@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { CrudSchema } from '@/api/types'
-import { assocKey } from '@/stores/crudStore'
+import { assocKey, prepareCrudSchema } from '@/stores/crudStore'
 import { generateInstanceDiagramDot } from '../instanceDiagram'
 
 const reflexiveSchema: CrudSchema = {
@@ -211,6 +211,12 @@ const inheritedReflexiveSchema: CrudSchema = {
   enums: [],
 }
 
+prepareCrudSchema(reflexiveSchema)
+prepareCrudSchema(duplicateUnnamedAssociationSchema)
+prepareCrudSchema(inheritedTargetSchema)
+prepareCrudSchema(inheritedSourceSchema)
+prepareCrudSchema(inheritedReflexiveSchema)
+
 describe('generateInstanceDiagramDot', () => {
   it('keeps distinct role-based associations between the same two instances', () => {
     const advisorAssoc = reflexiveSchema.classes[0]!.associations[0]!
@@ -226,8 +232,8 @@ describe('generateInstanceDiagramDot', () => {
       ],
     })
 
-    expect(dot).toContain('Person_1 -> Person_2 [label="advisor"];')
-    expect(dot).toContain('Person_1 -> Person_2 [label="mentor"];')
+    expect(dot).toContain('Person_1 -> Person_2 [dir=none, taillabel="* advisees", headlabel="0..1 advisor"];')
+    expect(dot).toContain('Person_1 -> Person_2 [dir=none, taillabel="* mentees", headlabel="0..1 mentor"];')
     expect((dot.match(/Person_1 -> Person_2/g) ?? [])).toHaveLength(2)
   })
 
@@ -246,7 +252,7 @@ describe('generateInstanceDiagramDot', () => {
       Account: [{ _id: 2 }],
     })
 
-    expect((dot.match(/Order_1 -> Account_2/g) ?? [])).toHaveLength(2)
+    expect((dot.match(/Order_1 -> Account_2 \[dir=none, headlabel="0..1"\];/g) ?? [])).toHaveLength(2)
   })
 
   it('uses the real subclass node id for inherited association targets', () => {
@@ -259,8 +265,8 @@ describe('generateInstanceDiagramDot', () => {
     })
 
     expect(dot).toContain('Bend_12 [label="Bend #12"];')
-    expect(dot).toContain('Segment_1 -> Bend_12 [label="ends"];')
-    expect(dot).not.toContain('Segment_1 -> SegEnd_12 [label="ends"];')
+    expect(dot).toContain('Segment_1 -> Bend_12 [dir=none, taillabel="* segments", headlabel="1..* ends"];')
+    expect(dot).not.toContain('Segment_1 -> SegEnd_12 [dir=none, taillabel="* segments", headlabel="1..* ends"];')
   })
 
   it('renders inherited associations for subclass instances', () => {
@@ -274,7 +280,7 @@ describe('generateInstanceDiagramDot', () => {
 
     expect(dot).toContain('Computer_7 [label="Computer #7"];')
     expect(dot).toContain('Owner_3 [label="Owner #3"];')
-    expect(dot).toContain('Computer_7 -> Owner_3 [label="owner"];')
+    expect(dot).toContain('Computer_7 -> Owner_3 [dir=none, taillabel="* assets", headlabel="0..1 owner"];')
   })
 
   it('keeps both inherited self-association ends distinct when the inherited roles differ', () => {
@@ -290,7 +296,7 @@ describe('generateInstanceDiagramDot', () => {
       ],
     })
 
-    expect(dot).toContain('Student_1 -> Student_2 [label="advisor"];')
-    expect(dot).toContain('Student_1 -> Student_3 [label="advisees"];')
+    expect(dot).toContain('Student_1 -> Student_2 [dir=none, taillabel="* advisees", headlabel="0..1 advisor"];')
+    expect(dot).toContain('Student_1 -> Student_3 [dir=none, taillabel="0..1 advisor", headlabel="* advisees"];')
   })
 })
