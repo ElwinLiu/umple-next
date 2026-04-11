@@ -152,7 +152,6 @@ interface CrudState {
   resetInstances: () => void
   exportJson: () => string
   importJson: (json: string) => boolean
-  generateRandom: (className: string, count: number) => void
   generateRandomAll: () => void
 }
 
@@ -1710,31 +1709,6 @@ export const useCrudStore = create<CrudState>((set, get) => ({
     } catch {
       return false
     }
-  },
-
-  generateRandom: (className, count) => {
-    const { schema } = get()
-    if (!schema) return
-    const cls = schema.classes.find((c) => c.name === className)
-    if (!cls || cls.isAbstract) return
-
-    set((s) => {
-      const newInstances = { ...s.instances }
-      const list = [...(newInstances[className] ?? [])]
-      let nextId = s.nextId
-
-      for (let i = 0; i < count; i++) {
-        list.push(createRandomInstanceForClass(cls, schema, nextId))
-        nextId++
-      }
-
-      newInstances[className] = list
-      return {
-        instances: newInstances,
-        nextId,
-        ...computeGlobalValidationState(schema, newInstances),
-      }
-    })
   },
 
   generateRandomAll: () => {

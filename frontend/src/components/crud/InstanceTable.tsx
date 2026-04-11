@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, Trash, ChevronRight, ChevronDown, Shuffle } from 'lucide-react'
+import { Plus, Pencil, Trash2, Trash, ChevronRight, ChevronDown } from 'lucide-react'
 import { useCrudStore, type CrudInstance, assocKey, getAssocIds, classHasCompositionChildren, collectClassAssociations, collectClassInstances } from '@/stores/crudStore'
 import type { CrudAssociation, CrudClass, CrudSchema } from '@/api/types'
 import {
@@ -20,7 +20,6 @@ export function InstanceTable({ cls }: { cls: CrudClass }) {
   const openEditor = useCrudStore((s) => s.openEditor)
   const deleteInstance = useCrudStore((s) => s.deleteInstance)
   const clearAllInstances = useCrudStore((s) => s.clearAllInstances)
-  const generateRandom = useCrudStore((s) => s.generateRandom)
   const [expandedRow, setExpandedRow] = useState<number | null>(null)
 
   const visibleAttrs = cls.attributes.slice(0, 8)
@@ -39,15 +38,6 @@ export function InstanceTable({ cls }: { cls: CrudClass }) {
           <span className="text-xs text-ink-faint tabular-nums">{instances.length} instance{instances.length !== 1 ? 's' : ''}</span>
         </div>
         <div className="flex items-center gap-1">
-          <Tip content="Generate 5 random instances" side="bottom">
-            <button
-              onClick={() => generateRandom(cls.name, 5)}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-ink-faint hover:text-ink-muted transition-colors cursor-pointer rounded-md hover:bg-surface-1"
-            >
-              <Shuffle className="size-3" />
-              Random
-            </button>
-          </Tip>
           {instances.length > 0 && (
             <Tip content="Clear all instances" side="bottom">
               <button

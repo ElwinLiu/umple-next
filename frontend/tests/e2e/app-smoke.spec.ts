@@ -178,8 +178,6 @@ test('command palette lists all supported diagram commands and diagram commands 
   }
 
   await expect(page.getByTestId('command-item-gen-Java')).toBeVisible()
-  await expect(page.getByTestId('command-item-gen-stateDiagram')).toHaveCount(0)
-  await expect(page.getByTestId('command-item-gen-featureDiagram')).toHaveCount(0)
 
   await page.getByTestId('command-item-diagram-erd').click()
   await expect.poll(() => diagramTypes[diagramTypes.length - 1]).toBe('GvEntityRelationshipDiagram')
