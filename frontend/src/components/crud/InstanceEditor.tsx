@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useCrudStore, type CrudInstance, assocKey, validateInstance } from '@/stores/crudStore'
+import { useMemo, useState, useEffect } from 'react'
+import { useCrudStore, type CrudInstance, assocKey, collectClassAssociations, collectClassInstances, getAssocIds, validateGlobalModel, validateInstance } from '@/stores/crudStore'
 import type { CrudAttribute, CrudAssociation, CrudClass, CrudEnum } from '@/api/types'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter,
@@ -23,6 +23,10 @@ export function InstanceEditor() {
   const existing = !isNew && cls
     ? (instances[cls.name] ?? []).find((i) => i._id === editingInstance?.instanceId)
     : undefined
+  const classAssociations = useMemo(
+    () => (schema && cls ? collectClassAssociations(schema, cls.name) : []),
+    [schema, cls],
+  )
 
   const [formData, setFormData] = useState<Record<string, unknown>>({})
 
@@ -33,10 +37,11 @@ export function InstanceEditor() {
       for (const attr of cls.attributes) {
         data[attr.name] = existing[attr.name] ?? getDefaultValue(attr)
       }
-      for (const assoc of cls.associations) {
+      for (const assoc of classAssociations) {
         if (!assoc.isNavigable) continue
-        const key = assocKey(assoc.roleName)
-        data[key] = existing[key] ?? (assoc.multiplicity.max === 1 ? undefined : [])
+        const key = assocKey(assoc)
+        const ids = getAssocIds(existing, assoc)
+        data[key] = assoc.multiplicity.max === 1 ? ids[0] : ids
       }
       setFormData(data)
     } else {
@@ -44,13 +49,13 @@ export function InstanceEditor() {
       for (const attr of cls.attributes) {
         data[attr.name] = getDefaultValue(attr)
       }
-      for (const assoc of cls.associations) {
+      for (const assoc of classAssociations) {
         if (!assoc.isNavigable) continue
-        data[assocKey(assoc.roleName)] = assoc.multiplicity.max === 1 ? undefined : []
+        data[assocKey(assoc)] = assoc.multiplicity.max === 1 ? undefined : []
       }
       setFormData(data)
     }
-  }, [cls, existing])
+  }, [classAssociations, cls, existing])
 
   const handleSave = () => {
     if (!cls || !editingInstance || !schema) return
@@ -79,12 +84,25 @@ export function InstanceEditor() {
 
   const fieldError = (field: string) => validationErrors.find((e) => e.field === field)?.message
 
-  const navigableAssocs = cls?.associations.filter((a) => a.isNavigable) ?? []
+  const navigableAssocs = classAssociations.filter((assoc) => assoc.isNavigable)
 
   // Check if required associations can be satisfied
   const missingTargets = navigableAssocs
     .filter((a) => a.multiplicity.min > 0)
-    .filter((a) => (instances[a.targetClass] ?? []).length === 0 && (a.isReflexive ? (instances[cls!.name] ?? []).length === 0 : true))
+    .filter((a) => schema ? collectClassInstances(schema, instances, a.targetClass).length === 0 : true)
+
+  const pendingGlobalValidation = useMemo(() => {
+    if (!schema || !cls || !editingInstance || Object.keys(formData).length === 0) return { messages: [], count: 0 }
+
+    return validateGlobalModel(schema, instances, {
+      className: cls.name,
+      instanceId: editingInstance.instanceId,
+      newInstance: {
+        _id: editingInstance.instanceId ?? -1,
+        ...formData,
+      } as CrudInstance,
+    })
+  }, [cls, editingInstance, formData, instances, schema])
 
   return (
     <Sheet open={isOpen} onOpenChange={(open) => { if (!open) closeEditor() }}>
@@ -101,9 +119,23 @@ export function InstanceEditor() {
               <p className="font-medium text-status-warning mb-1">Required associations need instances first:</p>
               <ul className="list-disc list-inside space-y-0.5">
                 {missingTargets.map((a) => (
-                  <li key={a.roleName}>
-                    {a.multiplicity.raw} {a.targetClass} ({a.roleName})
+                  <li key={assocKey(a)}>
+                    {a.multiplicity.raw} {a.targetClass}
+                    {a.roleName ? ` (${a.roleName})` : ''}
                   </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {pendingGlobalValidation.messages.length > 0 && (
+            <div className="rounded-md border border-status-error/30 bg-status-error/5 px-3 py-2 text-xs text-status-error">
+              <p className="font-medium mb-1">
+                Model-wide issue{pendingGlobalValidation.count === 1 ? '' : 's'} after this change:
+              </p>
+              <ul className="list-disc list-inside space-y-0.5">
+                {pendingGlobalValidation.messages.map((message, index) => (
+                  <li key={`${index}:${message}`}>{message}</li>
                 ))}
               </ul>
             </div>
@@ -127,14 +159,14 @@ export function InstanceEditor() {
               </div>
               {navigableAssocs.map((assoc) => (
                 <AssociationField
-                  key={`${assoc.targetClass}-${assoc.roleName}`}
+                  key={assocKey(assoc)}
                   assoc={assoc}
-                  value={formData[assocKey(assoc.roleName)]}
-                  onChange={(v) => setField(assocKey(assoc.roleName), v)}
-                  targetInstances={instances[assoc.targetClass] ?? []}
+                  value={formData[assocKey(assoc)]}
+                  onChange={(v) => setField(assocKey(assoc), v)}
+                  targetInstances={schema ? collectClassInstances(schema, instances, assoc.targetClass) : []}
                   targetClassName={assoc.targetClass}
                   currentInstanceId={editingInstance?.instanceId ?? undefined}
-                  error={fieldError(assocKey(assoc.roleName))}
+                  error={fieldError(assocKey(assoc))}
                 />
               ))}
             </>

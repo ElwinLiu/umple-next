@@ -1,14 +1,28 @@
-import type { CrudSchema } from '@/api/types'
-import { assocKey, toIdArray, type CrudInstance } from '@/stores/crudStore'
+import type { CrudAssociation, CrudSchema } from '@/api/types'
+import {
+  collectClassAssociations,
+  findReverseAssoc,
+  getAssocIds,
+  getAssociationRuntimeIdentity,
+  type CrudInstance,
+} from '@/stores/crudStore'
 
 function escapeLabel(s: string): string {
   return s.replace(/[\\"{}<>|]/g, '\\$&')
 }
 
-function associationEdgeKey(srcNode: string, tgtNode: string, roleName: string, reverseRoleName: string): string {
+function associationPairKey(
+  schema: CrudSchema,
+  srcNode: string,
+  tgtNode: string,
+  assoc: CrudAssociation,
+): string {
   const nodeKey = [srcNode, tgtNode].sort().join('->')
-  const roleKey = [roleName, reverseRoleName].filter(Boolean).sort().join('|')
-  return `${nodeKey}::${roleKey}`
+  const reverseAssoc = findReverseAssoc(schema, assoc)
+  const assocKey = reverseAssoc
+    ? [getAssociationRuntimeIdentity(assoc), getAssociationRuntimeIdentity(reverseAssoc)].sort().join('<->')
+    : getAssociationRuntimeIdentity(assoc)
+  return `${nodeKey}::${assocKey}`
 }
 
 export function generateInstanceDiagramDot(
@@ -22,11 +36,13 @@ export function generateInstanceDiagramDot(
     '  edge [fontsize=8, fontname="Helvetica"];',
     '',
   ]
+  const nodeIdByInstanceId = new Map<number, string>()
 
   for (const cls of schema.classes) {
     const list = instances[cls.name] ?? []
     for (const inst of list) {
       const nodeId = `${cls.name}_${inst._id}`
+      nodeIdByInstanceId.set(inst._id, nodeId)
       const header = `${cls.name} #${inst._id}`
       const attrLines = cls.attributes
         .map((a) => {
@@ -46,19 +62,15 @@ export function generateInstanceDiagramDot(
   for (const cls of schema.classes) {
     const list = instances[cls.name] ?? []
     for (const inst of list) {
-      for (const assoc of cls.associations) {
+      for (const assoc of collectClassAssociations(schema, cls.name)) {
         if (!assoc.isNavigable) continue
-        const ids = toIdArray(inst[assocKey(assoc.roleName)])
+        const ids = getAssocIds(inst, assoc)
 
         for (const tid of ids) {
-          const srcNode = `${cls.name}_${inst._id}`
-          const tgtNode = `${assoc.targetClass}_${tid}`
-          const edgeKey = associationEdgeKey(
-            srcNode,
-            tgtNode,
-            assoc.roleName,
-            assoc.reverseRoleName,
-          )
+          const srcNode = nodeIdByInstanceId.get(inst._id) ?? `${cls.name}_${inst._id}`
+          const tgtNode = nodeIdByInstanceId.get(tid)
+          if (!tgtNode) continue
+          const edgeKey = associationPairKey(schema, srcNode, tgtNode, assoc)
           if (drawnEdges.has(edgeKey)) continue
           drawnEdges.add(edgeKey)
           const label = assoc.roleName ? ` [label="${escapeLabel(assoc.roleName)}"]` : ''

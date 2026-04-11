@@ -1,6 +1,6 @@
 ## Project Overview
 
-Rewrite of UmpleOnline from legacy stack (PHP, jQuery) to modern stack. Old repo: `~/code/umple/`
+Rewrite of UmpleOnline from legacy stack (PHP, jQuery) to modern stack. Old repo: `~/umple/`
 
 ## Tech Stack
 

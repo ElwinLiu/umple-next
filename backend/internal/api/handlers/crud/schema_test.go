@@ -267,7 +267,6 @@ func TestFlattenAttributes(t *testing.T) {
 func TestResolveAssociations(t *testing.T) {
 	assocs := []RawAssociation{
 		{
-			ID:               "assoc1",
 			ClassOneID:       "Employee",
 			ClassTwoID:       "Department",
 			MultiplicityOne:  "*",
@@ -278,7 +277,6 @@ func TestResolveAssociations(t *testing.T) {
 			IsRightNavigable: "true",
 		},
 		{
-			ID:                "assoc2",
 			ClassOneID:        "Department",
 			ClassTwoID:        "Company",
 			MultiplicityOne:   "*",
@@ -345,7 +343,6 @@ func TestResolveAssociations(t *testing.T) {
 	t.Run("self referencing", func(t *testing.T) {
 		selfAssoc := []RawAssociation{
 			{
-				ID:               "self1",
 				ClassOneID:       "Employee",
 				ClassTwoID:       "Employee",
 				MultiplicityOne:  "0..1",
@@ -381,7 +378,6 @@ func TestResolveAssociations(t *testing.T) {
 	t.Run("unidirectional", func(t *testing.T) {
 		uniAssoc := []RawAssociation{
 			{
-				ID:               "uni1",
 				ClassOneID:       "Order",
 				ClassTwoID:       "Product",
 				MultiplicityOne:  "1",

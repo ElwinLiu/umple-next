@@ -57,7 +57,6 @@ type RawMethod struct {
 }
 
 type RawAssociation struct {
-	ID                   string `json:"id"`
 	ClassOneID           string `json:"classOneId"`
 	ClassTwoID           string `json:"classTwoId"`
 	MultiplicityOne      string `json:"multiplicityOne"`

@@ -1,6 +1,28 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { CrudSchema } from '@/api/types'
-import { assocKey, useCrudStore, validateInstance } from '../crudStore'
+import {
+  assocKey,
+  prepareCrudSchema,
+  reconcileInstances,
+  reconcileInstancesDetailed,
+  resolveSelectedClassName,
+  useCrudStore,
+  validateGlobalModel,
+  validateInstance,
+} from '../crudStore'
+import { accessControl2CrudSchema } from './fixtures/accessControl2CrudSchema'
+
+function createDeterministicRandom(seed: number) {
+  let state = seed >>> 0
+  return () => {
+    state = (1664525 * state + 1013904223) >>> 0
+    return state / 2 ** 32
+  }
+}
+
+function cloneSchema<T>(schema: T): T {
+  return JSON.parse(JSON.stringify(schema)) as T
+}
 
 const baseCrudState = useCrudStore.getState()
 
@@ -76,31 +98,743 @@ const toOneReverseSchema: CrudSchema = {
   enums: [],
 }
 
+const personOnlySchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithEmailSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+        { name: 'email', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithNicknameSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+        { name: 'nickname', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithHandleSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'handle', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithAliasSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'alias', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithDisplayNameSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'displayName', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithAliasAndNicknameSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'alias', type: 'String', typeKind: 'primitive', isInherited: false },
+        { name: 'nickname', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personAgeAsStringSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'age', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personAgeAsIntegerSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'age', type: 'Integer', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithMandatoryLockerSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Locker',
+          roleName: 'assignedLocker',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: 1, raw: '1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const deliveryOrderSchemaWithUnnamedRoles: CrudSchema = {
+  classes: [
+    {
+      name: 'Order',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          targetClass: 'Delivery',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Delivery',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          targetClass: 'Order',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: -1, raw: '1..*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
+const duplicateUnnamedOrderAssociationsSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Delivery',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          targetClass: 'Order',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: -1, raw: '1..*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+        {
+          targetClass: 'Order',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: -1, raw: '1..*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Order',
+      isAbstract: false,
+      attributes: [],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const randomBidirectionalSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Left',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          targetClass: 'Right',
+          roleName: 'right',
+          reverseRoleName: 'left',
+          multiplicity: { min: 1, max: 1, raw: '1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Right',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          targetClass: 'Left',
+          roleName: 'left',
+          reverseRoleName: 'right',
+          multiplicity: { min: 1, max: 1, raw: '1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
+const canalInheritedAssociationSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'SegEnd',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          targetClass: 'Segment',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 1, max: -1, raw: '1..*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Segment',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          targetClass: 'SegEnd',
+          roleName: '',
+          reverseRoleName: '',
+          multiplicity: { min: 2, max: 2, raw: '2' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Lock',
+      isAbstract: false,
+      extendsClass: 'Segment',
+      attributes: [],
+      associations: [],
+    },
+    {
+      name: 'Bend',
+      isAbstract: false,
+      extendsClass: 'SegEnd',
+      attributes: [],
+      associations: [],
+    },
+    {
+      name: 'EntryAndExitPoint',
+      isAbstract: false,
+      extendsClass: 'SegEnd',
+      attributes: [],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const inheritedDeleteSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Owner',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          targetClass: 'Asset',
+          roleName: 'asset',
+          reverseRoleName: 'owner',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Asset',
+      isAbstract: false,
+      attributes: [],
+      associations: [
+        {
+          targetClass: 'Owner',
+          roleName: 'owner',
+          reverseRoleName: 'asset',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Computer',
+      isAbstract: false,
+      extendsClass: 'Asset',
+      attributes: [{ name: 'name', type: 'String', typeKind: 'primitive', isInherited: false }],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personWithNewClassSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+    {
+      name: 'Course',
+      isAbstract: false,
+      attributes: [
+        { name: 'code', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personLockerSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Locker',
+          roleName: 'assignedLocker',
+          reverseRoleName: 'owner',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Person',
+          roleName: 'owner',
+          reverseRoleName: 'assignedLocker',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
+const personManyLockersSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Locker',
+          roleName: 'assignedLocker',
+          reverseRoleName: 'owner',
+          multiplicity: { min: 0, max: -1, raw: '*' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Person',
+          roleName: 'owner',
+          reverseRoleName: 'assignedLocker',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
+const personSchemaWithoutAssociations: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personCabinetSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Cabinet',
+          roleName: 'assignedLocker',
+          reverseRoleName: 'owner',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+    {
+      name: 'Cabinet',
+      isAbstract: false,
+      attributes: [
+        { name: 'code', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Person',
+          roleName: 'owner',
+          reverseRoleName: 'assignedLocker',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
+const renamedPersonSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'User',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const ambiguousOldRenameSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+    {
+      name: 'Customer',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const ambiguousNewRenameSchema: CrudSchema = {
+  classes: [
+    {
+      name: 'Member',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [],
+    },
+  ],
+  enums: [],
+}
+
+const personLockerSchemaWithRenamedRoles: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Locker',
+          roleName: 'locker',
+          reverseRoleName: 'assignedPerson',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Person',
+          roleName: 'assignedPerson',
+          reverseRoleName: 'locker',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
+const personLockerSchemaWithoutClassIds: CrudSchema = {
+  classes: [
+    {
+      name: 'Person',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Locker',
+          roleName: 'owner',
+          reverseRoleName: 'assignedLocker',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Person',
+          roleName: 'assignedLocker',
+          reverseRoleName: 'owner',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
+const userLockerSchemaWithoutClassIds: CrudSchema = {
+  classes: [
+    {
+      name: 'User',
+      isAbstract: false,
+      attributes: [
+        { name: 'name', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'Locker',
+          roleName: 'owner',
+          reverseRoleName: 'assignedLocker',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+    {
+      name: 'Locker',
+      isAbstract: false,
+      attributes: [
+        { name: 'number', type: 'String', typeKind: 'primitive', isInherited: false },
+      ],
+      associations: [
+        {
+          targetClass: 'User',
+          roleName: 'assignedLocker',
+          reverseRoleName: 'owner',
+          multiplicity: { min: 0, max: 1, raw: '0..1' },
+          isNavigable: true,
+          isComposition: false,
+        },
+      ],
+    },
+  ],
+  enums: [],
+}
+
 afterEach(() => {
   useCrudStore.setState({ ...baseCrudState })
 })
 
 describe('crudStore', () => {
   it('cascades composition deletes from the owner to its parts only', () => {
+    const companyAssoc = compositionSchema.classes[0]!.associations[0]!
+    const departmentAssoc = compositionSchema.classes[1]!.associations[0]!
+
     useCrudStore.setState({ schema: compositionSchema })
 
     const companyId = useCrudStore.getState().createInstance('Company', {})
     const departmentId = useCrudStore.getState().createInstance('Department', {
-      [assocKey('company')]: companyId,
+      [assocKey(departmentAssoc)]: companyId,
     })
 
     useCrudStore.getState().deleteInstance('Department', departmentId)
 
     expect(useCrudStore.getState().instances.Company?.[0]).toMatchObject({ _id: companyId })
-    expect(useCrudStore.getState().instances.Company?.[0]?.[assocKey('departments')]).toBeUndefined()
+    expect(useCrudStore.getState().instances.Company?.[0]?.[assocKey(companyAssoc)]).toBeUndefined()
     expect(useCrudStore.getState().instances.Department).toEqual([])
 
     const replacementDepartmentId = useCrudStore.getState().createInstance('Department', {
-      [assocKey('company')]: companyId,
+      [assocKey(departmentAssoc)]: companyId,
     })
 
     expect(useCrudStore.getState().instances.Company).toEqual([
-      { _id: companyId, [assocKey('departments')]: [replacementDepartmentId] },
+      { _id: companyId, [assocKey(companyAssoc)]: [replacementDepartmentId] },
     ])
 
     useCrudStore.getState().deleteInstance('Company', companyId)
@@ -109,38 +843,587 @@ describe('crudStore', () => {
     expect(useCrudStore.getState().instances.Department).toEqual([])
   })
 
+  it('removes superclass association links when deleting a subclass target instance', () => {
+    const ownerAssoc = inheritedDeleteSchema.classes[0]!.associations[0]!
+    const assetAssoc = inheritedDeleteSchema.classes[1]!.associations[0]!
+
+    useCrudStore.setState({
+      schema: inheritedDeleteSchema,
+      instances: {
+        Owner: [{ _id: 1, [assocKey(ownerAssoc)]: 2 }],
+        Asset: [],
+        Computer: [{ _id: 2, [assocKey(assetAssoc)]: 1 }],
+      },
+    })
+
+    useCrudStore.getState().deleteInstance('Computer', 2)
+
+    const state = useCrudStore.getState()
+    expect(state.instances.Computer).toEqual([])
+    expect(state.instances.Owner?.[0]?.[assocKey(ownerAssoc)]).toBeUndefined()
+  })
+
+  it('preserves inherited association links when updating a subclass instance', () => {
+    const ownerAssoc = inheritedDeleteSchema.classes[0]!.associations[0]!
+    const assetAssoc = inheritedDeleteSchema.classes[1]!.associations[0]!
+
+    useCrudStore.setState({ schema: inheritedDeleteSchema })
+
+    const ownerId = useCrudStore.getState().createInstance('Owner', {})
+    const computerId = useCrudStore.getState().createInstance('Computer', {
+      name: 'Workstation',
+      [assocKey(assetAssoc)]: ownerId,
+    })
+
+    let state = useCrudStore.getState()
+    expect(state.instances.Owner?.[0]?.[assocKey(ownerAssoc)]).toBe(computerId)
+    expect(state.instances.Computer?.[0]?.[assocKey(assetAssoc)]).toBe(ownerId)
+
+    useCrudStore.getState().updateInstance('Computer', computerId, { name: 'Renamed workstation' })
+
+    state = useCrudStore.getState()
+    expect(state.instances.Computer?.[0]?.name).toBe('Renamed workstation')
+    expect(state.instances.Computer?.[0]?.[assocKey(assetAssoc)]).toBe(ownerId)
+    expect(state.instances.Owner?.[0]?.[assocKey(ownerAssoc)]).toBe(computerId)
+
+    useCrudStore.getState().updateInstance('Computer', computerId, {
+      name: 'Detached workstation',
+      [assocKey(assetAssoc)]: undefined,
+    })
+
+    state = useCrudStore.getState()
+    expect(state.instances.Computer?.[0]?.[assocKey(assetAssoc)]).toBeUndefined()
+    expect(state.instances.Owner?.[0]?.[assocKey(ownerAssoc)]).toBeUndefined()
+  })
+
   it('rejects a second reverse to-one link during validation and reverse sync', () => {
+    const personAssoc = toOneReverseSchema.classes[0]!.associations[0]!
+    const lockerAssoc = toOneReverseSchema.classes[1]!.associations[0]!
+
     useCrudStore.setState({ schema: toOneReverseSchema })
 
     const lockerId = useCrudStore.getState().createInstance('Locker', {})
     const aliceId = useCrudStore.getState().createInstance('Person', {
-      [assocKey('assignedLocker')]: lockerId,
+      [assocKey(personAssoc)]: lockerId,
     })
 
     const errors = validateInstance(
       toOneReverseSchema,
       'Person',
-      { [assocKey('assignedLocker')]: lockerId },
+      { [assocKey(personAssoc)]: lockerId },
       useCrudStore.getState().instances,
       null,
     )
 
     expect(errors).toContainEqual({
-      field: assocKey('assignedLocker'),
+      field: assocKey(personAssoc),
       message: `Locker #${lockerId} already has the maximum number of owner links`,
     })
 
     const bobId = useCrudStore.getState().createInstance('Person', {
-      [assocKey('assignedLocker')]: lockerId,
+      [assocKey(personAssoc)]: lockerId,
     })
 
     const locker = useCrudStore.getState().instances.Locker?.[0]
     const alice = useCrudStore.getState().instances.Person?.find((inst) => inst._id === aliceId)
     const bob = useCrudStore.getState().instances.Person?.find((inst) => inst._id === bobId)
 
-    expect(locker).toEqual({ _id: lockerId, [assocKey('owner')]: aliceId })
-    expect(alice).toEqual({ _id: aliceId, [assocKey('assignedLocker')]: lockerId })
+    expect(locker).toEqual({ _id: lockerId, [assocKey(lockerAssoc)]: aliceId })
+    expect(alice).toEqual({ _id: aliceId, [assocKey(personAssoc)]: lockerId })
     expect(bob).toMatchObject({ _id: bobId })
-    expect(bob?.[assocKey('assignedLocker')]).toBeUndefined()
+    expect(bob?.[assocKey(personAssoc)]).toBeUndefined()
+  })
+
+  it('keeps class instances when a new attribute is added', () => {
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice' }],
+    }
+
+    const reconciled = reconcileInstances(personOnlySchema, personWithEmailSchema, instances)
+
+    expect(reconciled).toEqual({
+      Person: [{ _id: 1, name: 'Alice' }],
+    })
+  })
+
+  it('drops removed attributes but keeps the class instances', () => {
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice', nickname: 'Al' }],
+    }
+
+    const reconciled = reconcileInstances(personWithNicknameSchema, personOnlySchema, instances)
+
+    expect(reconciled).toEqual({
+      Person: [{ _id: 1, name: 'Alice' }],
+    })
+  })
+
+  it('preserves attribute values across a unique rename match', () => {
+    const instances = {
+      Person: [{ _id: 1, handle: 'alice' }],
+    }
+
+    const reconciled = reconcileInstancesDetailed(personWithHandleSchema, personWithAliasSchema, instances)
+
+    expect(reconciled.instances).toEqual({
+      Person: [{ _id: 1, alias: 'alice' }],
+    })
+    expect(reconciled.adjustments).toContain(
+      `Attribute 'handle' in class 'Person' was renamed to 'alias'. Existing data was preserved because the attribute type did not change.`,
+    )
+  })
+
+  it('does not guess an attribute rename when the match is ambiguous', () => {
+    const instances = {
+      Person: [{ _id: 1, alias: 'ally', nickname: 'alice' }],
+    }
+
+    const reconciled = reconcileInstancesDetailed(personWithAliasAndNicknameSchema, personWithDisplayNameSchema, instances)
+
+    expect(reconciled.instances).toEqual({
+      Person: [{ _id: 1 }],
+    })
+  })
+
+  it('coerces compatible attribute type changes', () => {
+    const instances = {
+      Person: [{ _id: 1, age: '42' }],
+    }
+
+    const reconciled = reconcileInstances(personAgeAsStringSchema, personAgeAsIntegerSchema, instances)
+
+    expect(reconciled).toEqual({
+      Person: [{ _id: 1, age: 42 }],
+    })
+  })
+
+  it('clears incompatible attribute values after a type change', () => {
+    const instances = {
+      Person: [{ _id: 1, age: 'not-a-number' }],
+    }
+
+    const reconciled = reconcileInstances(personAgeAsStringSchema, personAgeAsIntegerSchema, instances)
+
+    expect(reconciled).toEqual({
+      Person: [{ _id: 1 }],
+    })
+  })
+
+  it('records attribute type-change adjustments when incompatible values are dropped', () => {
+    const instances = {
+      Person: [{ _id: 1, age: 'not-a-number' }],
+    }
+
+    const reconciled = reconcileInstancesDetailed(personAgeAsStringSchema, personAgeAsIntegerSchema, instances)
+
+    expect(reconciled.adjustments).toContain(
+      `Data type of attribute 'age' in class 'Person' was updated from String to Integer. Existing data was removed from 1 instance(s) because it is not compatible with the new type.`,
+    )
+  })
+
+  it('keeps existing instances when an unrelated class is added', () => {
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice' }],
+    }
+
+    const reconciled = reconcileInstances(personOnlySchema, personWithNewClassSchema, instances)
+
+    expect(reconciled).toEqual({
+      Person: [{ _id: 1, name: 'Alice' }],
+      Course: [],
+    })
+  })
+
+  it('removes deleted classes and prunes links from surviving instances', () => {
+    const personAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchema.classes[1]!.associations[0]!
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
+    }
+
+    const reconciled = reconcileInstances(personLockerSchema, personOnlySchema, instances)
+
+    expect(reconciled).toEqual({
+      Person: [{ _id: 1, name: 'Alice' }],
+    })
+  })
+
+  it('drops removed associations but keeps the instances', () => {
+    const personAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchema.classes[1]!.associations[0]!
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
+    }
+
+    const reconciled = reconcileInstances(personLockerSchema, personSchemaWithoutAssociations, instances)
+
+    expect(reconciled).toEqual({
+      Person: [{ _id: 1, name: 'Alice' }],
+      Locker: [{ _id: 2, number: 'L1' }],
+    })
+  })
+
+  it('clears association links when the target class changes', () => {
+    const personAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchema.classes[1]!.associations[0]!
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
+      Cabinet: [],
+    }
+
+    const reconciled = reconcileInstances(personLockerSchema, personCabinetSchema, instances)
+
+    expect(reconciled).toEqual({
+      Person: [{ _id: 1, name: 'Alice' }],
+      Locker: [{ _id: 2, number: 'L1' }],
+      Cabinet: [],
+    })
+  })
+
+  it('records association adjustments when links are trimmed by a tighter multiplicity', () => {
+    const oldPersonAssoc = personManyLockersSchema.classes[0]!.associations[0]!
+    const oldLockerAssoc = personManyLockersSchema.classes[1]!.associations[0]!
+    const personAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchema.classes[1]!.associations[0]!
+
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice', [assocKey(oldPersonAssoc)]: [2, 3] }],
+      Locker: [
+        { _id: 2, number: 'L1', [assocKey(oldLockerAssoc)]: 1 },
+        { _id: 3, number: 'L2', [assocKey(oldLockerAssoc)]: 1 },
+      ],
+    }
+
+    const reconciled = reconcileInstancesDetailed(personManyLockersSchema, personLockerSchema, instances)
+
+    expect(reconciled.instances).toEqual({
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
+      Locker: [
+        { _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 },
+        { _id: 3, number: 'L2' },
+      ],
+    })
+    expect(reconciled.adjustments).toContain(
+      `Existing links for association 'owner' from Locker to Person were trimmed to satisfy the updated multiplicity constraints.`,
+    )
+  })
+
+  it('preserves class instances across rename when class shape matches uniquely', () => {
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice' }],
+    }
+
+    const reconciled = reconcileInstances(personOnlySchema, renamedPersonSchema, instances)
+
+    expect(reconciled).toEqual({
+      User: [{ _id: 1, name: 'Alice' }],
+    })
+  })
+
+  it('preserves association links when a class is renamed heuristically', () => {
+    const oldPersonAssoc = personLockerSchemaWithoutClassIds.classes[0]!.associations[0]!
+    const oldLockerAssoc = personLockerSchemaWithoutClassIds.classes[1]!.associations[0]!
+    const userAssoc = userLockerSchemaWithoutClassIds.classes[0]!.associations[0]!
+    const lockerAssoc = userLockerSchemaWithoutClassIds.classes[1]!.associations[0]!
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice', [assocKey(oldPersonAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(oldLockerAssoc)]: 1 }],
+    }
+
+    const reconciled = reconcileInstances(personLockerSchemaWithoutClassIds, userLockerSchemaWithoutClassIds, instances)
+
+    expect(reconciled).toEqual({
+      User: [{ _id: 1, name: 'Alice', [assocKey(userAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
+    })
+  })
+
+  it('rejects ambiguous class rename matches', () => {
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice' }],
+      Customer: [{ _id: 2, name: 'Bob' }],
+    }
+
+    const reconciled = reconcileInstances(ambiguousOldRenameSchema, ambiguousNewRenameSchema, instances)
+
+    expect(reconciled).toEqual({
+      Member: [],
+    })
+  })
+
+  it('remaps the selected class when a heuristic rename matches uniquely', () => {
+    expect(resolveSelectedClassName(personOnlySchema, renamedPersonSchema, 'Person')).toBe('User')
+  })
+
+  it('does not guess a selected-class rename when the heuristic is ambiguous', () => {
+    expect(resolveSelectedClassName(ambiguousOldRenameSchema, ambiguousNewRenameSchema, 'Person')).toBeNull()
+  })
+
+  it('preserves association links across role rename when the association shape still matches uniquely', () => {
+    const oldPersonAssoc = personLockerSchema.classes[0]!.associations[0]!
+    const oldLockerAssoc = personLockerSchema.classes[1]!.associations[0]!
+    const personAssoc = personLockerSchemaWithRenamedRoles.classes[0]!.associations[0]!
+    const lockerAssoc = personLockerSchemaWithRenamedRoles.classes[1]!.associations[0]!
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice', [assocKey(oldPersonAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(oldLockerAssoc)]: 1 }],
+    }
+
+    const reconciled = reconcileInstances(
+      personLockerSchema,
+      personLockerSchemaWithRenamedRoles,
+      instances,
+    )
+
+    expect(reconciled).toEqual({
+      Person: [{ _id: 1, name: 'Alice', [assocKey(personAssoc)]: 2 }],
+      Locker: [{ _id: 2, number: 'L1', [assocKey(lockerAssoc)]: 1 }],
+    })
+  })
+
+  it('reports global validation errors when schema evolution makes existing instances invalid', () => {
+    const instances = {
+      Person: [{ _id: 1, name: 'Alice' }],
+      Locker: [],
+    }
+
+    const result = validateGlobalModel(personWithMandatoryLockerSchema, instances)
+
+    expect(result.count).toBe(1)
+    expect(result.messages).toEqual([
+      `Conflict: Person cannot exist without Locker according to the updated association. Create at least one Locker instance and associate it with the existing Person instances.`,
+    ])
+  })
+
+  it('accepts unnamed association links stored under the derived association key during global validation', () => {
+    const deliveryAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[1]!.associations[0]!
+    const instances = {
+      Order: [{ _id: 2 }],
+      Delivery: [{ _id: 3, [assocKey(deliveryAssoc)]: [2] }],
+    }
+
+    const result = validateGlobalModel(deliveryOrderSchemaWithUnnamedRoles, instances)
+
+    expect(result.count).toBe(0)
+    expect(result.messages).toEqual([])
+  })
+
+  it('keeps association keys stable across identical schema reloads and import normalization', () => {
+    const initialSchema = prepareCrudSchema(cloneSchema(personLockerSchema))
+    const reloadedSchema = prepareCrudSchema(cloneSchema(personLockerSchema))
+    const initialPersonAssoc = initialSchema.classes[0]!.associations[0]!
+    const initialLockerAssoc = initialSchema.classes[1]!.associations[0]!
+    const reloadedPersonAssoc = reloadedSchema.classes[0]!.associations[0]!
+    const reloadedLockerAssoc = reloadedSchema.classes[1]!.associations[0]!
+
+    expect(assocKey(initialPersonAssoc)).toBe(assocKey(reloadedPersonAssoc))
+    expect(assocKey(initialLockerAssoc)).toBe(assocKey(reloadedLockerAssoc))
+
+    useCrudStore.setState({ schema: reloadedSchema })
+
+    const imported = useCrudStore.getState().importJson(JSON.stringify({
+      instances: {
+        Person: [{ _id: 1, name: 'Alice', [assocKey(initialPersonAssoc)]: 2 }],
+        Locker: [{ _id: 2, number: 'L1', [assocKey(initialLockerAssoc)]: 1 }],
+      },
+      nextId: 3,
+    }))
+
+    expect(imported).toBe(true)
+    expect(useCrudStore.getState().instances.Person).toEqual([
+      { _id: 1, name: 'Alice', [assocKey(reloadedPersonAssoc)]: 2 },
+    ])
+    expect(useCrudStore.getState().instances.Locker).toEqual([
+      { _id: 2, number: 'L1', [assocKey(reloadedLockerAssoc)]: 1 },
+    ])
+  })
+
+  it('syncs reverse links for unnamed bidirectional associations', () => {
+    useCrudStore.setState({ schema: deliveryOrderSchemaWithUnnamedRoles })
+
+    const orderAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[0]!.associations[0]!
+    const deliveryAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[1]!.associations[0]!
+
+    const orderId = useCrudStore.getState().createInstance('Order', {})
+    const deliveryId = useCrudStore.getState().createInstance('Delivery', {
+      [assocKey(deliveryAssoc)]: [orderId],
+    })
+
+    const state = useCrudStore.getState()
+
+    expect(state.instances.Delivery).toEqual([
+      { _id: deliveryId, [assocKey(deliveryAssoc)]: [orderId] },
+    ])
+    expect(state.instances.Order).toEqual([
+      { _id: orderId, [assocKey(orderAssoc)]: deliveryId },
+    ])
+  })
+
+  it('keeps duplicate unnamed association violations as separate messages', () => {
+    const instances = {
+      Delivery: [{ _id: 1 }],
+      Order: [{ _id: 2 }],
+    }
+
+    const result = validateGlobalModel(duplicateUnnamedOrderAssociationsSchema, instances)
+
+    expect(result.count).toBe(2)
+    expect(result.messages).toHaveLength(2)
+    expect(result.messages[0]).not.toContain("''")
+    expect(result.messages[0]).toBe('Please associate Delivery #1 with at least 1 Order instances.')
+    expect(result.messages[1]).toBe('Please associate Delivery #1 with at least 1 Order instances.')
+  })
+
+  it('deduplicates bidirectional random generation by association identity', () => {
+    useCrudStore.setState({ schema: randomBidirectionalSchema })
+    const randomValues = [0.9, 0.9, 0.1, 0.1, 0.1, 0.9, 0.1]
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1)
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const leftAssoc = randomBidirectionalSchema.classes[0]!.associations[0]!
+    const rightAssoc = randomBidirectionalSchema.classes[1]!.associations[0]!
+
+    expect(state.instances.Left).toHaveLength(2)
+    expect(state.instances.Right).toHaveLength(2)
+
+    for (const left of state.instances.Left ?? []) {
+      const rightId = left[assocKey(leftAssoc)]
+      expect(typeof rightId).toBe('number')
+
+      const right = state.instances.Right?.find((candidate) => candidate._id === rightId)
+      expect(right?.[assocKey(rightAssoc)]).toBe(left._id)
+    }
+
+    const linkedRightIds = (state.instances.Left ?? []).map((left) => left[assocKey(leftAssoc)])
+    expect(new Set(linkedRightIds).size).toBe(2)
+  })
+
+  it('generateRandomAll satisfies required reverse multiplicities when the forward side is optional', () => {
+    useCrudStore.setState({ schema: deliveryOrderSchemaWithUnnamedRoles })
+    const randomValues = [0.1, 0.1, 0.1]
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1)
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const orderAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[0]!.associations[0]!
+    const deliveryAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[1]!.associations[0]!
+    const order = state.instances.Order?.[0]
+    const delivery = state.instances.Delivery?.[0]
+
+    expect(order).toBeTruthy()
+    expect(delivery).toBeTruthy()
+    expect(order?.[assocKey(orderAssoc)]).toBe(delivery?._id)
+    expect(delivery?.[assocKey(deliveryAssoc)]).toEqual([order?._id])
+    expect(state.globalValidationCount).toBe(0)
+  })
+
+  it('generateRandomAll adds more source instances when one optional source cannot satisfy all required targets', () => {
+    useCrudStore.setState({ schema: deliveryOrderSchemaWithUnnamedRoles })
+    const randomValues = [0.1, 0.9, 0.1, 0.1, 0.1, 0.1]
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1)
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const orderAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[0]!.associations[0]!
+    const deliveryAssoc = deliveryOrderSchemaWithUnnamedRoles.classes[1]!.associations[0]!
+    const deliveries = state.instances.Delivery ?? []
+    const orders = state.instances.Order ?? []
+
+    expect(deliveries).toHaveLength(2)
+    expect(orders.length).toBeGreaterThanOrEqual(2)
+
+    for (const delivery of deliveries) {
+      const linkedOrderIds = delivery[assocKey(deliveryAssoc)]
+      if (!Array.isArray(linkedOrderIds)) throw new Error('expected delivery links to be stored as an array')
+      expect(linkedOrderIds).toHaveLength(1)
+
+      const linkedOrder = orders.find((order) => order._id === linkedOrderIds[0])
+      expect(linkedOrder?.[assocKey(orderAssoc)]).toBe(delivery._id)
+    }
+
+    expect(state.globalValidationCount).toBe(0)
+  })
+
+  it('generateRandomAll keeps AccessControl2 mayUse links valid after ACSystem counts are expanded later', () => {
+    useCrudStore.setState({ schema: accessControl2CrudSchema })
+    const rng = createDeterministicRandom(2)
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => rng())
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const acSystemClass = accessControl2CrudSchema.classes.find((cls) => cls.name === 'ACSystem')!
+    const mayUseAssoc = acSystemClass.associations.find((assoc) => assoc.roleName === 'mayUse')!
+    const systems = state.instances.ACSystem ?? []
+    const doorClass = accessControl2CrudSchema.classes.find((cls) => cls.name === 'Door')!
+    const controlsAssoc = doorClass.associations.find((assoc) => assoc.roleName === 'controls')!
+    const doors = state.instances.Door ?? []
+
+    expect(systems).toHaveLength(2)
+    for (const system of systems) {
+      const linkedUsers = system[assocKey(mayUseAssoc)]
+      if (!Array.isArray(linkedUsers)) throw new Error('expected ACSystem mayUse links to be stored as an array')
+      expect(linkedUsers.length).toBeGreaterThanOrEqual(1)
+    }
+    expect(doors).toHaveLength(2)
+    for (const door of doors) {
+      expect(door[assocKey(controlsAssoc)]).toBeTypeOf('number')
+    }
+    expect(state.globalValidationCount).toBe(0)
+  })
+
+  it('generateRandomAll uses inherited CanalSystem-style SegEnd subclasses to satisfy Segment endpoints', () => {
+    useCrudStore.setState({ schema: canalInheritedAssociationSchema })
+    const randomValues = [0.1, 0.1, 0.1, 0.1, 0.1]
+    const randomSpy = vi.spyOn(Math, 'random').mockImplementation(() => randomValues.shift() ?? 0.1)
+
+    try {
+      useCrudStore.getState().generateRandomAll()
+    } finally {
+      randomSpy.mockRestore()
+    }
+
+    const state = useCrudStore.getState()
+    const segmentAssoc = canalInheritedAssociationSchema.classes[1]!.associations[0]!
+    const segmentFamily = [...(state.instances.Segment ?? []), ...(state.instances.Lock ?? [])]
+    const derivedEndpointIds = [
+      ...(state.instances.Bend ?? []).map((instance) => instance._id),
+      ...(state.instances.EntryAndExitPoint ?? []).map((instance) => instance._id),
+    ]
+    const usedEndpointIds = new Set<number>()
+
+    for (const segment of segmentFamily) {
+      const linkedSegEnds = segment[assocKey(segmentAssoc)]
+      if (!Array.isArray(linkedSegEnds)) throw new Error('expected segment endpoints to be stored as an array')
+      expect(linkedSegEnds).toHaveLength(2)
+      for (const linkedId of linkedSegEnds) usedEndpointIds.add(linkedId)
+    }
+
+    expect(derivedEndpointIds.length).toBeGreaterThan(0)
+    expect(derivedEndpointIds.some((id) => usedEndpointIds.has(id))).toBe(true)
+    expect(state.globalValidationCount).toBe(0)
   })
 })
