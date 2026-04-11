@@ -8,7 +8,7 @@ interface SmartSvgViewProps {
 
 export function formatDiagramIdentifierForDisplay(raw: string): string {
   const formatToken = (token: string) => {
-    const trimmed = token.trim()
+    const trimmed = token.trim().replace(/^cluster_/, '')
     const match = trimmed.match(/^(.*)_(\d+)$/)
     if (!match) return trimmed
     const [, className, instanceId] = match
@@ -51,8 +51,12 @@ const SVG_THEME_CSS = `
   .edge text { fill: var(--color-ink-muted); }
 
   /* Hover highlights */
-  .node, .edge { cursor: pointer; }
+  .node, .edge, .cluster { cursor: pointer; }
   .node:hover polygon, .node:hover ellipse, .node:hover path, .node:hover polyline {
+    stroke: var(--color-brand);
+    transition: stroke 0.15s ease;
+  }
+  .cluster:hover polygon, .cluster:hover path {
     stroke: var(--color-brand);
     transition: stroke 0.15s ease;
   }
@@ -151,7 +155,7 @@ function processSvg(raw: string): { html: string; dims: { width: number; height:
   })
 
   // Add data attributes to node/edge groups for interaction targeting
-  doc.querySelectorAll('g.node').forEach((g) => {
+  doc.querySelectorAll('g.node, g.cluster').forEach((g) => {
     const title = g.querySelector('title')
     if (title?.textContent) {
       const rawId = title.textContent.trim()
@@ -363,7 +367,7 @@ const SmartSvgViewInner = ({ svg }: SmartSvgViewProps) => {
     if (!el) return
     const handler = (e: MouseEvent) => {
       const target = e.target as Element
-      const nodeGroup = target.closest('g.node')
+      const nodeGroup = target.closest('g.node, g.cluster')
       const edgeGroup = target.closest('g.edge')
 
       if (nodeGroup) {

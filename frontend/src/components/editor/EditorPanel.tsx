@@ -13,38 +13,9 @@ import { useCollabEditor } from '../../hooks/useCollabEditor'
 import { useCollabTabs } from '../../hooks/useCollabTabs'
 import { useLsp } from '../../hooks/useLsp'
 import { attachLspToView } from '../../codemirror/lsp'
-
-interface DiagramSelectDetail {
-  name: string
-  kind: 'node' | 'edge'
-}
+import { findDiagramRange, type DiagramSelectDetail } from './diagramSelection'
 
 const AgentPanel = lazy(() => import('../agent/AgentPanel'))
-
-/**
- * Find the character range of a top-level class/interface/trait definition in Umple source.
- * Matches brace depth to find the full block extent.
- */
-function findClassRange(code: string, className: string): { from: number; to: number } | null {
-  const escaped = className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const pattern = new RegExp(`(associationClass|class|interface|trait)\\s+${escaped}(\\s|\\{|$)`)
-  const match = pattern.exec(code)
-  if (!match) return null
-
-  const from = match.index
-  let braceCount = 0
-  let foundOpen = false
-  for (let i = from; i < code.length; i++) {
-    if (code[i] === '{') { braceCount++; foundOpen = true }
-    else if (code[i] === '}') {
-      braceCount--
-      if (foundOpen && braceCount === 0) return { from, to: i + 1 }
-    }
-  }
-  // No braces — select to end of line
-  const eol = code.indexOf('\n', from)
-  return { from, to: eol === -1 ? code.length : eol }
-}
 
 export function EditorPanel() {
   const code = useSessionStore((s) => s.code)
@@ -81,15 +52,11 @@ export function EditorPanel() {
   useEffect(() => {
     const handler = (e: Event) => {
       const { name, kind } = (e as CustomEvent<DiagramSelectDetail>).detail
-      const view = editorRef.current?.view
+      const view = editorViewRef.current ?? editorRef.current?.view
       if (!view) return
 
       const doc = view.state.doc.toString()
-      const className = kind === 'edge'
-        ? name.split(/->|--/)[0].trim()
-        : name
-
-      const range = findClassRange(doc, className)
+      const range = findDiagramRange(doc, { name, kind })
       if (!range) return
 
       view.dispatch({
