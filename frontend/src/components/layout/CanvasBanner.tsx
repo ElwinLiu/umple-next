@@ -31,21 +31,6 @@ export function CanvasBanner() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === '1') {
-        e.preventDefault()
-        e.stopPropagation()
-        const state = useEphemeralStore.getState()
-        if (state.rightPanelView === 'generated') {
-          state.setRightPanelView('diagram')
-        }
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === '2') {
-        if (useEphemeralStore.getState().generationRequested) {
-          e.preventDefault()
-          e.stopPropagation()
-          useEphemeralStore.getState().setRightPanelView('generated')
-        }
-      }
       if ((e.metaKey || e.ctrlKey) && e.key === "'") {
         e.preventDefault()
         e.stopPropagation()
@@ -60,7 +45,7 @@ export function CanvasBanner() {
     <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center h-[var(--toolbar-h)] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
       <div />
       <div className="flex items-center justify-center gap-0.5 min-w-0 overflow-hidden">
-        <Tip content="Diagram (Ctrl+1)" side="bottom">
+        <Tip content="Diagram" side="bottom">
           <button
             onClick={() => {
               if (rightPanelView === 'generated') {
@@ -74,7 +59,7 @@ export function CanvasBanner() {
         </Tip>
         {generationRequested && (
           <div className="flex items-center min-w-0">
-            <Tip content="Generated code (Ctrl+2)" side="bottom">
+            <Tip content="Generated code" side="bottom">
               <button
                 onClick={() => setRightPanelView('generated')}
                 className={cn(lineTabClasses({ active: rightPanelView === 'generated' }), 'text-xs px-2.5 py-1 flex items-center gap-1.5 min-w-0 max-w-48')}
