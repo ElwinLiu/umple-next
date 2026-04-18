@@ -9,7 +9,6 @@ import {
   collabCloseOtherTabs,
 } from '../../hooks/useCollabTabs'
 import { Plus, X, ChevronLeft, ChevronRight, PanelLeft } from 'lucide-react'
-import { Tip } from '@/components/ui/tooltip'
 import { OutputBadges } from './ExecutionPanel'
 import { CollabButton } from './CollabButton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -21,6 +20,14 @@ import {
 } from '@/components/ui/context-menu'
 import { cn } from '@/lib/utils'
 import { stripUmpExt } from '@/lib/umpFile'
+import { Tip } from '@/components/ui/tooltip'
+
+function getSidebarShortcutLabel() {
+  if (typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform)) {
+    return 'Cmd+B'
+  }
+  return 'Ctrl+B'
+}
 
 // ── TabBar ────────────────────────────────────────────────────────────
 
@@ -101,24 +108,25 @@ export function TabBar() {
 
   const showSidebar = usePreferencesStore((s) => s.showSidebar)
   const toggleSidebar = usePreferencesStore((s) => s.toggleSidebar)
-
   const activeIndex = tabs.findIndex((t) => t.id === activeTabId)
+  const sidebarShortcutLabel = getSidebarShortcutLabel()
 
   return (
     <Tabs value={activeTabId} onValueChange={setActiveTab} className="shrink-0">
       <div className="flex items-center h-[var(--toolbar-h)] shrink-0 border-b border-border">
-        {/* Sidebar toggle (visible when sidebar is closed) */}
-        {!showSidebar && (
-          <Tip content="Show sidebar" side="bottom">
-            <button
-              onClick={toggleSidebar}
-              className="flex items-center justify-center w-9 h-full text-ink-faint hover:text-ink-muted transition-colors cursor-pointer shrink-0"
-              aria-label="Show sidebar"
-            >
-              <PanelLeft className="size-3.5" />
-            </button>
-          </Tip>
-        )}
+        <Tip content={`Toggle preferences sidebar (${sidebarShortcutLabel})`} side="bottom">
+          <button
+            onClick={toggleSidebar}
+            className={cn(
+              'flex items-center justify-center w-9 h-full transition-colors cursor-pointer shrink-0',
+              showSidebar ? 'text-ink bg-surface-2' : 'text-ink-faint hover:text-ink-muted',
+            )}
+            aria-label="Toggle preferences sidebar"
+            aria-pressed={showSidebar}
+          >
+            <PanelLeft className="size-3.5" />
+          </button>
+        </Tip>
 
         {/* Scroll left */}
         {canScrollLeft && (
