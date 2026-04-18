@@ -41,6 +41,43 @@ export function createDefaultProviderConfigs(): Record<AiProvider, ProviderConfi
   ) as Record<AiProvider, ProviderConfig>
 }
 
+const memoryStorage = (() => {
+  const data = new Map<string, string>()
+  return {
+    getItem: (key: string) => data.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      data.set(key, value)
+    },
+    removeItem: (key: string) => {
+      data.delete(key)
+    },
+    clear: () => {
+      data.clear()
+    },
+    key: (index: number) => Array.from(data.keys())[index] ?? null,
+    get length() {
+      return data.size
+    },
+  } satisfies Storage
+})()
+
+function isStorageLike(value: unknown): value is Storage {
+  return !!value
+    && typeof (value as Storage).getItem === 'function'
+    && typeof (value as Storage).setItem === 'function'
+    && typeof (value as Storage).removeItem === 'function'
+}
+
+function getBrowserStorage(): Storage {
+  if (typeof window !== 'undefined' && isStorageLike(window.localStorage)) {
+    return window.localStorage
+  }
+  if (isStorageLike(globalThis.localStorage)) {
+    return globalThis.localStorage
+  }
+  return memoryStorage
+}
+
 export type { DisplayPrefKey, GvLayoutAlgorithm } from '../constants/diagram'
 
 // ── Store ──
@@ -92,7 +129,7 @@ export const usePreferencesStore = create<PreferencesState>()(
       dismissWelcome: () => set({ hasSeenWelcome: true }),
 
       // Sidebar
-      showSidebar: true,
+      showSidebar: false,
       toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
 
       // Diagram display preferences (match Umple compiler defaults)
@@ -126,9 +163,18 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     {
       name: 'umple-preferences-v1',
-      version: 1,
-      storage: createJSONStorage(() => localStorage),
-      migrate: (persisted) => persisted as any,
+      version: 2,
+      storage: createJSONStorage(getBrowserStorage),
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as Record<string, unknown>
+        if (version < 2) {
+          return {
+            ...state,
+            showSidebar: false,
+          } as any
+        }
+        return state as any
+      },
       merge: (persisted, current) => {
         const p = (persisted ?? {}) as Record<string, unknown>
         // Only restore keys that partialize stores — stale keys from older

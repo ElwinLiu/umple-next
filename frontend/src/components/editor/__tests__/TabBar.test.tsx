@@ -28,8 +28,7 @@ describe('TabBar', () => {
 
   afterEach(() => {
     cleanup()
-    sessionStorage.clear()
-    localStorage.clear()
+    usePreferencesStore.persist.clearStorage()
     usePreferencesStore.setState({ showSidebar: true })
     useSessionStore.setState({
       code: '',

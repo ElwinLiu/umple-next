@@ -24,8 +24,15 @@ function useThemeEffect() {
   }, [theme])
 }
 
+function useDocumentTitleEffect() {
+  useEffect(() => {
+    document.title = 'UmpleOnline v2 (experimental)'
+  }, [])
+}
+
 export default function App() {
   useThemeEffect()
+  useDocumentTitleEffect()
   return (
     <TooltipProvider>
       <Outlet />

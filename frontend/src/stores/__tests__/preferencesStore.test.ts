@@ -1,7 +1,21 @@
 // @vitest-environment jsdom
-import { describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
-import { buildSuboptions } from '../preferencesStore'
+import { buildSuboptions, usePreferencesStore } from '../preferencesStore'
+
+describe('preferencesStore', () => {
+  beforeEach(() => {
+    usePreferencesStore.persist.clearStorage()
+    usePreferencesStore.setState({
+      showSidebar: false,
+      theme: 'system',
+    })
+  })
+
+  it('hides the sidebar by default', () => {
+    expect(usePreferencesStore.getState().showSidebar).toBe(false)
+  })
+})
 
 describe('buildSuboptions', () => {
   it('keeps showmethods enabled for class trait diagrams', () => {

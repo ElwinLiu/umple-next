@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { usePreferencesStore } from '@/stores/preferencesStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { Button } from '@/components/ui/button'
@@ -29,11 +28,6 @@ interface TourStep {
   onActivate?: () => void
 }
 
-function ensureSidebarOpen() {
-  const prefs = usePreferencesStore.getState()
-  if (!prefs.showSidebar) prefs.toggleSidebar()
-}
-
 const TOUR_STEPS: TourStep[] = [
   {
     target: '[data-tour="diagram-view"]',
@@ -51,7 +45,6 @@ const TOUR_STEPS: TourStep[] = [
     placement: 'right',
     icon: MousePointerClick,
     interactive: true,
-    onActivate: ensureSidebarOpen,
     detectComplete: () => {
       const { selectedExample, viewMode } = useSessionStore.getState()
       return viewMode === 'state' && selectedExample !== null
@@ -72,7 +65,6 @@ const TOUR_STEPS: TourStep[] = [
     placement: 'right',
     icon: MousePointerClick,
     interactive: true,
-    onActivate: ensureSidebarOpen,
     detectComplete: () => {
       const { generatedCode } = useEphemeralStore.getState()
       return generatedCode.length > 0
@@ -83,9 +75,9 @@ const TOUR_STEPS: TourStep[] = [
 // ── Feature hints for the final step ──
 
 const FEATURE_HINTS = [
-  { icon: Bot, label: 'Umple AI', hint: 'Configure an AI provider in the sidebar to get modeling assistance' },
+  { icon: Bot, label: 'Umple AI', hint: 'Use the AI button in the top toolbar to configure a provider and get modeling assistance' },
   { icon: LayoutDashboard, label: 'Layout Algorithm', hint: 'Change how diagram nodes are arranged (dot, sfdp, circo, etc.)' },
-  { icon: Columns2, label: 'Toggle Sidebar', hint: 'Hide the sidebar for more space — press Ctrl+B or click the rail to toggle' },
+  { icon: Columns2, label: 'Preferences Sidebar', hint: 'Open the sidebar from the top toolbar when you need theme or release preferences' },
   { icon: Command, label: 'Command Palette', hint: 'Press Ctrl+K to quickly search examples, diagrams, and generators' },
 ]
 
