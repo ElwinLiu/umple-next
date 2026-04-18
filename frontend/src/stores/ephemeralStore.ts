@@ -85,7 +85,6 @@ interface EphemeralState {
   showEditor: boolean
   outputView: OutputView
   commandPaletteOpen: boolean
-  commandPaletteInitialPage: string[] | null
   diagramOnly: boolean
   readOnly: boolean
   rightPanelView: 'diagram' | 'generated'
@@ -182,7 +181,6 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   showEditor: true,
   outputView: 'hidden',
   commandPaletteOpen: false,
-  commandPaletteInitialPage: null,
   diagramOnly: false,
   readOnly: false,
   rightPanelView: 'diagram',
@@ -241,15 +239,12 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   toggleOutputPanel: () => set((s) => ({ outputView: s.outputView === 'hidden' ? 'panel' : 'hidden' })),
   openCommandPalette: () => set({
     commandPaletteOpen: true,
-    commandPaletteInitialPage: null,
   }),
   openExamplesPalette: () => set({
     commandPaletteOpen: true,
-    commandPaletteInitialPage: ['examples'],
   }),
   closeCommandPalette: () => set({
     commandPaletteOpen: false,
-    commandPaletteInitialPage: null,
   }),
   setDiagramOnly: (diagramOnly) => set({ diagramOnly, showEditor: !diagramOnly }),
   setReadOnly: (readOnly) => set({ readOnly }),

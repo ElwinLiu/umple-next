@@ -449,10 +449,8 @@ test.describe('Sidebar examples display options parity', () => {
     // Load a class diagram example from the sidebar
     await page.keyboard.press('Control+k')
     await expect(page.getByTestId('command-palette')).toBeVisible()
-    await page.getByTestId('command-item-examples-browse').click()
-    await page.getByTestId('command-item-category-Class Diagrams').click()
     // Pick the first example
-    const firstExample = page.locator('[data-testid^="command-item-example-"]').first()
+    const firstExample = page.locator('[data-testid^="command-item-example-Class Diagrams-"]').first()
     await firstExample.click()
 
     // Wait for compile
@@ -512,9 +510,7 @@ test.describe('Sidebar examples display options parity', () => {
     // Load a state machine example
     await page.keyboard.press('Control+k')
     await expect(page.getByTestId('command-palette')).toBeVisible()
-    await page.getByTestId('command-item-examples-browse').click()
-    await page.getByTestId('command-item-category-State Machines').click()
-    const firstExample = page.locator('[data-testid^="command-item-example-"]').first()
+    const firstExample = page.locator('[data-testid^="command-item-example-State Machines-"]').first()
     await firstExample.click()
 
     await compileAndWait(page)

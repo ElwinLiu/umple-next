@@ -23,9 +23,7 @@ test.skip(
 async function loadExample(page: Page, category: string, name: string) {
   await page.keyboard.press('Control+k')
   await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId(`command-item-category-${category}`).click()
-  await page.getByTestId(`command-item-example-${name}`).click()
+  await page.getByTestId(`command-item-example-${category}-${name}`).click()
 }
 
 /** Wait for compilation to finish (compile button becomes enabled again). */
