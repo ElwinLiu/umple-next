@@ -76,12 +76,10 @@ test('renders empty editor and compiles when an example is loaded', async ({ pag
   await expect(page.getByTestId('diagram-panel')).toBeVisible()
   await expect(page.getByTestId('compile-button')).toHaveCount(0)
 
-  // Navigate through hierarchical example palette (sidebar collapsed by default, use Ctrl+K)
+  // Load an example from the first-layer command palette (sidebar collapsed by default, use Ctrl+K)
   await page.keyboard.press('Control+k')
   await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId('command-item-category-Samples').click()
-  await page.getByTestId('command-item-example-Banking').click()
+  await page.getByTestId('command-item-example-Samples-Banking').click()
 
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
 })
@@ -119,12 +117,10 @@ test('uses the selected diagram type for the first diagram request', async ({ pa
   await page.goto('/')
   await expect(page.getByTestId('app-shell')).toBeVisible()
 
-  // Load an example via hierarchical navigation (sidebar collapsed by default, use Ctrl+K)
+  // Load an example via the first-layer command palette (sidebar collapsed by default, use Ctrl+K)
   await page.keyboard.press('Control+k')
   await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId('command-item-category-Samples').click()
-  await page.getByTestId('command-item-example-Banking').click()
+  await page.getByTestId('command-item-example-Samples-Banking').click()
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
 
   // Switch diagram view — should trigger a diagram request with the new type
@@ -175,9 +171,7 @@ test('command palette lists all supported diagram commands and diagram commands 
   await expect(page.getByTestId('app-shell')).toBeVisible()
 
   await page.keyboard.press('Control+k')
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId('command-item-category-Samples').click()
-  await page.getByTestId('command-item-example-Banking').click()
+  await page.getByTestId('command-item-example-Samples-Banking').click()
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
 
   await page.keyboard.press('Control+k')
@@ -203,9 +197,7 @@ test('command palette view commands toggle renderer, output panel, and diagram-o
   await expect(page.getByTestId('app-shell')).toBeVisible()
 
   await page.keyboard.press('Control+k')
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId('command-item-category-Samples').click()
-  await page.getByTestId('command-item-example-Banking').click()
+  await page.getByTestId('command-item-example-Samples-Banking').click()
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
 
   await page.keyboard.press('Control+k')
@@ -241,9 +233,7 @@ test('ERD selection sends GvEntityRelationshipDiagram to backend', async ({ page
   // Load example to trigger compile + diagram
   await page.keyboard.press('Control+k')
   await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId('command-item-category-Samples').click()
-  await page.getByTestId('command-item-example-Banking').click()
+  await page.getByTestId('command-item-example-Samples-Banking').click()
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
 
   // Switch to ERD
@@ -269,9 +259,7 @@ test('Event Sequence renders iframe with mocked HTML response', async ({ page })
   // Load example
   await page.keyboard.press('Control+k')
   await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId('command-item-category-Samples').click()
-  await page.getByTestId('command-item-example-Banking').click()
+  await page.getByTestId('command-item-example-Samples-Banking').click()
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
 
   // Switch to Event Sequence
@@ -306,9 +294,7 @@ test('Feature view renders SVG diagram from backend', async ({ page }) => {
   await expect(page.getByTestId('app-shell')).toBeVisible()
   await page.keyboard.press('Control+k')
   await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId('command-item-category-Samples').click()
-  await page.getByTestId('command-item-example-Banking').click()
+  await page.getByTestId('command-item-example-Samples-Banking').click()
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
 
   await page.getByLabel('Diagram view').click()
@@ -360,9 +346,7 @@ test('loading a composite structure example switches to structure view and rende
   await expect(page.getByTestId('app-shell')).toBeVisible()
   await page.keyboard.press('Control+k')
   await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId('command-item-examples-browse').click()
-  await page.getByTestId('command-item-category-Composite Structure').click()
-  await page.getByTestId('command-item-example-PingPong').click()
+  await page.getByTestId('command-item-example-Composite Structure-PingPong').click()
 
   await expect.poll(() => diagramTypes[diagramTypes.length - 1]).toBe('StructureDiagram')
   await expect(page.getByLabel('Diagram view')).toContainText('Structure')
