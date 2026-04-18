@@ -154,6 +154,7 @@ export function useCompiler() {
   const modelId = useSessionStore((s) => s.modelId)
   const tabsVersion = useSessionStore((s) => s.tabsVersion)
   const viewMode = useSessionStore((s) => s.viewMode)
+  const autoCompile = usePreferencesStore((s) => s.autoCompile)
   const setSvgForView = useSessionStore((s) => s.setSvgForView)
   const setHtmlForView = useSessionStore((s) => s.setHtmlForView)
   const suboptionsKey = usePreferencesStore(selectSuboptionsKey)
@@ -187,6 +188,7 @@ export function useCompiler() {
     if (!urlModelResolved) return
 
     if (timerRef.current) clearTimeout(timerRef.current)
+    if (!autoCompile) return
 
     const { syncPending, clearSyncPending } = useSessionStore.getState()
     if (syncPending) clearSyncPending()
@@ -223,7 +225,7 @@ export function useCompiler() {
     // store, and every legitimate modelId change is accompanied by a code or
     // tabsVersion change.  Including it here caused a feedback loop: first
     // compile assigns a modelId → dep changes → second (redundant) compile.
-  }, [code, tabsVersion])
+  }, [autoCompile, code, tabsVersion])
 
   // When viewMode, display preferences, or dark theme change, re-fetch diagram only
   useEffect(() => {

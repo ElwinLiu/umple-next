@@ -31,9 +31,13 @@ async function loadExample(page: Page, category: string, name: string) {
 /** Wait for compilation to finish (compile button becomes enabled again). */
 async function waitForCompile(page: Page) {
   const compileBtn = page.getByTestId('compile-button')
-  // Wait for compiling to start (button becomes disabled)
-  await expect(compileBtn).toBeDisabled({ timeout: 5_000 })
-  // Then wait for it to finish — the button re-enables
+  const compilePromise = page.waitForResponse(
+    (res) => res.url().includes('/api/compile') && res.status() === 200,
+    { timeout: 30_000 },
+  )
+  await expect(compileBtn).toBeEnabled({ timeout: 10_000 })
+  await compileBtn.click()
+  await compilePromise
   await expect(compileBtn).toBeEnabled({ timeout: 30_000 })
 }
 
@@ -111,6 +115,15 @@ test.describe('Live backend — all examples', () => {
   test.setTimeout(600_000) // 10 min budget for ~85 examples
 
   let categories: ExampleCategory[] = []
+
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('umple-preferences-v1', JSON.stringify({
+        state: { hasSeenWelcome: true, autoCompile: false },
+        version: 0,
+      }))
+    })
+  })
 
   test.beforeAll(async ({ request, baseURL }) => {
     const health = await request.get(`${baseURL}/api/health`)

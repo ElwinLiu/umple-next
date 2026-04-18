@@ -8,12 +8,17 @@ describe('preferencesStore', () => {
     usePreferencesStore.persist.clearStorage()
     usePreferencesStore.setState({
       showSidebar: false,
+      autoCompile: true,
       theme: 'system',
     })
   })
 
   it('hides the sidebar by default', () => {
     expect(usePreferencesStore.getState().showSidebar).toBe(false)
+  })
+
+  it('enables auto-compile by default', () => {
+    expect(usePreferencesStore.getState().autoCompile).toBe(true)
   })
 })
 

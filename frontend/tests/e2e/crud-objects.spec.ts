@@ -37,7 +37,7 @@ const schemaResponse = {
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     localStorage.setItem('umple-preferences-v1', JSON.stringify({
-      state: { hasSeenWelcome: true },
+      state: { hasSeenWelcome: true, autoCompile: false },
       version: 0,
     }))
   })

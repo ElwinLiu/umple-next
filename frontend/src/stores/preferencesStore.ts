@@ -95,6 +95,10 @@ interface PreferencesState {
   showSidebar: boolean
   toggleSidebar: () => void
 
+  // Compile behavior
+  autoCompile: boolean
+  setAutoCompile: (autoCompile: boolean) => void
+
   // Diagram display preferences
   showAttributes: boolean
   showMethods: boolean
@@ -132,6 +136,10 @@ export const usePreferencesStore = create<PreferencesState>()(
       showSidebar: false,
       toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
 
+      // Compile behavior
+      autoCompile: true,
+      setAutoCompile: (autoCompile) => set({ autoCompile }),
+
       // Diagram display preferences (match Umple compiler defaults)
       ...DISPLAY_PREF_DEFAULTS,
       layoutAlgorithm: 'dot',
@@ -163,7 +171,7 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     {
       name: 'umple-preferences-v1',
-      version: 2,
+      version: 3,
       storage: createJSONStorage(getBrowserStorage),
       migrate: (persisted, version) => {
         const state = (persisted ?? {}) as Record<string, unknown>
@@ -171,6 +179,13 @@ export const usePreferencesStore = create<PreferencesState>()(
           return {
             ...state,
             showSidebar: false,
+            autoCompile: state.autoCompile ?? true,
+          } as any
+        }
+        if (version < 3) {
+          return {
+            ...state,
+            autoCompile: state.autoCompile ?? true,
           } as any
         }
         return state as any
@@ -184,6 +199,7 @@ export const usePreferencesStore = create<PreferencesState>()(
           'theme',
           'hasSeenWelcome',
           'showSidebar',
+          'autoCompile',
           ...DISPLAY_PREF_KEYS,
           'layoutAlgorithm',
           'activeProvider',
@@ -203,6 +219,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         theme: state.theme,
         hasSeenWelcome: state.hasSeenWelcome,
         showSidebar: state.showSidebar,
+        autoCompile: state.autoCompile,
         ...Object.fromEntries(DISPLAY_PREF_KEYS.map((key) => [key, state[key]])),
         layoutAlgorithm: state.layoutAlgorithm,
         activeProvider: state.activeProvider,

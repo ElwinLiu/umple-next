@@ -153,8 +153,11 @@ test.describe('Class diagram display options', () => {
     await page.goto('/')
     await expect(page.getByTestId('app-shell')).toBeVisible()
 
-    // Clear localStorage to reset display prefs to defaults
-    await page.evaluate(() => localStorage.removeItem('umple-preferences-v1'))
+    // Reset display prefs while keeping manual compile enabled for this suite
+    await page.evaluate(() => localStorage.setItem('umple-preferences-v1', JSON.stringify({
+      state: { hasSeenWelcome: true, autoCompile: false },
+      version: 0,
+    })))
     await page.reload()
     await expect(page.getByTestId('app-shell')).toBeVisible()
 
@@ -268,8 +271,11 @@ test.describe('Default code display options consistency', () => {
     await page.goto('/')
     await expect(page.getByTestId('app-shell')).toBeVisible()
 
-    // Clear localStorage to reset display prefs
-    await page.evaluate(() => localStorage.removeItem('umple-preferences-v1'))
+    // Reset display prefs while keeping manual compile enabled for this suite
+    await page.evaluate(() => localStorage.setItem('umple-preferences-v1', JSON.stringify({
+      state: { hasSeenWelcome: true, autoCompile: false },
+      version: 0,
+    })))
     await page.reload()
     await expect(page.getByTestId('app-shell')).toBeVisible()
 
@@ -330,8 +336,11 @@ test.describe('ReactFlow mode display options', () => {
     await page.goto('/')
     await expect(page.getByTestId('app-shell')).toBeVisible()
 
-    // Clear localStorage to reset display prefs
-    await page.evaluate(() => localStorage.removeItem('umple-preferences-v1'))
+    // Reset display prefs while keeping manual compile enabled for this suite
+    await page.evaluate(() => localStorage.setItem('umple-preferences-v1', JSON.stringify({
+      state: { hasSeenWelcome: true, autoCompile: false },
+      version: 0,
+    })))
     await page.reload()
     await expect(page.getByTestId('app-shell')).toBeVisible()
 
@@ -430,7 +439,10 @@ test.describe('Sidebar examples display options parity', () => {
   test('class diagram examples: display toggles work and RF/GV are consistent', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByTestId('app-shell')).toBeVisible()
-    await page.evaluate(() => localStorage.removeItem('umple-preferences-v1'))
+    await page.evaluate(() => localStorage.setItem('umple-preferences-v1', JSON.stringify({
+      state: { hasSeenWelcome: true, autoCompile: false },
+      version: 0,
+    })))
     await page.reload()
     await expect(page.getByTestId('app-shell')).toBeVisible()
 
@@ -490,7 +502,10 @@ test.describe('Sidebar examples display options parity', () => {
   test('state diagram examples: display toggles work', async ({ page }) => {
     await page.goto('/')
     await expect(page.getByTestId('app-shell')).toBeVisible()
-    await page.evaluate(() => localStorage.removeItem('umple-preferences-v1'))
+    await page.evaluate(() => localStorage.setItem('umple-preferences-v1', JSON.stringify({
+      state: { hasSeenWelcome: true, autoCompile: false },
+      version: 0,
+    })))
     await page.reload()
     await expect(page.getByTestId('app-shell')).toBeVisible()
 
@@ -524,8 +539,11 @@ test.describe('State diagram display options', () => {
     await page.goto('/')
     await expect(page.getByTestId('app-shell')).toBeVisible()
 
-    // Clear localStorage to reset display prefs
-    await page.evaluate(() => localStorage.removeItem('umple-preferences-v1'))
+    // Reset display prefs while keeping manual compile enabled for this suite
+    await page.evaluate(() => localStorage.setItem('umple-preferences-v1', JSON.stringify({
+      state: { hasSeenWelcome: true, autoCompile: false },
+      version: 0,
+    })))
     await page.reload()
     await expect(page.getByTestId('app-shell')).toBeVisible()
 

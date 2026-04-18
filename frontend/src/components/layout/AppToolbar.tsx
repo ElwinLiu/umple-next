@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import { useSessionStore, type DiagramView } from '../../stores/sessionStore'
+import { usePreferencesStore } from '../../stores/preferencesStore'
 import { useCompile, useExecute } from '../../hooks/useExecute'
 import { useGenerate } from '../../hooks/useGenerate'
 import { useExamples } from '../../hooks/useExamples'
@@ -47,6 +48,7 @@ export function AppToolbar() {
   const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const executing = useEphemeralStore((s) => s.executing)
   const errorCount = useEphemeralStore((s) => s.outputErrorCount)
+  const autoCompile = usePreferencesStore((s) => s.autoCompile)
   const viewMode = useSessionStore((s) => s.viewMode)
   const setViewMode = useSessionStore((s) => s.setViewMode)
   const generateTargetId = useSessionStore((s) => s.generateTargetId)
@@ -220,28 +222,30 @@ export function AppToolbar() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        <Tip content="Compile (Ctrl+Enter)" side="bottom">
-          <button
-            onClick={compile}
-            disabled={compiling}
-            aria-label={compiling ? 'Compiling' : 'Compile (Ctrl+Enter)'}
-            data-testid="compile-button"
-            className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/70 bg-surface-0 px-2.5 text-xs font-medium text-ink-muted shadow-sm transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {compiling ? (
-              <Loader2 className="size-3.5 shrink-0 animate-spin" />
-            ) : justCompiled ? (
-              <Check className="size-3.5 shrink-0 text-status-success animate-fade-in" />
-            ) : (
-              <Hammer className="size-3.5 shrink-0" />
-            )}
-            <span className="truncate">
-              {compiling ? 'Compiling...' : justCompiled ? (
-                <span className="text-status-success animate-fade-in">Compiled</span>
-              ) : 'Compile'}
-            </span>
-          </button>
-        </Tip>
+        {!autoCompile && (
+          <Tip content="Compile (Ctrl+Enter)" side="bottom">
+            <button
+              onClick={compile}
+              disabled={compiling}
+              aria-label={compiling ? 'Compiling' : 'Compile (Ctrl+Enter)'}
+              data-testid="compile-button"
+              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/70 bg-surface-0 px-2.5 text-xs font-medium text-ink-muted shadow-sm transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {compiling ? (
+                <Loader2 className="size-3.5 shrink-0 animate-spin" />
+              ) : justCompiled ? (
+                <Check className="size-3.5 shrink-0 text-status-success animate-fade-in" />
+              ) : (
+                <Hammer className="size-3.5 shrink-0" />
+              )}
+              <span className="truncate">
+                {compiling ? 'Compiling...' : justCompiled ? (
+                  <span className="text-status-success animate-fade-in">Compiled</span>
+                ) : 'Compile'}
+              </span>
+            </button>
+          </Tip>
+        )}
 
         <Combobox
           groups={viewModeGroups}
