@@ -74,6 +74,7 @@ test('renders empty editor and compiles when an example is loaded', async ({ pag
   await expect(page.getByTestId('app-shell')).toBeVisible()
   await expect(page.getByTestId('editor-panel')).toBeVisible()
   await expect(page.getByTestId('diagram-panel')).toBeVisible()
+  await expect(page.getByTestId('compile-button')).toHaveCount(0)
 
   // Navigate through hierarchical example palette (sidebar collapsed by default, use Ctrl+K)
   await page.keyboard.press('Control+k')
@@ -83,6 +84,20 @@ test('renders empty editor and compiles when an example is loaded', async ({ pag
   await page.getByTestId('command-item-example-Banking').click()
 
   await expect(page.getByTestId('class-node-Account')).toBeVisible({ timeout: 10_000 })
+})
+
+test('manual compile button appears only when auto-compile is disabled in preferences', async ({ page }) => {
+  await page.goto('/')
+  await expect(page.getByTestId('app-shell')).toBeVisible()
+  await expect(page.getByTestId('compile-button')).toHaveCount(0)
+
+  await page.getByLabel('Toggle preferences sidebar').click()
+  const autoCompileSwitch = page.getByRole('switch', { name: 'Auto-compile' })
+  await expect(autoCompileSwitch).toHaveAttribute('data-state', 'checked')
+  await autoCompileSwitch.click()
+
+  await expect(autoCompileSwitch).toHaveAttribute('data-state', 'unchecked')
+  await expect(page.getByTestId('compile-button')).toBeVisible()
 })
 
 test('uses the selected diagram type for the first diagram request', async ({ page }) => {

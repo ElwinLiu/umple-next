@@ -14,10 +14,16 @@ test.skip(
   'Set PLAYWRIGHT_LIVE_BACKEND=1 to run against the real backend stack.',
 )
 
-/** Wait for compilation to finish (compile button becomes enabled again). */
-async function waitForCompile(page: Page) {
+/** Trigger a manual compile and wait for it to complete. */
+async function compileAndWait(page: Page) {
   const compileBtn = page.getByTestId('compile-button')
-  await expect(compileBtn).toBeDisabled({ timeout: 5_000 })
+  const compilePromise = page.waitForResponse(
+    (res) => res.url().includes('/api/compile') && res.status() === 200,
+    { timeout: 30_000 },
+  )
+  await expect(compileBtn).toBeEnabled({ timeout: 10_000 })
+  await compileBtn.click()
+  await compilePromise
   await expect(compileBtn).toBeEnabled({ timeout: 30_000 })
 }
 
@@ -34,7 +40,7 @@ test.describe('Live backend — cross-tab use statements', () => {
     // Dismiss welcome dialog
     await page.addInitScript(() => {
       localStorage.setItem('umple-preferences-v1', JSON.stringify({
-        state: { hasSeenWelcome: true },
+        state: { hasSeenWelcome: true, autoCompile: false },
         version: 0,
       }))
     })
@@ -45,7 +51,7 @@ test.describe('Live backend — cross-tab use statements', () => {
   test('class in a second tab can be referenced via use statement', async ({ page }) => {
     // Type the main model with a use statement
     await setEditorCode(page, 'use Person.ump;\nclass Student {\n  isA Person;\n  studentId;\n}\n')
-    await waitForCompile(page)
+    await compileAndWait(page)
 
     // Create a new tab
     await page.getByTestId('add-tab-button').click()
@@ -59,11 +65,11 @@ test.describe('Live backend — cross-tab use statements', () => {
 
     // Type Person class in the new tab
     await setEditorCode(page, 'class Person {\n  name;\n  age;\n}\n')
-    await waitForCompile(page)
+    await compileAndWait(page)
 
     // Switch back to first tab
     await page.getByTestId('tab-bar').locator('[data-testid^="tab-"]').first().click()
-    await waitForCompile(page)
+    await compileAndWait(page)
 
     // The compilation should succeed — Student class should appear in the diagram
     // (if it failed, use statement couldn't resolve Person.ump)
@@ -77,7 +83,7 @@ test.describe('Live backend — LSP diagnostics', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem('umple-preferences-v1', JSON.stringify({
-        state: { hasSeenWelcome: true },
+        state: { hasSeenWelcome: true, autoCompile: false },
         version: 0,
       }))
     })
@@ -88,7 +94,7 @@ test.describe('Live backend — LSP diagnostics', () => {
   test('syntax error shows diagnostic underline in editor', async ({ page }) => {
     // Type valid code first to establish a model (triggers LSP connection)
     await setEditorCode(page, 'class Foo {\n  name;\n}\n')
-    await waitForCompile(page)
+    await compileAndWait(page)
 
     // Wait for LSP to connect (it needs modelId from first compile)
     await page.waitForTimeout(2000)

@@ -127,6 +127,15 @@ async function compileAndWait(page: Page) {
 test.describe('Live backend — code generation targets', () => {
   test.setTimeout(300_000) // 5 min budget
 
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      localStorage.setItem('umple-preferences-v1', JSON.stringify({
+        state: { hasSeenWelcome: true, autoCompile: false },
+        version: 0,
+      }))
+    })
+  })
+
   test.beforeAll(async ({ request, baseURL }) => {
     const health = await request.get(`${baseURL}/api/health`)
     expect(health.ok()).toBeTruthy()

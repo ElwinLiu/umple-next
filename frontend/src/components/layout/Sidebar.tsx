@@ -5,6 +5,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { usePreferencesStore } from '@/stores/preferencesStore'
 import { Monitor, Moon, Sun } from 'lucide-react'
@@ -37,9 +38,15 @@ export function AppSidebar() {
           <section className="space-y-3">
             <div>
               <h2 className="text-sm font-medium text-ink">Theme</h2>
-              <p className="mt-1 text-xs text-ink-muted">Choose how UmpleOnline looks.</p>
             </div>
             <ThemePicker />
+          </section>
+
+          <section className="mt-6 space-y-3">
+            <div>
+              <h2 className="text-sm font-medium text-ink">Compilation</h2>
+            </div>
+            <AutoCompileToggle />
           </section>
         </div>
 
@@ -48,6 +55,27 @@ export function AppSidebar() {
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  )
+}
+
+function AutoCompileToggle() {
+  const autoCompile = usePreferencesStore((s) => s.autoCompile)
+  const setAutoCompile = usePreferencesStore((s) => s.setAutoCompile)
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
+      <div>
+        <p className="text-sm font-medium text-ink">Auto-compile</p>
+        <p className="text-xs text-ink-muted">
+          Compile every few seconds and hide the manual compile button.
+        </p>
+      </div>
+      <Switch
+        checked={autoCompile}
+        onCheckedChange={setAutoCompile}
+        aria-label="Auto-compile"
+      />
+    </div>
   )
 }
 
