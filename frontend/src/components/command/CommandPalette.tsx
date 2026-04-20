@@ -1,16 +1,23 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useEphemeralStore } from '../../stores/ephemeralStore'
-import { useSessionStore } from '../../stores/sessionStore'
-import { useGenerate } from '../../hooks/useGenerate'
-import { useExamples } from '../../hooks/useExamples'
-import { GENERATE_ONLY_TARGET_GROUPS } from '../../generation/targets'
-import { DIAGRAM_VIEW_ICON, VIEW_MODE_GROUPS } from '../../constants/diagram'
-import type { ExampleCategoryId } from '../../api/types'
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useEphemeralStore } from "../../stores/ephemeralStore";
+import { useSessionStore } from "../../stores/sessionStore";
+import { useGenerate } from "../../hooks/useGenerate";
+import { useExamples } from "../../hooks/useExamples";
+import { GENERATE_ONLY_TARGET_GROUPS } from "../../generation/targets";
+import { DIAGRAM_VIEW_ICON, VIEW_MODE_GROUPS } from "../../constants/diagram";
+import type { ExampleCategoryId } from "../../api/types";
 import {
-  LayoutGrid, Workflow, GitBranch, Network,
-  Code, Layers, Maximize2, Minimize2,
-  Terminal, FileCode,
-} from 'lucide-react'
+  LayoutGrid,
+  Workflow,
+  GitBranch,
+  Network,
+  Code,
+  Layers,
+  Maximize2,
+  Minimize2,
+  Terminal,
+  FileCode,
+} from "lucide-react";
 import {
   CommandDialog,
   CommandInput,
@@ -20,75 +27,86 @@ import {
   CommandItem,
   CommandShortcut,
   CommandSeparator,
-} from '@/components/ui/command'
+} from "@/components/ui/command";
 
 const CATEGORY_ICONS: Partial<Record<ExampleCategoryId, React.ReactNode>> = {
   class: <LayoutGrid />,
   state: <Workflow />,
   structure: <Network />,
   feature: <GitBranch />,
-}
+};
 
 export function CommandPalette() {
   const {
-    commandPaletteOpen, closeCommandPalette,
-    setDiagramOnly, diagramOnly, toggleOutputPanel,
-    setRenderMode, renderMode,
-  } = useEphemeralStore()
-  const setViewMode = useSessionStore((s) => s.setViewMode)
-  const viewMode = useSessionStore((s) => s.viewMode)
-  const umpleModel = useSessionStore((s) => s.umpleModel)
-  const generate = useGenerate()
-  const { categories, loadExample, loading } = useExamples()
+    commandPaletteOpen,
+    closeCommandPalette,
+    setDiagramOnly,
+    diagramOnly,
+    toggleOutputPanel,
+    setRenderMode,
+    renderMode,
+  } = useEphemeralStore();
+  const setViewMode = useSessionStore((s) => s.setViewMode);
+  const viewMode = useSessionStore((s) => s.viewMode);
+  const umpleModel = useSessionStore((s) => s.umpleModel);
+  const generate = useGenerate();
+  const { examples, loadExample, loading } = useExamples();
 
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState("");
 
   // Reset state when palette closes
   useEffect(() => {
     if (!commandPaletteOpen) {
-      setSearch('')
+      setSearch("");
     }
-  }, [commandPaletteOpen])
+  }, [commandPaletteOpen]);
 
   // Global Ctrl+K shortcut
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        e.stopPropagation()
-        const state = useEphemeralStore.getState()
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        e.stopPropagation();
+        const state = useEphemeralStore.getState();
         if (state.commandPaletteOpen) {
-          state.closeCommandPalette()
+          state.closeCommandPalette();
         } else {
-          state.openCommandPalette()
+          state.openCommandPalette();
         }
       }
-    }
-    window.addEventListener('keydown', handler, true)
-    return () => window.removeEventListener('keydown', handler, true)
-  }, [])
+    };
+    window.addEventListener("keydown", handler, true);
+    return () => window.removeEventListener("keydown", handler, true);
+  }, []);
 
-  const handleGenerate = useCallback(async (language: string) => {
-    closeCommandPalette()
-    generate(language)
-  }, [closeCommandPalette, generate])
+  const handleGenerate = useCallback(
+    async (language: string) => {
+      closeCommandPalette();
+      generate(language);
+    },
+    [closeCommandPalette, generate],
+  );
 
-  const exampleItems = useMemo(() => {
-    return categories.flatMap((category) => (
-      category.examples.map((example) => ({
-        categoryId: category.id,
-        categoryLabel: category.label,
+  const exampleItems = useMemo(
+    () =>
+      examples.map((example) => ({
+        exampleId: example.id,
+        categoryId: example.categoryId,
+        setLabel: example.setLabel,
         exampleName: example.name,
         exampleLabel: example.label || example.name,
-      }))
-    ))
-  }, [categories])
-  const canToggleRenderer = viewMode === 'class' && !!umpleModel?.umpleClasses?.length
+      })),
+    [examples],
+  );
+  const canToggleRenderer =
+    viewMode === "class" && !!umpleModel?.umpleClasses?.length;
 
   return (
     <CommandDialog
       open={commandPaletteOpen}
-      onOpenChange={(open) => { if (!open) closeCommandPalette() }}
+      onOpenChange={(open) => {
+        if (!open) closeCommandPalette();
+      }}
       showCloseButton={false}
       className="sm:max-w-[520px]"
       data-testid="command-palette"
@@ -109,9 +127,9 @@ export function CommandPalette() {
               <CommandItem
                 key={mode.value}
                 onSelect={() => {
-                  setViewMode(mode.value)
-                  useEphemeralStore.getState().setRightPanelView('diagram')
-                  closeCommandPalette()
+                  setViewMode(mode.value);
+                  useEphemeralStore.getState().setRightPanelView("diagram");
+                  closeCommandPalette();
                 }}
                 data-testid={`command-item-diagram-${mode.value}`}
               >
@@ -144,29 +162,34 @@ export function CommandPalette() {
           {canToggleRenderer && (
             <CommandItem
               onSelect={() => {
-                setRenderMode(renderMode === 'editable' ? 'graphviz' : 'editable')
-                closeCommandPalette()
+                setRenderMode(
+                  renderMode === "editable" ? "graphviz" : "editable",
+                );
+                closeCommandPalette();
               }}
               data-testid="command-item-view-renderer"
             >
               <Layers />
-              Switch to {renderMode === 'editable' ? 'Graphviz' : 'Editable'} Rendering
+              Switch to {renderMode === "editable"
+                ? "Graphviz"
+                : "Editable"}{" "}
+              Rendering
             </CommandItem>
           )}
           <CommandItem
             onSelect={() => {
-              setDiagramOnly(!diagramOnly)
-              closeCommandPalette()
+              setDiagramOnly(!diagramOnly);
+              closeCommandPalette();
             }}
             data-testid="command-item-view-diagram-only"
           >
             {diagramOnly ? <Minimize2 /> : <Maximize2 />}
-            {diagramOnly ? 'Exit Diagram Only Mode' : 'Diagram Only Mode'}
+            {diagramOnly ? "Exit Diagram Only Mode" : "Diagram Only Mode"}
           </CommandItem>
           <CommandItem
             onSelect={() => {
-              toggleOutputPanel()
-              closeCommandPalette()
+              toggleOutputPanel();
+              closeCommandPalette();
             }}
             data-testid="command-item-view-output-panel"
           >
@@ -179,25 +202,26 @@ export function CommandPalette() {
         <CommandSeparator />
         <CommandGroup heading="Examples">
           {loading ? (
-            <div className="py-2 text-center text-xs text-muted-foreground">Loading examples...</div>
+            <div className="py-2 text-center text-xs text-muted-foreground">
+              Loading examples...
+            </div>
           ) : (
             exampleItems.map((item) => (
               <CommandItem
-                key={`${item.categoryId}:${item.exampleName}`}
-                value={`${item.exampleLabel} ${item.exampleName} ${item.categoryLabel}`}
+                key={item.exampleId}
+                value={`${item.exampleLabel} ${item.exampleName} ${item.setLabel}`}
                 onSelect={() => {
-                  closeCommandPalette()
-                  loadExample(item.exampleName, {
-                    categoryId: item.categoryId,
+                  closeCommandPalette();
+                  void loadExample(item.exampleId, {
                     switchToDefaultView: true,
-                  })
+                  });
                 }}
-                data-testid={`command-item-example-${item.categoryLabel}-${item.exampleName}`}
+                data-testid={`command-item-example-${item.exampleId}`}
               >
                 {CATEGORY_ICONS[item.categoryId] ?? <FileCode />}
                 {item.exampleLabel}
                 <span className="ml-auto text-xs text-muted-foreground">
-                  {item.categoryLabel}
+                  {item.setLabel}
                 </span>
               </CommandItem>
             ))
@@ -205,5 +229,5 @@ export function CommandPalette() {
         </CommandGroup>
       </CommandList>
     </CommandDialog>
-  )
+  );
 }

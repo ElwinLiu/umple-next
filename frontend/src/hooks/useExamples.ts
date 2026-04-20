@@ -1,67 +1,119 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useSessionStore } from '../stores/sessionStore'
-import { useCollabStore } from '../stores/collabStore'
-import { useEphemeralStore } from '../stores/ephemeralStore'
-import { collabLoadExample } from './useCollabTabs'
-import { api } from '../api/client'
-import type { ExampleCategory, ExampleCategoryId } from '../api/types'
-import { getDefaultViewForExampleCategory } from '../constants/examples'
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { useSessionStore } from "../stores/sessionStore";
+import { useCollabStore } from "../stores/collabStore";
+import { useEphemeralStore } from "../stores/ephemeralStore";
+import { collabLoadBlankModel, collabLoadExample } from "./useCollabTabs";
+import { api } from "../api/client";
+import type { ExampleSet, ExampleSetId, ExampleCategoryId } from "../api/types";
+import { getDefaultViewForExampleCategory } from "../constants/examples";
 
-// Module-level cache so all consumers share one fetch
-let cachedCategories: ExampleCategory[] | null = null
-let fetchPromise: Promise<ExampleCategory[]> | null = null
+let cachedSets: ExampleSet[] | null = null;
+let fetchPromise: Promise<ExampleSet[]> | null = null;
 
 interface LoadExampleOptions {
-  categoryId?: ExampleCategoryId
-  switchToDefaultView?: boolean
+  switchToDefaultView?: boolean;
 }
 
 export function useExamples() {
-  const [allCategories, setAllCategories] = useState<ExampleCategory[]>(cachedCategories ?? [])
-  const [loading, setLoading] = useState(cachedCategories === null)
-  const localLoadExample = useSessionStore((s) => s.loadExample)
-  const isCollaborating = useCollabStore((s) => s.isCollaborating)
+  const [sets, setSets] = useState<ExampleSet[]>(cachedSets ?? []);
+  const [loading, setLoading] = useState(cachedSets === null);
+  const localLoadExample = useSessionStore((s) => s.loadExample);
+  const localLoadBlankModel = useSessionStore((s) => s.loadBlankModel);
+  const isCollaborating = useCollabStore((s) => s.isCollaborating);
 
   useEffect(() => {
-    if (cachedCategories) {
-      setAllCategories(cachedCategories)
-      setLoading(false)
-      return
+    if (cachedSets) {
+      setSets(cachedSets);
+      setLoading(false);
+      return;
     }
     if (!fetchPromise) {
-      fetchPromise = api.listExamples()
+      fetchPromise = api.listExamples();
       fetchPromise
-        .then((cats) => { cachedCategories = cats })
-        .catch(() => { fetchPromise = null })
+        .then((nextSets) => {
+          cachedSets = nextSets;
+        })
+        .catch(() => {
+          fetchPromise = null;
+        });
     }
     fetchPromise
-      .then((cats) => {
-        setAllCategories(cats)
-        setLoading(false)
+      .then((nextSets) => {
+        setSets(nextSets);
+        setLoading(false);
       })
-      .catch(() => setLoading(false))
-  }, [])
+      .catch(() => setLoading(false));
+  }, []);
 
-  const categories = useMemo(
-    () => allCategories.filter((cat) => cat.examples.length > 0),
-    [allCategories],
-  )
+  const examples = useMemo(
+    () =>
+      sets.flatMap((set) =>
+        set.examples.map((example) => ({
+          ...example,
+          setId: set.id,
+          setLabel: set.label,
+          categoryId: set.categoryId,
+        })),
+      ),
+    [sets],
+  );
 
-  const loadExample = useCallback(async (name: string, options?: LoadExampleOptions) => {
-    if (options?.switchToDefaultView && options.categoryId) {
-      const targetView = getDefaultViewForExampleCategory(options.categoryId)
-      if (targetView) useSessionStore.getState().setViewMode(targetView)
-    }
-    try {
-      const res = await api.getExample(name)
-      if (isCollaborating) {
-        collabLoadExample(res.name, res.code, res.modelId)
-      } else {
-        localLoadExample(res.name, res.code, res.modelId)
+  const loadExample = useCallback(
+    async (id: string, options?: LoadExampleOptions) => {
+      try {
+        const res = await api.getExample(id);
+        if (options?.switchToDefaultView && res.defaultCategoryId) {
+          const targetView = getDefaultViewForExampleCategory(
+            res.defaultCategoryId,
+          );
+          if (targetView) useSessionStore.getState().setViewMode(targetView);
+        }
+
+        if (isCollaborating) {
+          collabLoadExample(
+            res.id,
+            res.name,
+            res.code,
+            res.modelId,
+            res.setId ?? null,
+          );
+        } else {
+          localLoadExample(
+            res.id,
+            res.name,
+            res.code,
+            res.modelId,
+            res.setId ?? null,
+          );
+        }
+        useEphemeralStore.getState().setRightPanelView("diagram");
+      } catch {
+        // Ignore list/load failures in the UI and leave the current model intact.
       }
-      useEphemeralStore.getState().setRightPanelView('diagram')
-    } catch { /* ignore */ }
-  }, [localLoadExample, isCollaborating])
+    },
+    [isCollaborating, localLoadExample],
+  );
 
-  return { categories, loadExample, loading }
+  const loadBlank = useCallback(
+    (
+      setId: ExampleSetId,
+      categoryId: ExampleCategoryId,
+      options?: LoadExampleOptions,
+    ) => {
+      if (options?.switchToDefaultView) {
+        const targetView = getDefaultViewForExampleCategory(categoryId);
+        if (targetView) useSessionStore.getState().setViewMode(targetView);
+      }
+
+      if (isCollaborating) {
+        collabLoadBlankModel(setId);
+      } else {
+        localLoadBlankModel(setId);
+      }
+      useEphemeralStore.getState().setRightPanelView("diagram");
+    },
+    [isCollaborating, localLoadBlankModel],
+  );
+
+  return { sets, examples, loadExample, loadBlank, loading };
 }
