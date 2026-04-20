@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState, useCallback } from 'react'
+import { useRef, useEffect, useState, useCallback, useMemo } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
 import type { ParsedIssue } from '../../stores/ephemeralStore'
 import { useSessionStore } from '../../stores/sessionStore'
@@ -39,6 +39,46 @@ function triggerAIFix() {
     `Fix the following compilation issues:\n\n\`\`\`\n${errorInfo}\n\`\`\``,
   )
   useSessionStore.getState().openAgentPanel()
+}
+
+interface ExecutionSection {
+  heading: string | null
+  body: string
+}
+
+const MAIN_METHOD_HEADING_RE = /^<strong>(For main method in class .*?:)<\/strong>\n?/gm
+
+function parseExecutionSections(output: string): ExecutionSection[] | null {
+  const matches = Array.from(output.matchAll(MAIN_METHOD_HEADING_RE))
+  if (!matches.length) return null
+
+  const sections: ExecutionSection[] = []
+  let cursor = 0
+
+  for (let i = 0; i < matches.length; i += 1) {
+    const match = matches[i]
+    const start = match.index ?? 0
+    const bodyStart = start + match[0].length
+    const bodyEnd = matches[i + 1]?.index ?? output.length
+
+    if (start > cursor) {
+      sections.push({ heading: null, body: output.slice(cursor, start) })
+    }
+
+    sections.push({
+      heading: match[1] ?? null,
+      // The backend always inserts one newline after the heading marker.
+      body: output.slice(bodyStart, bodyEnd).replace(/^\n/, ''),
+    })
+
+    cursor = bodyEnd
+  }
+
+  if (cursor < output.length) {
+    sections.push({ heading: null, body: output.slice(cursor) })
+  }
+
+  return sections.filter((section) => section.heading || section.body)
 }
 
 // ── Shared badge pills ──────────────────────────────────────────────
@@ -212,6 +252,7 @@ export function OutputPanel() {
   const isAiConfigured = useIsAiConfigured()
   const hasIssues = errorCount > 0 || warningCount > 0
   const [copied, setCopied] = useState(false)
+  const executionSections = useMemo(() => parseExecutionSections(executionOutput), [executionOutput])
 
   const hasContent = !!(executionOutput || executionErrors)
 
@@ -283,9 +324,31 @@ export function OutputPanel() {
         className="flex-1 overflow-auto bg-surface-0"
       >
         {executionOutput && (
-          <pre className="m-0 whitespace-pre-wrap break-words px-2.5 pt-2.5 font-mono text-xs leading-relaxed text-ink">
-            {executionOutput}
-          </pre>
+          executionSections ? (
+            <div className="flex flex-col gap-3 px-2.5 py-2.5">
+              {executionSections.map((section, index) => (
+                <section
+                  key={`${section.heading ?? 'body'}-${index}`}
+                  className={cn(section.heading && index > 0 && 'border-t border-border/70 pt-3')}
+                >
+                  {section.heading && (
+                    <h3 className="mb-1.5 text-xs font-semibold text-ink">
+                      {section.heading}
+                    </h3>
+                  )}
+                  {section.body && (
+                    <pre className="m-0 whitespace-pre-wrap break-words font-mono text-xs leading-relaxed text-ink">
+                      {section.body}
+                    </pre>
+                  )}
+                </section>
+              ))}
+            </div>
+          ) : (
+            <pre className="m-0 whitespace-pre-wrap break-words px-2.5 pt-2.5 font-mono text-xs leading-relaxed text-ink">
+              {executionOutput}
+            </pre>
+          )
         )}
         {parsedIssues.length > 0 && (
           <div className="flex flex-col gap-px px-1.5 py-1.5">

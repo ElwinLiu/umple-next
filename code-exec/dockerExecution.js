@@ -1,113 +1,207 @@
 const fs = require('fs');
-const exec = require('child_process').exec;
+const os = require('os');
+const path = require('path');
+const { execFile } = require('child_process');
+const { promisify } = require('util');
+
+const execFileAsync = promisify(execFile);
 
 class DockerExecution {
-    constructor(path, mainFile, model, language="Java") {
-        this.path = path;
+    constructor(pathToMainClass, mainFile, modelPath, language="Java") {
+        this.path = pathToMainClass;
         this.mainFile = mainFile;
-        this.model = model;
-        this.outputFolder = "output/" + this.model + "_" + this.mainFile;
-        this.language=language;
+        this.model = path.resolve(modelPath);
+        this.outputFolder = null;
+        this.language = language;
 
         const config = this.readConfig();
-        this.basePath = config['umplePath'];
-        this.baseOutputPath = config['tempPath'];
+        this.baseOutputPath = config['tempPath'] || os.tmpdir();
         this.tempContainerName = config['tempContainerName'];
         this.timeoutValue = +config['timeoutValue'];
     }
 
-    run(callback) {      
-        // Make output folder where the output files will be written
-        this.makeOutputFolder();
-        const mainFilePath = this.getNormalizedMainFilename();
-        console.log("Normalized main file: ", mainFilePath);
-        const command = `sh dockerTimeout.sh ${this.timeoutValue}s -i -t --network none -v ${this.basePath}/${this.model}:/input/:ro -v ${this.baseOutputPath}/${this.model}_${this.mainFile}:/output/ ${this.tempContainerName} ${mainFilePath}`;
-        
-        console.log("Docker command:'",command,"'"); 
-        exec(command); // Execute docker for Java execution
+    run(callback) {
+        void this.runExecution(callback);
+    }
 
-        this.listenToChanges(callback);
+    async runExecution(callback) {
+        let containerId = "";
+
+        try {
+            this.makeOutputFolder();
+            const mainFilePath = this.getNormalizedMainFilename();
+            console.log("Normalized main file: ", mainFilePath);
+
+            containerId = await this.createContainer(mainFilePath);
+            await this.copyModelIntoContainer(containerId);
+
+            const timedOut = await this.startAndWait(containerId);
+            const copyError = await this.copyOutputFromContainer(containerId);
+            const result = this.readExecutionResult(timedOut, copyError);
+
+            callback(result.errors, result.output);
+        } catch(err) {
+            console.error(err);
+            callback(this.formatExecutionError(err), "");
+        } finally {
+            await this.removeContainer(containerId);
+            this.deleteOutputFolder();
+        }
+    }
+
+    async createContainer(mainFilePath) {
+        const { stdout } = await execFileAsync('docker', [
+            'create',
+            '--cpus=0.5',
+            '--memory=150m',
+            '--network',
+            'none',
+            this.tempContainerName,
+            mainFilePath,
+        ]);
+
+        const containerId = stdout.trim();
+        if(!containerId) {
+            throw new Error('failed to create execution container');
+        }
+
+        return containerId;
+    }
+
+    async copyModelIntoContainer(containerId) {
+        await execFileAsync('docker', [
+            'cp',
+            `${this.model}${path.sep}.`,
+            `${containerId}:/input/`,
+        ]);
+    }
+
+    async startAndWait(containerId) {
+        await execFileAsync('docker', ['start', containerId]);
+
+        try {
+            await execFileAsync('timeout', [`${this.timeoutValue}s`, 'docker', 'wait', containerId]);
+            return false;
+        } catch (err) {
+            if(!this.isTimeoutError(err)) {
+                throw err;
+            }
+
+            await this.stopContainer(containerId);
+            return true;
+        }
+    }
+
+    async copyOutputFromContainer(containerId) {
+        try {
+            await execFileAsync('docker', [
+                'cp',
+                `${containerId}:/output/.`,
+                `${this.outputFolder}/`,
+            ]);
+            return null;
+        } catch (err) {
+            return err;
+        }
+    }
+
+    readExecutionResult(timedOut, copyError) {
+        const errorsPath = path.join(this.outputFolder, 'errors');
+        const completedPath = path.join(this.outputFolder, 'completed');
+        const partialPath = path.join(this.outputFolder, 'logfile.txt');
+
+        let errors = this.readFileIfPresent(errorsPath);
+        let output = this.readFileIfPresent(completedPath) || this.readFileIfPresent(partialPath);
+
+        if(!output && copyError) {
+            errors = [errors, this.formatExecutionError(copyError)].filter(Boolean).join('\n');
+        }
+
+        if(timedOut) {
+            output = output || "";
+            if(output && !output.endsWith('\n')) {
+                output += '\n';
+            }
+            output += `Execution Timed Out. Maximum allowed time is ${this.timeoutValue} seconds.`;
+        }
+
+        return { errors, output };
+    }
+
+    readFileIfPresent(filePath) {
+        if(!fs.existsSync(filePath)) {
+            return "";
+        }
+        return fs.readFileSync(filePath, 'utf8');
+    }
+
+    async stopContainer(containerId) {
+        try {
+            await execFileAsync('docker', ['kill', containerId]);
+        } catch {}
+    }
+
+    async removeContainer(containerId) {
+        if(!containerId) {
+            return;
+        }
+
+        try {
+            await execFileAsync('docker', ['rm', '-f', containerId]);
+        } catch {}
+    }
+
+    isTimeoutError(err) {
+        return Number(err?.code) === 124;
+    }
+
+    formatExecutionError(err) {
+        const detail = err?.stderr?.trim() || err?.message || String(err);
+        return `Internal problem executing generated code. ${detail}`;
     }
 
     getNormalizedMainFilename() {
-        let path = this.path;
-        if(path.startsWith('/')) {
-            path = path.substring(1);
+        let mainPath = this.path;
+        if(mainPath.startsWith('/')) {
+            mainPath = mainPath.substring(1);
         }
-        if(path.endsWith('/')) {
-            path = path.substring(0, path.length - 1);
+        if(mainPath.endsWith('/')) {
+            mainPath = mainPath.substring(0, mainPath.length - 1);
         }
         if(this.language=="Python"){
-            return path ? `${path}/${this.mainFile}.py` : `${this.mainFile}.py`;
+            return mainPath ? `${mainPath}/${this.mainFile}.py` : `${this.mainFile}.py`;
         }
-        return path ? `${path.split('/').join('.')}.${this.mainFile}` : this.mainFile;    
+        return mainPath ? `${mainPath.split('/').join('.')}.${this.mainFile}` : this.mainFile;
     }
 
-    listenToChanges(callback) {
-        //variable to enforce the timeout_value
-        let timeValue = 0;
-
-        // Check For File named "completed" or "errors" after every 1 second
-        const intid = setInterval(() => {
-            timeValue++;
-        
-            // Listen for the completed file
-            fs.readFile(this.outputFolder + '/completed', 'utf8', (err, completeData) => {
-                // if file is not available yet and the file interval is not yet up carry on
-                // else if file is found simply display a message and proceed
-                if(err && timeValue < this.timeoutValue) {
-                    return;
-                } else if (timeValue < this.timeoutValue) {
-                    //check for possible errors
-                    fs.readFile(this.outputFolder + '/errors', 'utf8', (err, errorData) => {
-                        if(errorData) {
-                            console.log("Error file: ", errorData)
-                        }
-                        console.log("Complete file: \n", completeData);
-
-                        callback(errorData, completeData.toString())
-                    });
-                } else { 
-                    // if time is up. Save an error message to the data variable
-                    // Since the time is up, we take the partial output and return it.
-                    fs.readFile(this.outputFolder + '/logfile.txt', 'utf8', (err, partialData) => {
-                        if (!partialData) partialData = "";
-                        partialData += "\nExecution Timed Out. Maximum allowed time is " + this.timeoutValue + " seconds.";
-
-                        fs.readFile(this.outputFolder + '/errors', 'utf8', (err, errorData) => {
-                            callback(errorData ,partialData.toString())
-                        });
-                    });
-                }
-
-                // If time is finished, remove directory and clear timer
-                this.deleteOutputFolder();
-                clearInterval(intid);
-            });
-        }, 1000);
-    }
-
-    
     makeOutputFolder() {
-        if(fs.existsSync(this.outputFolder)) {
-            this.deleteOutputFolder();
-        } else {
-            fs.mkdirSync(this.outputFolder);
-        }
+        fs.mkdirSync(this.baseOutputPath, { recursive: true });
+        this.outputFolder = fs.mkdtempSync(path.join(this.baseOutputPath, `${this.getOutputPrefix()}-`));
     }
 
     deleteOutputFolder() {
+        if(!this.outputFolder) {
+            return;
+        }
+
         try {
             console.log("ATTEMPTING TO REMOVE: " + this.outputFolder);
             fs.rmSync(this.outputFolder, { recursive: true });
             console.log(`${this.outputFolder} is deleted!`);
         } catch (err) {
             console.error(`Error while deleting ${this.outputFolder}.`);
+        } finally {
+            this.outputFolder = null;
         }
     }
 
+    getOutputPrefix() {
+        const modelName = path.basename(this.model) || "model";
+        return `umple-exec-${modelName}-${this.mainFile}`.replace(/[^A-Za-z0-9._-]/g, '_');
+    }
+
     readConfig() {
-        const file = fs.readFileSync('./config.cfg', 'utf8');
+        const file = fs.readFileSync(path.join(__dirname, 'config.cfg'), 'utf8');
         const config = file.toString().replace(/\r\n/g,'\n').split('\n');
         
         const obj = {};
