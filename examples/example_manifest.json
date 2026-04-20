@@ -1,7 +1,7 @@
 {
   "sets": [
     {
-      "id": "data-model-examples-1",
+      "id": "example-set-1",
       "label": "Class Diagrams",
       "categoryId": "class",
       "examples": [
@@ -192,7 +192,7 @@
       ]
     },
     {
-      "id": "data-model-examples-2",
+      "id": "example-set-2",
       "label": "Extra Class Diagrams",
       "categoryId": "class",
       "examples": [
@@ -539,7 +539,7 @@
       ]
     },
     {
-      "id": "state-model-examples",
+      "id": "example-set-3",
       "label": "State Machines",
       "categoryId": "state",
       "examples": [
@@ -690,8 +690,8 @@
       ]
     },
     {
-      "id": "feature-model-examples",
-      "label": "Feature Diagram",
+      "id": "example-set-4",
+      "label": "Feature Diagrams",
       "categoryId": "feature",
       "examples": [
         {
@@ -709,7 +709,7 @@
       ]
     },
     {
-      "id": "composite-structure-examples",
+      "id": "example-set-5",
       "label": "Composite Structure",
       "categoryId": "structure",
       "examples": [

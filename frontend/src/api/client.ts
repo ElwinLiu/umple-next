@@ -1,113 +1,161 @@
 import type {
-  CompileRequest, CompileResponse, ExampleCategory, ExampleResponse, GenerateRequest, GenerateResponse,
-  DiagramResponse, GetModelResponse, CrudSchemaResponse, PromoteResponse,
-} from './types'
+  CompileRequest,
+  CompileResponse,
+  ExampleSet,
+  ExampleResponse,
+  GenerateRequest,
+  GenerateResponse,
+  DiagramResponse,
+  GetModelResponse,
+  CrudSchemaResponse,
+  PromoteResponse,
+} from "./types";
 
-const API_BASE = '/api'
+const API_BASE = "/api";
 
-export async function request<T>(path: string, options?: RequestInit): Promise<T> {
+export async function request<T>(
+  path: string,
+  options?: RequestInit,
+): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { "Content-Type": "application/json" },
     ...options,
-  })
+  });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(err.error || res.statusText)
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || res.statusText);
   }
-  return res.json()
+  return res.json();
 }
 
 async function requestBlob(path: string, options?: RequestInit): Promise<Blob> {
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
+    headers: { "Content-Type": "application/json" },
     ...options,
-  })
+  });
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }))
-    throw new Error(err.error || res.statusText)
+    const err = await res.json().catch(() => ({ error: res.statusText }));
+    throw new Error(err.error || res.statusText);
   }
-  return res.blob()
+  return res.blob();
 }
 
 export const api = {
   compile(req: CompileRequest, signal?: AbortSignal): Promise<CompileResponse> {
-    return request('/compile', {
-      method: 'POST',
+    return request("/compile", {
+      method: "POST",
       body: JSON.stringify(req),
       signal,
-    })
+    });
   },
 
-  listExamples(): Promise<ExampleCategory[]> {
-    return request('/examples')
+  listExamples(): Promise<ExampleSet[]> {
+    return request("/examples");
   },
 
   getModel(id: string, signal?: AbortSignal): Promise<GetModelResponse> {
-    return request(`/models/${encodeURIComponent(id)}`, { signal })
+    return request(`/models/${encodeURIComponent(id)}`, { signal });
   },
 
-  getExample(name: string): Promise<ExampleResponse> {
-    return request(`/examples/${encodeURIComponent(name)}`)
+  getExample(id: string): Promise<ExampleResponse> {
+    return request(`/examples/${encodeURIComponent(id)}`);
+  },
+
+  resolveExample(example: string): Promise<ExampleResponse> {
+    return request(`/examples/resolve?example=${encodeURIComponent(example)}`);
   },
 
   generate(req: GenerateRequest): Promise<GenerateResponse> {
-    return request('/generate', {
-      method: 'POST',
+    return request("/generate", {
+      method: "POST",
       body: JSON.stringify(req),
-    })
+    });
   },
 
-  async sync(req: { action: string; modelId: string; params: Record<string, string> }): Promise<{ code: string; result: string; errors?: string; modelId?: string; rejected?: boolean; noEffect?: boolean }> {
+  async sync(req: {
+    action: string;
+    modelId: string;
+    params: Record<string, string>;
+  }): Promise<{
+    code: string;
+    result: string;
+    errors?: string;
+    modelId?: string;
+    rejected?: boolean;
+    noEffect?: boolean;
+  }> {
     const res = await fetch(`${API_BASE}/sync`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(req),
-    })
+    });
     // 422 carries a valid SyncResponse with rejected: true — parse it normally.
     if (!res.ok && res.status !== 422) {
-      const err = await res.json().catch(() => ({ error: res.statusText }))
-      throw new Error(err.error || res.statusText)
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || res.statusText);
     }
-    return res.json()
+    return res.json();
   },
 
-  diagram(req: { code: string; diagramType: string; modelId?: string; suboptions?: string[]; needsLayout?: boolean; activeTabId?: string }): Promise<DiagramResponse> {
-    return request('/diagram', {
-      method: 'POST',
+  diagram(req: {
+    code: string;
+    diagramType: string;
+    modelId?: string;
+    suboptions?: string[];
+    needsLayout?: boolean;
+    activeTabId?: string;
+  }): Promise<DiagramResponse> {
+    return request("/diagram", {
+      method: "POST",
       body: JSON.stringify(req),
-    })
+    });
   },
 
-  export(req: { code: string; format: string; modelId?: string; activeTabId?: string }): Promise<Blob> {
-    return requestBlob('/export', {
-      method: 'POST',
+  export(req: {
+    code: string;
+    format: string;
+    modelId?: string;
+    activeTabId?: string;
+  }): Promise<Blob> {
+    return requestBlob("/export", {
+      method: "POST",
       body: JSON.stringify(req),
-    })
+    });
   },
 
-
-  execute(req: { code: string; language: string; modelId?: string; activeTabId?: string }): Promise<{ output: string; errors?: string }> {
-    return request('/execute', {
-      method: 'POST',
+  execute(req: {
+    code: string;
+    language: string;
+    modelId?: string;
+    activeTabId?: string;
+  }): Promise<{ output: string; errors?: string }> {
+    return request("/execute", {
+      method: "POST",
       body: JSON.stringify(req),
-    })
+    });
   },
 
-  crudSchema(req: { code: string; modelId?: string; activeTabId?: string }): Promise<CrudSchemaResponse> {
-    return request('/crud/schema', {
-      method: 'POST',
+  crudSchema(req: {
+    code: string;
+    modelId?: string;
+    activeTabId?: string;
+  }): Promise<CrudSchemaResponse> {
+    return request("/crud/schema", {
+      method: "POST",
       body: JSON.stringify(req),
-    })
+    });
   },
 
   crudDiagram(dot: string): Promise<{ svg: string; error?: string }> {
-    return request('/crud/diagram', {
-      method: 'POST',
+    return request("/crud/diagram", {
+      method: "POST",
       body: JSON.stringify({ dot }),
-    })
+    });
   },
 
   promoteModel(id: string): Promise<PromoteResponse> {
-    return request(`/models/${encodeURIComponent(id)}/promote`, { method: 'POST' })
+    return request(`/models/${encodeURIComponent(id)}/promote`, {
+      method: "POST",
+    });
   },
-}
+};

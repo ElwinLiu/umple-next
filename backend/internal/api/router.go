@@ -30,7 +30,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store, task
 
 	// Existing handlers
 	compileH := handlers.NewCompileHandler(pool, store)
-	exampleH := handlers.NewExampleHandler(cfg.ExamplePath, store)
+	exampleH := handlers.NewExampleHandler(cfg, store)
 	healthH := handlers.NewHealthHandler(cfg)
 
 	// New handlers
@@ -67,7 +67,8 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store, task
 
 		// Examples
 		r.Get("/examples", exampleH.List)
-		r.Get("/examples/{name}", exampleH.Get)
+		r.Get("/examples/resolve", exampleH.Resolve)
+		r.Get("/examples/{id}", exampleH.Get)
 
 		// AI provider proxy (browser → backend → provider)
 		r.Route("/ai", aiProxyH.Routes())

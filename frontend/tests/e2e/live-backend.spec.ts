@@ -8,53 +8,62 @@
  *
  * Requires `make dev` running, then: `bun run test:e2e:live`
  */
-import { expect, test, type Page } from '@playwright/test'
-import type { ExampleCategory } from '../../src/api/types'
-import { getDefaultViewForExampleCategory } from '../../src/constants/examples'
+import { expect, test, type Page } from "@playwright/test";
+import type { ExampleSet } from "../../src/api/types";
+import { getDefaultViewForExampleCategory } from "../../src/constants/examples";
 
 test.skip(
   !process.env.PLAYWRIGHT_LIVE_BACKEND,
-  'Set PLAYWRIGHT_LIVE_BACKEND=1 to run against the real backend stack.',
-)
+  "Set PLAYWRIGHT_LIVE_BACKEND=1 to run against the real backend stack.",
+);
 
 /* ── Helpers ── */
 
 /** Load an example via the command palette. */
-async function loadExample(page: Page, category: string, name: string) {
-  await page.keyboard.press('Control+k')
-  await expect(page.getByTestId('command-palette')).toBeVisible()
-  await page.getByTestId(`command-item-example-${category}-${name}`).click()
+async function loadExample(page: Page, exampleId: string) {
+  await page.keyboard.press("Control+k");
+  await expect(page.getByTestId("command-palette")).toBeVisible();
+  await page.getByTestId(`command-item-example-${exampleId}`).click();
 }
 
 /** Wait for compilation to finish (compile button becomes enabled again). */
 async function waitForCompile(page: Page) {
-  const compileBtn = page.getByTestId('compile-button')
+  const compileBtn = page.getByTestId("compile-button");
   const compilePromise = page.waitForResponse(
-    (res) => res.url().includes('/api/compile') && res.status() === 200,
+    (res) => res.url().includes("/api/compile") && res.status() === 200,
     { timeout: 30_000 },
-  )
-  await expect(compileBtn).toBeEnabled({ timeout: 10_000 })
-  await compileBtn.click()
-  await compilePromise
-  await expect(compileBtn).toBeEnabled({ timeout: 30_000 })
+  );
+  await expect(compileBtn).toBeEnabled({ timeout: 10_000 });
+  await compileBtn.click();
+  await compilePromise;
+  await expect(compileBtn).toBeEnabled({ timeout: 30_000 });
 }
 
 /**
  * Wait for a diagram to render based on the expected view type.
  * Returns 'class' | 'svg' | 'html' indicating which renderer was used.
  */
-async function waitForDiagram(page: Page, view: string): Promise<'class' | 'svg' | 'html'> {
-  if (view === 'class') {
-    await expect(page.locator('[data-testid^="class-node-"]').first()).toBeVisible({ timeout: 15_000 })
-    return 'class'
+async function waitForDiagram(
+  page: Page,
+  view: string,
+): Promise<"class" | "svg" | "html"> {
+  if (view === "class") {
+    await expect(
+      page.locator('[data-testid^="class-node-"]').first(),
+    ).toBeVisible({ timeout: 15_000 });
+    return "class";
   }
-  if (view === 'structure') {
-    await expect(page.getByTestId('html-diagram-iframe')).toBeVisible({ timeout: 15_000 })
-    return 'html'
+  if (view === "structure") {
+    await expect(page.getByTestId("html-diagram-iframe")).toBeVisible({
+      timeout: 15_000,
+    });
+    return "html";
   }
   // SVG-based views: state, feature, erd, instance
-  await expect(page.locator('[data-testid="diagram-canvas"] svg g.node').first()).toBeVisible({ timeout: 15_000 })
-  return 'svg'
+  await expect(
+    page.locator('[data-testid="diagram-canvas"] svg g.node').first(),
+  ).toBeVisible({ timeout: 15_000 });
+  return "svg";
 }
 
 /**
@@ -65,10 +74,10 @@ async function waitForDiagram(page: Page, view: string): Promise<'class' | 'svg'
  */
 async function checkSvgThemeCompat(page: Page): Promise<string[]> {
   return page.evaluate(() => {
-    const SAFE = new Set(['none', 'transparent', 'currentcolor'])
-    const issues: string[] = []
-    const canvas = document.querySelector('[data-testid="diagram-canvas"]')
-    if (!canvas) return issues
+    const SAFE = new Set(["none", "transparent", "currentcolor"]);
+    const issues: string[] = [];
+    const canvas = document.querySelector('[data-testid="diagram-canvas"]');
+    if (!canvas) return issues;
 
     // Dark mode compatibility check: scan EVERY shape and text element in
     // the SVG, not just the ones the sanitizer targets. Any hardcoded
@@ -79,148 +88,166 @@ async function checkSvgThemeCompat(page: Page): Promise<string[]> {
     // adopted after .cluster > text missed deeply nested cluster labels
     // that Graphviz wraps in extra <g> elements.)
     canvas
-      .querySelectorAll('svg text, svg polygon, svg ellipse, svg path, svg polyline, svg rect, svg circle, svg line')
+      .querySelectorAll(
+        "svg text, svg polygon, svg ellipse, svg path, svg polyline, svg rect, svg circle, svg line",
+      )
       .forEach((el) => {
         // Check presentation attributes — these should have been stripped
-        for (const attr of ['fill', 'stroke', 'color']) {
-          const val = el.getAttribute(attr)
-          if (!val) continue
-          const v = val.trim().toLowerCase()
-          if (SAFE.has(v) || v.startsWith('var(') || v.startsWith('url(')) continue
-          issues.push(`<${el.tagName}> has ${attr}="${val}"`)
+        for (const attr of ["fill", "stroke", "color"]) {
+          const val = el.getAttribute(attr);
+          if (!val) continue;
+          const v = val.trim().toLowerCase();
+          if (SAFE.has(v) || v.startsWith("var(") || v.startsWith("url("))
+            continue;
+          issues.push(`<${el.tagName}> has ${attr}="${val}"`);
         }
 
         // Check inline style for hardcoded color values
-        const style = el.getAttribute('style')
+        const style = el.getAttribute("style");
         if (style) {
-          const matches = style.match(/(?:fill|stroke|color)\s*:\s*([^;]+)/gi)
+          const matches = style.match(/(?:fill|stroke|color)\s*:\s*([^;]+)/gi);
           if (matches) {
             for (const m of matches) {
-              const val = m.split(':')[1]?.trim().toLowerCase()
-              if (!val || SAFE.has(val) || val.startsWith('var(') || val.startsWith('url(')) continue
-              issues.push(`<${el.tagName}> has style with ${m.trim()}`)
+              const val = m.split(":")[1]?.trim().toLowerCase();
+              if (
+                !val ||
+                SAFE.has(val) ||
+                val.startsWith("var(") ||
+                val.startsWith("url(")
+              )
+                continue;
+              issues.push(`<${el.tagName}> has style with ${m.trim()}`);
             }
           }
         }
-      })
-    return issues
-  })
+      });
+    return issues;
+  });
 }
 
 /* ── Tests ── */
 
-test.describe('Live backend — all examples', () => {
-  test.setTimeout(600_000) // 10 min budget for ~85 examples
+test.describe("Live backend — all examples", () => {
+  test.setTimeout(600_000); // 10 min budget for ~85 examples
 
-  let categories: ExampleCategory[] = []
+  let sets: ExampleSet[] = [];
 
   test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
-      localStorage.setItem('umple-preferences-v1', JSON.stringify({
-        state: { hasSeenWelcome: true, autoCompile: false },
-        version: 0,
-      }))
-    })
-  })
+      localStorage.setItem(
+        "umple-preferences-v1",
+        JSON.stringify({
+          state: { hasSeenWelcome: true, autoCompile: false },
+          version: 0,
+        }),
+      );
+    });
+  });
 
   test.beforeAll(async ({ request, baseURL }) => {
-    const health = await request.get(`${baseURL}/api/health`)
-    expect(health.ok()).toBeTruthy()
+    const health = await request.get(`${baseURL}/api/health`);
+    expect(health.ok()).toBeTruthy();
 
-    const res = await request.get(`${baseURL}/api/examples`)
-    expect(res.ok()).toBeTruthy()
-    categories = (await res.json()) as ExampleCategory[]
-    expect(categories.length).toBeGreaterThan(0)
-  })
+    const res = await request.get(`${baseURL}/api/examples`);
+    expect(res.ok()).toBeTruthy();
+    sets = (await res.json()) as ExampleSet[];
+    expect(sets.length).toBeGreaterThan(0);
+  });
 
-  test('every example compiles and renders a themed diagram', async ({ page }) => {
-    await page.goto('/')
-    await expect(page.getByTestId('app-shell')).toBeVisible()
+  test("every example compiles and renders a themed diagram", async ({
+    page,
+  }) => {
+    await page.goto("/");
+    await expect(page.getByTestId("app-shell")).toBeVisible();
 
-    const compileFailures: string[] = []
-    const diagramFailures: string[] = []
-    const themeFailures: { example: string; issues: string[] }[] = []
-    let passed = 0
+    const compileFailures: string[] = [];
+    const diagramFailures: string[] = [];
+    const themeFailures: { example: string; issues: string[] }[] = [];
+    let passed = 0;
 
-    for (const cat of categories) {
-      const view = getDefaultViewForExampleCategory(cat.id)
-      if (!view) continue // skip categories we don't map (e.g. "Other")
+    for (const set of sets) {
+      const view = getDefaultViewForExampleCategory(set.categoryId);
+      if (!view) continue;
 
-      for (const ex of cat.examples) {
-        const label = `${cat.label} / ${ex.name}`
+      for (const ex of set.examples) {
+        const label = `${set.label} / ${ex.name}`;
 
         // Load via command palette
         try {
-          await loadExample(page, cat.label, ex.name)
+          await loadExample(page, ex.id);
         } catch {
-          compileFailures.push(`${label} — failed to load via command palette`)
-          continue
+          compileFailures.push(`${label} — failed to load via command palette`);
+          continue;
         }
 
         // Wait for compilation
         try {
-          await waitForCompile(page)
+          await waitForCompile(page);
         } catch {
-          compileFailures.push(`${label} — compilation timed out`)
-          continue
+          compileFailures.push(`${label} — compilation timed out`);
+          continue;
         }
 
         // Wait for diagram to render
-        let renderer: 'class' | 'svg' | 'html'
+        let renderer: "class" | "svg" | "html";
         try {
-          renderer = await waitForDiagram(page, view)
+          renderer = await waitForDiagram(page, view);
         } catch {
-          diagramFailures.push(`${label} — diagram did not render (expected ${view} view)`)
-          continue
+          diagramFailures.push(
+            `${label} — diagram did not render (expected ${view} view)`,
+          );
+          continue;
         }
 
         // For SVG-rendered diagrams, check theme compatibility
-        if (renderer === 'svg') {
-          const issues = await checkSvgThemeCompat(page)
+        if (renderer === "svg") {
+          const issues = await checkSvgThemeCompat(page);
           if (issues.length > 0) {
             // Deduplicate
-            const unique = [...new Set(issues)]
-            themeFailures.push({ example: label, issues: unique })
+            const unique = [...new Set(issues)];
+            themeFailures.push({ example: label, issues: unique });
           }
         }
 
-        passed++
+        passed++;
       }
     }
 
     // Report results
-    const total = passed + compileFailures.length + diagramFailures.length
-    const lines: string[] = []
+    const total = passed + compileFailures.length + diagramFailures.length;
+    const lines: string[] = [];
 
     if (compileFailures.length > 0) {
       lines.push(
         `\n⚠ ${compileFailures.length} compile/load failure(s):`,
         ...compileFailures.map((f) => `  • ${f}`),
-      )
+      );
     }
 
     if (diagramFailures.length > 0) {
       lines.push(
         `\n⚠ ${diagramFailures.length} diagram render failure(s):`,
         ...diagramFailures.map((f) => `  • ${f}`),
-      )
+      );
     }
 
     if (themeFailures.length > 0) {
-      const allColors = new Set(themeFailures.flatMap((f) => f.issues))
+      const allColors = new Set(themeFailures.flatMap((f) => f.issues));
       lines.push(
-        `\n⚠ ${themeFailures.length} SVG theme issue(s) (colors: ${[...allColors].join(', ')}):`,
-        ...themeFailures.map(
-          (f) => `  • ${f.example}: ${f.issues.join('; ')}`,
-        ),
-      )
+        `\n⚠ ${themeFailures.length} SVG theme issue(s) (colors: ${[...allColors].join(", ")}):`,
+        ...themeFailures.map((f) => `  • ${f.example}: ${f.issues.join("; ")}`),
+      );
     }
 
-    const failCount = compileFailures.length + diagramFailures.length + themeFailures.length
+    const failCount =
+      compileFailures.length + diagramFailures.length + themeFailures.length;
     if (failCount > 0) {
       expect
-        .soft(failCount, `${passed}/${total} passed, ${failCount} failed:${lines.join('\n')}`)
-        .toBe(0)
+        .soft(
+          failCount,
+          `${passed}/${total} passed, ${failCount} failed:${lines.join("\n")}`,
+        )
+        .toBe(0);
     }
-  })
-})
+  });
+});

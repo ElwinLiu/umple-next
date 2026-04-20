@@ -1,7 +1,9 @@
-.PHONY: dev dev-backend dev-frontend install up-prod down logs logs-backend clean tidy fetch-jar test-e2e test-e2e-live test-e2e-ui check check-frontend check-backend
+.PHONY: dev dev-backend dev-frontend install up-prod down logs logs-backend clean tidy fetch-jar sync-examples test-e2e test-e2e-live test-e2e-ui check check-frontend check-backend
 
 UMPLESYNC_VERSION := $(shell cat .umplesync-version)
 export DOCKER_GID := $(shell stat -c '%g' /var/run/docker.sock 2>/dev/null || echo 0)
+LEGACY_UMPLE_GIT_URL ?= https://github.com/umple/umple.git
+LEGACY_UMPLE_REF ?= master
 
 # Prefer "docker compose" plugin; fall back to standalone "docker-compose"
 COMPOSE := $(shell if docker compose version >/dev/null 2>&1; then echo "docker compose"; elif command -v docker-compose >/dev/null 2>&1; then echo "docker-compose"; else echo "docker compose"; fi)
@@ -93,3 +95,7 @@ fetch-jar:
 	@echo "Fetching umplesync.jar from GitHub releases..."
 	@gh release download jars/$(UMPLESYNC_VERSION) --pattern 'umplesync.jar' --dir jars --clobber
 	@echo "Downloaded jars/umplesync.jar"
+
+# Refresh the committed example manifest and bundled example files from the legacy repo
+sync-examples:
+	bun scripts/sync-examples.ts --legacy-repo "$(LEGACY_UMPLE_GIT_URL)" --legacy-ref "$(LEGACY_UMPLE_REF)"

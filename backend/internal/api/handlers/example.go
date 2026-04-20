@@ -1,28 +1,25 @@
 package handlers
 
 import (
+	"crypto/sha1"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"os"
+	"path"
 	"path/filepath"
-	"slices"
-	"sort"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/umple/umpleonline/backend/internal/config"
 	"github.com/umple/umpleonline/backend/internal/model"
 )
 
-type ExampleHandler struct {
-	examplePath string
-	store       *model.Store
-}
-
-func NewExampleHandler(examplePath string, store *model.Store) *ExampleHandler {
-	return &ExampleHandler{examplePath: examplePath, store: store}
-}
+const exampleManifestFileName = "example_manifest.json"
 
 type ExampleEntry struct {
+	ID       string `json:"id"`
 	Name     string `json:"name"`
 	Label    string `json:"label"`
 	Filename string `json:"filename"`
@@ -35,300 +32,263 @@ const (
 	ExampleCategoryState     ExampleCategoryID = "state"
 	ExampleCategoryStructure ExampleCategoryID = "structure"
 	ExampleCategoryFeature   ExampleCategoryID = "feature"
-	ExampleCategoryOther     ExampleCategoryID = "other"
 )
 
-type ExampleCategory struct {
-	ID       ExampleCategoryID `json:"id"`
-	Label    string            `json:"label"`
-	Name     string            `json:"name"`
-	Examples []ExampleEntry    `json:"examples"`
+type ExampleSetID string
+
+const (
+	ExampleSet1 ExampleSetID = "example-set-1"
+	ExampleSet2 ExampleSetID = "example-set-2"
+	ExampleSet3 ExampleSetID = "example-set-3"
+	ExampleSet4 ExampleSetID = "example-set-4"
+	ExampleSet5 ExampleSetID = "example-set-5"
+)
+
+type ExampleSet struct {
+	ID         ExampleSetID      `json:"id"`
+	Label      string            `json:"label"`
+	CategoryID ExampleCategoryID `json:"categoryId"`
+	Examples   []ExampleEntry    `json:"examples"`
 }
 
-type exampleCategoryDef struct {
-	ID    ExampleCategoryID
-	Label string
+type ExampleResponse struct {
+	ID                string            `json:"id"`
+	Name              string            `json:"name"`
+	Label             string            `json:"label"`
+	Code              string            `json:"code"`
+	ModelID           string            `json:"modelId,omitempty"`
+	SetID             ExampleSetID      `json:"setId,omitempty"`
+	DefaultCategoryID ExampleCategoryID `json:"defaultCategoryId,omitempty"`
 }
 
-// categoryOrder defines the display order of example categories.
-var categoryOrder = []exampleCategoryDef{
-	{ID: ExampleCategoryClass, Label: "Class Diagrams"},
-	{ID: ExampleCategoryState, Label: "State Machines"},
-	{ID: ExampleCategoryStructure, Label: "Composite Structure"},
-	{ID: ExampleCategoryFeature, Label: "Feature Diagrams"},
+type ExampleHandler struct {
+	examplePath string
+	store       *model.Store
 }
 
-// hiddenExamples are present on disk but were intentionally not exposed in the
-// legacy UmpleOnline picker.
-var hiddenExamples = map[string]bool{
-	"OBDCarSystem": true,
+type exampleManifest struct {
+	sets            []ExampleSet
+	byID            map[string]exampleSpec
+	byLegacyExample map[string]string
 }
 
-// categoryMembers maps each category to its curated list of example names
-// (without .ump extension). Derived from legacy UmpleOnline (umple.php).
-var categoryMembers = map[ExampleCategoryID][]string{
-	ExampleCategoryClass: {
-		"2DShapes", "AccessControl", "AccessControl2", "Accidents", "Accommodations",
-		"AfghanRainDesign", "AirlineExample", "Auction", "BankingSystemA", "BankingSystemB",
-		"CanalSystem", "Claim", "CommunityAssociation", "Compositions", "CoOpSystem",
-		"DMMExtensionCTF", "DMMOverview", "DMMRelationshipHierarchy", "DMMSourceObjectHierarchy",
-		"Decisions", "ElectionSystem", "ElevatorSystemA", "ElevatorSystemB",
-		"GenealogyA", "GenealogyB", "GenealogyC", "GeographicalInformationSystem", "GeometricSystem",
-		"Hospital", "Hotel", "Insurance", "InventoryManagement", "Library",
-		"MailOrderSystemClientOrder", "ManufacturingPlantController", "OhHellWhist",
-		"Pizza", "PoliceSystem", "PoliticalEntities", "RoutesAndLocations",
-		"School", "TelephoneSystem", "UniversitySystem", "VendingMachineClassDiagram",
-		"WarehouseSystem", "realestate",
-	},
-	ExampleCategoryState: {
-		"AgentsCommunication", "ApplicationProcessing", "Auction", "Booking",
-		"CanalLockStateMachine", "CarTransmission", "CollisionAvoidance",
-		"CollisionAvoidanceA1", "CollisionAvoidanceA2", "CollisionAvoidanceA3",
-		"ComplexStateMachine", "CourseSectionFlat", "CourseSectionNested",
-		"DigitalWatchFlat", "DigitalWatchNested", "Dishwasher",
-		"Elevator_State_Machine", "GarageDoor", "HomeHeater",
-		"LibraryLoanStateMachine", "Lights", "MicrowaveOven2", "Ovens",
-		"ParliamentBill", "Phone", "Runway", "SecurityLight",
-		"SpecificFlight", "SpecificFlightFlat", "TcpIpSimulation",
-		"TelephoneSystem2", "TicTacToe", "TimedCommands", "TollBooth",
-		"TrafficLightsA", "TrafficLightsB",
-	},
-	ExampleCategoryStructure: {
-		"PingPong", "OBDCarSystem",
-	},
-	ExampleCategoryFeature: {
-		"BerkeleyDB_SPL", "BerkeleyDB_SP_featureDepend", "HelloWorld_SPL",
-	},
+type exampleSpec struct {
+	entry      ExampleEntry
+	setID      ExampleSetID
+	categoryID ExampleCategoryID
+	sourcePath string
 }
 
-// displayLabels maps example names to human-readable labels.
-// Derived from legacy UmpleOnline (umple.php). Examples not listed here
-// fall back to the auto-generated label from humanize().
-var displayLabels = map[string]string{
-	// Class Diagrams
-	"2DShapes":                      "2DShapes *",
-	"AccessControl":                 "Access Control",
-	"AccessControl2":                "Access Control 2",
-	"Accidents":                     "Accidents",
-	"Accommodations":                "Accommodations",
-	"AfghanRainDesign":              "Afghan Rain Design",
-	"AirlineExample":                "Airline *",
-	"Auction":                       "Auction *",
-	"BankingSystemA":                "Banking System A",
-	"BankingSystemB":                "Banking System B",
-	"CanalSystem":                   "Canal",
-	"Claim":                         "Claim (Insurance)",
-	"CommunityAssociation":          "Community Association",
-	"Compositions":                  "Compositions",
-	"CoOpSystem":                    "Co-Op System",
-	"DMMExtensionCTF":               "DMM CTF",
-	"DMMOverview":                   "DMM Overview",
-	"DMMRelationshipHierarchy":      "DMM Relationship Hierarchy",
-	"DMMSourceObjectHierarchy":      "DMM Source Object Hierarchy",
-	"Decisions":                     "Decisions",
-	"ElectionSystem":                "Election System",
-	"ElevatorSystemA":               "Elevator System A",
-	"ElevatorSystemB":               "Elevator System B",
-	"GenealogyA":                    "Genealogy A",
-	"GenealogyB":                    "Genealogy B",
-	"GenealogyC":                    "Genealogy C",
-	"GeographicalInformationSystem": "Geographical Information System",
-	"GeometricSystem":               "Geometric System",
-	"Hospital":                      "Hospital",
-	"Hotel":                         "Hotel",
-	"Insurance":                     "Insurance",
-	"InventoryManagement":           "Inventory Management",
-	"Library":                       "Library",
-	"MailOrderSystemClientOrder":    "Mail Order System - Client Order",
-	"ManufacturingPlantController":  "Manufacturing Plant Controller",
-	"OhHellWhist":                   "Card Games",
-	"Pizza":                         "Pizza System",
-	"PoliceSystem":                  "Police System",
-	"PoliticalEntities":             "Political Entities",
-	"realestate":                    "Real Estate",
-	"RoutesAndLocations":            "Routes And Locations",
-	"School":                        "School",
-	"TelephoneSystem":               "Telephone System",
-	"UniversitySystem":              "University System",
-	"VendingMachineClassDiagram":    "Vending Machine",
-	"WarehouseSystem":               "Warehouse System",
-	// State Machines
-	"AgentsCommunication":     "Agents Communicating *",
-	"ApplicationProcessing":   "Application for a Grant",
-	"Booking":                 "Booking (Airline)",
-	"CanalLockStateMachine":   "Canal Lock",
-	"CarTransmission":         "Car Transmission",
-	"CollisionAvoidance":      "Collision Avoidance With And-Cross Transition",
-	"CollisionAvoidanceA1":    "Collision Avoidance - Alternative 1",
-	"CollisionAvoidanceA2":    "Collision Avoidance - Alternative 2",
-	"CollisionAvoidanceA3":    "Collision Avoidance - Alternative 3",
-	"ComplexStateMachine":     "Complex Symbolic *",
-	"CourseSectionFlat":       "Course Section",
-	"CourseSectionNested":     "Course Section (Nested)",
-	"DigitalWatchFlat":        "Digital Watch (Flat) *",
-	"DigitalWatchNested":      "Digital Watch Nested *",
-	"Dishwasher":              "Dishwasher",
-	"Elevator_State_Machine":  "Elevator",
-	"GarageDoor":              "Garage Door",
-	"HomeHeater":              "Home Heating System",
-	"LibraryLoanStateMachine": "Library Loan",
-	"Lights":                  "Light (3 alternatives)",
-	"MicrowaveOven2":          "Microwave Oven *",
-	"Ovens":                   "Oven (3 alternatives)",
-	"ParliamentBill":          "Parliament Bill",
-	"Phone":                   "Phone and Lines",
-	"Runway":                  "Runway",
-	"SecurityLight":           "Security Light",
-	"SpecificFlight":          "Specific Flight (Airline)",
-	"SpecificFlightFlat":      "Specific Flight (Airline - Flat)",
-	"TcpIpSimulation":         "TCP/IP Simulation *",
-	"TelephoneSystem2":        "Telephone Set Modes",
-	"TicTacToe":               "Tic Tac Toe or Noughts and Crosses",
-	"TimedCommands":           "Timed Commands *",
-	"TollBooth":               "Toll Booth",
-	"TrafficLightsA":          "Traffic Lights A",
-	"TrafficLightsB":          "Traffic Lights B",
-	// Composite Structure
-	"PingPong":     "Ping Pong",
-	"OBDCarSystem": "OBD Car System",
-	// Feature Diagrams
-	"BerkeleyDB_SPL":              "BerkeleyDB SPL",
-	"BerkeleyDB_SP_featureDepend": "Feature Dependencies of BerkeleyDB SPL",
-	"HelloWorld_SPL":              "HelloWorld SPL",
+type exampleManifestFile struct {
+	Sets []exampleManifestSet `json:"sets"`
 }
 
-// labelFor returns the human-readable label for an example name.
-func labelFor(name string) string {
-	if l, ok := displayLabels[name]; ok {
-		return l
+type exampleManifestSet struct {
+	ID         ExampleSetID           `json:"id"`
+	Label      string                 `json:"label"`
+	CategoryID ExampleCategoryID      `json:"categoryId"`
+	Examples   []exampleManifestEntry `json:"examples"`
+}
+
+type exampleManifestEntry struct {
+	Filename string `json:"filename"`
+	Label    string `json:"label"`
+}
+
+type fetchError struct {
+	status int
+	err    error
+}
+
+func (e *fetchError) Error() string {
+	return e.err.Error()
+}
+
+func (e *fetchError) Unwrap() error {
+	return e.err
+}
+
+func NewExampleHandler(cfg *config.Config, store *model.Store) *ExampleHandler {
+	return &ExampleHandler{
+		examplePath: cfg.ExamplePath,
+		store:       store,
 	}
-	return name
 }
 
 func (h *ExampleHandler) List(w http.ResponseWriter, r *http.Request) {
-	entries, err := os.ReadDir(h.examplePath)
+	manifest, err := h.loadManifest()
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]ExampleCategory{})
+		writeError(w, http.StatusBadGateway, "failed to load bundled examples")
 		return
 	}
 
-	// Build set of available .ump files
-	available := make(map[string]bool)
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".ump") {
-			continue
-		}
-		name := strings.TrimSuffix(e.Name(), ".ump")
-		if hiddenExamples[name] {
-			continue
-		}
-		available[name] = true
-	}
-
-	// Track which examples have been claimed by a category
-	claimed := make(map[string]bool)
-
-	var categories []ExampleCategory
-	for _, category := range categoryOrder {
-		members := categoryMembers[category.ID]
-		var exs []ExampleEntry
-		for _, name := range members {
-			if available[name] {
-				exs = append(exs, ExampleEntry{
-					Name:     name,
-					Label:    labelFor(name),
-					Filename: name + ".ump",
-				})
-				claimed[name] = true
-			}
-		}
-		if len(exs) > 0 {
-			categories = append(categories, ExampleCategory{
-				ID:       category.ID,
-				Label:    category.Label,
-				Name:     category.Label,
-				Examples: exs,
-			})
-		}
-	}
-
-	// Collect unclaimed examples into "Other"
-	var other []ExampleEntry
-	for name := range available {
-		if !claimed[name] {
-			other = append(other, ExampleEntry{
-				Name:     name,
-				Label:    labelFor(name),
-				Filename: name + ".ump",
-			})
-		}
-	}
-	if len(other) > 0 {
-		sort.Slice(other, func(i, j int) bool {
-			return strings.ToLower(other[i].Name) < strings.ToLower(other[j].Name)
-		})
-		categories = append(categories, ExampleCategory{
-			ID:       ExampleCategoryOther,
-			Label:    "Other",
-			Name:     "Other",
-			Examples: other,
-		})
-	}
-
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(categories)
+	json.NewEncoder(w).Encode(manifest.sets)
 }
 
-// categoryForExample returns the canonical category for the given example
-// (without .ump extension), or empty string if uncategorized. Some examples
-// appear in multiple categories, so this follows the display order above to
-// choose the default category for URL/bootstrap flows.
-func categoryForExample(name string) ExampleCategoryID {
-	for _, category := range categoryOrder {
-		if slices.Contains(categoryMembers[category.ID], name) {
-			return category.ID
-		}
-	}
-	return ""
-}
-
-func (h *ExampleHandler) Get(w http.ResponseWriter, r *http.Request) {
-	name := chi.URLParam(r, "name")
-	// Sanitize
-	name = filepath.Base(name)
-	if !strings.HasSuffix(name, ".ump") {
-		name += ".ump"
+func (h *ExampleHandler) Resolve(w http.ResponseWriter, r *http.Request) {
+	legacyExample := normalizeLegacyExample(r.URL.Query().Get("example"))
+	if legacyExample == "" {
+		writeError(w, http.StatusBadRequest, "missing example")
+		return
 	}
 
-	data, err := os.ReadFile(filepath.Join(h.examplePath, name))
+	manifest, err := h.loadManifest()
 	if err != nil {
+		writeError(w, http.StatusBadGateway, "failed to load bundled examples")
+		return
+	}
+
+	id, ok := manifest.byLegacyExample[legacyExample]
+	if !ok {
 		writeError(w, http.StatusNotFound, "example not found")
 		return
 	}
 
-	raw := string(data)
+	h.respondWithExample(w, manifest.byID[id])
+}
+
+func (h *ExampleHandler) Get(w http.ResponseWriter, r *http.Request) {
+	id := strings.TrimSpace(chi.URLParam(r, "id"))
+	if id == "" {
+		writeError(w, http.StatusNotFound, "example not found")
+		return
+	}
+
+	manifest, err := h.loadManifest()
+	if err != nil {
+		writeError(w, http.StatusBadGateway, "failed to load bundled examples")
+		return
+	}
+
+	spec, ok := manifest.byID[id]
+	if !ok {
+		writeError(w, http.StatusNotFound, "example not found")
+		return
+	}
+
+	h.respondWithExample(w, spec)
+}
+
+func (h *ExampleHandler) respondWithExample(w http.ResponseWriter, spec exampleSpec) {
+	raw, err := h.exampleCode(spec)
+	if err != nil {
+		var fetchErr *fetchError
+		if errors.As(err, &fetchErr) && fetchErr.status == http.StatusNotFound {
+			writeError(w, http.StatusNotFound, "example not found")
+			return
+		}
+		writeError(w, http.StatusBadGateway, "failed to load example")
+		return
+	}
+
 	userCode, _, hasDelimiter := splitModelSections(raw)
-
-	baseName := strings.TrimSuffix(name, ".ump")
-	resp := map[string]string{
-		"name": baseName,
-		"code": userCode,
+	resp := ExampleResponse{
+		ID:                spec.entry.ID,
+		Name:              spec.entry.Name,
+		Label:             spec.entry.Label,
+		Code:              userCode,
+		SetID:             spec.setID,
+		DefaultCategoryID: spec.categoryID,
 	}
 
-	if categoryID := categoryForExample(baseName); categoryID != "" {
-		resp["defaultCategoryId"] = string(categoryID)
-	}
-
-	// If the example has a layout section, pre-create a model on disk with the
-	// full content so that the first compile preserves the stored positions.
+	// Preserve stored Graphviz layout for examples that carry a hidden layout
+	// section by pre-creating a temp model before the first compile.
 	if hasDelimiter {
-		m, err := h.store.Create(raw)
-		if err == nil {
-			resp["modelId"] = m.ID
+		m, createErr := h.store.Create(raw)
+		if createErr == nil {
+			resp.ModelID = m.ID
 		}
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
+}
+
+func (h *ExampleHandler) loadManifest() (*exampleManifest, error) {
+	return h.buildManifest()
+}
+
+func (h *ExampleHandler) buildManifest() (*exampleManifest, error) {
+	raw, err := os.ReadFile(filepath.Join(h.examplePath, exampleManifestFileName))
+	if err != nil {
+		return nil, fmt.Errorf("read example manifest: %w", err)
+	}
+
+	var file exampleManifestFile
+	if err := json.Unmarshal(raw, &file); err != nil {
+		return nil, fmt.Errorf("decode example manifest: %w", err)
+	}
+
+	manifest := &exampleManifest{
+		sets:            make([]ExampleSet, 0, len(file.Sets)),
+		byID:            make(map[string]exampleSpec),
+		byLegacyExample: make(map[string]string),
+	}
+
+	for _, setDef := range file.Sets {
+		set := ExampleSet{
+			ID:         setDef.ID,
+			Label:      setDef.Label,
+			CategoryID: setDef.CategoryID,
+			Examples:   make([]ExampleEntry, 0, len(setDef.Examples)),
+		}
+
+		for _, item := range setDef.Examples {
+			sourcePath := strings.TrimLeft(item.Filename, "/")
+			name := strings.TrimSuffix(path.Base(sourcePath), ".ump")
+			id := stableExampleID(setDef.ID, sourcePath)
+			label := item.Label
+			if label == "" {
+				label = name
+			}
+
+			entry := ExampleEntry{
+				ID:       id,
+				Name:     name,
+				Label:    label,
+				Filename: sourcePath,
+			}
+			spec := exampleSpec{
+				entry:      entry,
+				setID:      setDef.ID,
+				categoryID: setDef.CategoryID,
+				sourcePath: sourcePath,
+			}
+
+			set.Examples = append(set.Examples, entry)
+			manifest.byID[id] = spec
+
+			legacyKey := normalizeLegacyExample(sourcePath)
+			if _, exists := manifest.byLegacyExample[legacyKey]; !exists {
+				manifest.byLegacyExample[legacyKey] = id
+			}
+		}
+
+		manifest.sets = append(manifest.sets, set)
+	}
+
+	return manifest, nil
+}
+
+func (h *ExampleHandler) exampleCode(spec exampleSpec) (string, error) {
+	data, err := os.ReadFile(filepath.Join(h.examplePath, filepath.FromSlash(spec.sourcePath)))
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return "", &fetchError{status: http.StatusNotFound, err: err}
+		}
+		return "", err
+	}
+	return string(data), nil
+}
+
+func stableExampleID(setID ExampleSetID, raw string) string {
+	sum := sha1.Sum([]byte(string(setID) + "::" + raw))
+	return fmt.Sprintf("ex-%x", sum[:8])
+}
+
+func normalizeLegacyExample(raw string) string {
+	value := strings.TrimSpace(raw)
+	value = strings.TrimPrefix(value, "/")
+	return strings.TrimSuffix(value, ".ump")
 }

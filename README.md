@@ -41,6 +41,20 @@ Three services, all containerized with Docker:
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for setup instructions, available commands, and contribution guidelines.
 
+## Bundled Examples
+
+The example picker is driven by committed files under `examples/`, not by runtime fetches from the running app. Refresh that snapshot from the legacy Umple repo with:
+
+```bash
+make sync-examples
+```
+
+By default this syncs from `https://github.com/umple/umple.git` at `master`. You can override the source ref if needed:
+
+```bash
+make sync-examples LEGACY_UMPLE_REF=my-legacy-branch
+```
+
 ## License
 
 [MIT](LICENSE.md) — see the license file for the full list of contributors.
