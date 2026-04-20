@@ -1,0 +1,723 @@
+{
+  "sets": [
+    {
+      "id": "data-model-examples-1",
+      "label": "Class Diagrams",
+      "categoryId": "class",
+      "examples": [
+        {
+          "filename": "2DShapes.ump",
+          "label": "2DShapes *"
+        },
+        {
+          "filename": "AccessControl.ump",
+          "label": "Access Control"
+        },
+        {
+          "filename": "AccessControl2.ump",
+          "label": "Access Control 2"
+        },
+        {
+          "filename": "Accidents.ump",
+          "label": "Accidents"
+        },
+        {
+          "filename": "Accommodations.ump",
+          "label": "Accommodations"
+        },
+        {
+          "filename": "AfghanRainDesign.ump",
+          "label": "Afghan Rain Design"
+        },
+        {
+          "filename": "AirlineExample.ump",
+          "label": "Airline *"
+        },
+        {
+          "filename": "Auction.ump",
+          "label": "Auction *"
+        },
+        {
+          "filename": "BankingSystemA.ump",
+          "label": "Banking System A"
+        },
+        {
+          "filename": "BankingSystemB.ump",
+          "label": "Banking System B"
+        },
+        {
+          "filename": "CanalSystem.ump",
+          "label": "Canal"
+        },
+        {
+          "filename": "Decisions.ump",
+          "label": "Decisions"
+        },
+        {
+          "filename": "OhHellWhist.ump",
+          "label": "Card Games"
+        },
+        {
+          "filename": "Claim.ump",
+          "label": "Claim (Insurance)"
+        },
+        {
+          "filename": "CommunityAssociation.ump",
+          "label": "Community Association"
+        },
+        {
+          "filename": "Compositions.ump",
+          "label": "Compositions"
+        },
+        {
+          "filename": "CoOpSystem.ump",
+          "label": "Co-Op System"
+        },
+        {
+          "filename": "DMMOverview.ump",
+          "label": "DMM Overview"
+        },
+        {
+          "filename": "DMMSourceObjectHierarchy.ump",
+          "label": "DMM Source Object Hierarchy"
+        },
+        {
+          "filename": "DMMRelationshipHierarchy.ump",
+          "label": "DMM Relationship Hierarchy"
+        },
+        {
+          "filename": "DMMExtensionCTF.ump",
+          "label": "DMM CTF"
+        },
+        {
+          "filename": "ElectionSystem.ump",
+          "label": "Election System"
+        },
+        {
+          "filename": "ElevatorSystemA.ump",
+          "label": "Elevator System A"
+        },
+        {
+          "filename": "ElevatorSystemB.ump",
+          "label": "Elevator System B"
+        },
+        {
+          "filename": "GenealogyA.ump",
+          "label": "Genealogy A"
+        },
+        {
+          "filename": "GenealogyB.ump",
+          "label": "Genealogy B"
+        },
+        {
+          "filename": "GenealogyC.ump",
+          "label": "Genealogy C"
+        },
+        {
+          "filename": "GeographicalInformationSystem.ump",
+          "label": "Geographical Information System"
+        },
+        {
+          "filename": "GeometricSystem.ump",
+          "label": "Geometric system"
+        },
+        {
+          "filename": "Hospital.ump",
+          "label": "Hospital"
+        },
+        {
+          "filename": "Hotel.ump",
+          "label": "Hotel"
+        },
+        {
+          "filename": "Insurance.ump",
+          "label": "Insurance"
+        },
+        {
+          "filename": "InventoryManagement.ump",
+          "label": "Inventory Management"
+        },
+        {
+          "filename": "Library.ump",
+          "label": "Library"
+        },
+        {
+          "filename": "MailOrderSystemClientOrder.ump",
+          "label": "Mail Order System- Client Order"
+        },
+        {
+          "filename": "ManufacturingPlantController.ump",
+          "label": "Manufacturing Plant Controller"
+        },
+        {
+          "filename": "Pizza.ump",
+          "label": "Pizza System"
+        },
+        {
+          "filename": "PoliceSystem.ump",
+          "label": "Police System"
+        },
+        {
+          "filename": "PoliticalEntities.ump",
+          "label": "Political Entities"
+        },
+        {
+          "filename": "realestate.ump",
+          "label": "Real Estate"
+        },
+        {
+          "filename": "RoutesAndLocations.ump",
+          "label": "Routes And Locations"
+        },
+        {
+          "filename": "School.ump",
+          "label": "School"
+        },
+        {
+          "filename": "TelephoneSystem.ump",
+          "label": "Telephone System"
+        },
+        {
+          "filename": "UniversitySystem.ump",
+          "label": "University System"
+        },
+        {
+          "filename": "VendingMachineClassDiagram.ump",
+          "label": "Vending Machine"
+        },
+        {
+          "filename": "WarehouseSystem.ump",
+          "label": "Warehouse System"
+        }
+      ]
+    },
+    {
+      "id": "data-model-examples-2",
+      "label": "Extra Class Diagrams",
+      "categoryId": "class",
+      "examples": [
+        {
+          "filename": "extraExamples1/ATOM.ecore.ump",
+          "label": "ATOM Web Syndication"
+        },
+        {
+          "filename": "extraExamples1/AWKPrograms.ecore.ump",
+          "label": "AWK Unix Utility"
+        },
+        {
+          "filename": "extraExamples1/ASM.ecore.ump",
+          "label": "Abstract State Machine Language"
+        },
+        {
+          "filename": "extraExamples1/AsmL.ecore.ump",
+          "label": "Abstract State Machines"
+        },
+        {
+          "filename": "extraExamples1/Amble.ecore.ump",
+          "label": "Amble Distributed SW"
+        },
+        {
+          "filename": "extraExamples1/Ant.ecore.ump",
+          "label": "Ant Build Tool"
+        },
+        {
+          "filename": "extraExamples1/AntScripts.ecore.ump",
+          "label": "Ant Scripts"
+        },
+        {
+          "filename": "extraExamples1/AnyLogic.ecore.ump",
+          "label": "AnyLogic Simulation Models"
+        },
+        {
+          "filename": "extraExamples1/ATL.ecore.ump",
+          "label": "Atlas Transformation Language"
+        },
+        {
+          "filename": "extraExamples1/BIBTEXML.ecore.ump",
+          "label": "BibTeX"
+        },
+        {
+          "filename": "extraExamples1/HAL.ecore.ump",
+          "label": "Bibliography HAL"
+        },
+        {
+          "filename": "extraExamples1/Bossa.ecore.ump",
+          "label": "Bossa"
+        },
+        {
+          "filename": "extraExamples1/Bugzilla.ecore.ump",
+          "label": "Bugzilla Bug Tracker"
+        },
+        {
+          "filename": "extraExamples1/ClassicModels.ecore.ump",
+          "label": "Business Database BIRT"
+        },
+        {
+          "filename": "extraExamples1/BMM.ecore.ump",
+          "label": "Business Motivation Model"
+        },
+        {
+          "filename": "extraExamples1/BusinessProcessModel.ecore.ump",
+          "label": "Business Process Model"
+        },
+        {
+          "filename": "extraExamples1/C.ecore.ump",
+          "label": "C"
+        },
+        {
+          "filename": "extraExamples1/CADM.ecore.ump",
+          "label": "C4ISR Architecture Data Model"
+        },
+        {
+          "filename": "extraExamples1/CPL.ecore.ump",
+          "label": "Call Processing Language"
+        },
+        {
+          "filename": "extraExamples1/Cocus.owl.ecore.ump",
+          "label": "Cocus Conference Organization"
+        },
+        {
+          "filename": "extraExamples1/Collaborations_Interactions_UML.ecore.ump",
+          "label": "Collaborations and Interactions UML"
+        },
+        {
+          "filename": "extraExamples1/CORBAComponent.ecore.ump",
+          "label": "Common Object Request Broker Architecture CORBA"
+        },
+        {
+          "filename": "extraExamples1/confOf.owl.ecore.ump",
+          "label": "Conference Organization"
+        },
+        {
+          "filename": "extraExamples1/CPR.ecore.ump",
+          "label": "Core Plan Representation"
+        },
+        {
+          "filename": "extraExamples1/DiagramInterchange.ecore.ump",
+          "label": "Diagram Interchange UML2"
+        },
+        {
+          "filename": "extraExamples1/DoDAF-OV5.ecore.ump",
+          "label": "DoDAF Operational View AV5"
+        },
+        {
+          "filename": "extraExamples1/DoDAF-SV5.ecore.ump",
+          "label": "DoDAF Structural View OA to SF"
+        },
+        {
+          "filename": "extraExamples1/DoDAF-SV4.ecore.ump",
+          "label": "DoDAF Structural View SF"
+        },
+        {
+          "filename": "extraExamples1/DoDAF.ecore.ump",
+          "label": "DoDAF Subset"
+        },
+        {
+          "filename": "extraExamples1/DTD.ecore.ump",
+          "label": "Document Type Definition"
+        },
+        {
+          "filename": "extraExamples1/DotNET_SystemReflection.ecore.ump",
+          "label": "DotNET System Reflection"
+        },
+        {
+          "filename": "extraExamples1/BPEL.ecore.ump",
+          "label": "Eclipse BPEL Project"
+        },
+        {
+          "filename": "extraExamples1/MSOfficeExcel_SpreadsheetMLBasicDef.ecore.ump",
+          "label": "Excel Spreadsheet"
+        },
+        {
+          "filename": "extraExamples1/FeatureDiagrams.ecore.ump",
+          "label": "Feature Diagram"
+        },
+        {
+          "filename": "extraExamples1/Automaton.ecore.ump",
+          "label": "Finite Automaton"
+        },
+        {
+          "filename": "extraExamples1/FlatSignalFlow.ecore.ump",
+          "label": "Flat Signal Flow"
+        },
+        {
+          "filename": "extraExamples1/GUI.ecore.ump",
+          "label": "GUI"
+        },
+        {
+          "filename": "extraExamples1/Gantt.ecore.ump",
+          "label": "Gantt"
+        },
+        {
+          "filename": "extraExamples1/GenericEditor.ecore.ump",
+          "label": "Generic Notion Editor"
+        },
+        {
+          "filename": "extraExamples1/GenericOutline.ecore.ump",
+          "label": "Generic Outline"
+        },
+        {
+          "filename": "extraExamples1/Grafcet.ecore.ump",
+          "label": "Grafcet Discrete Modeling"
+        },
+        {
+          "filename": "extraExamples1/GraphML.ecore.ump",
+          "label": "GraphML"
+        },
+        {
+          "filename": "extraExamples1/GraphViz_Dot.ecore.ump",
+          "label": "Graphviz DOT"
+        },
+        {
+          "filename": "extraExamples1/HTML.ecore.ump",
+          "label": "HTML"
+        },
+        {
+          "filename": "extraExamples1/HierarchicalStateMachine.ecore.ump",
+          "label": "Hierarchical State Machine"
+        },
+        {
+          "filename": "extraExamples1/J2SE5.ecore.ump",
+          "label": "J2SE5"
+        },
+        {
+          "filename": "extraExamples1/LaTeX.ecore.ump",
+          "label": "LaTeX"
+        },
+        {
+          "filename": "extraExamples1/MSOfficeExcel_SpreadsheetMLStyles.ecore.ump",
+          "label": "MSOffice Spreadseheet styles"
+        },
+        {
+          "filename": "extraExamples1/MSOfficeExcel_SpreadsheetMLWorksheetOpt.ecore.ump",
+          "label": "MSOffice Spreadsheet Worksheet Opt"
+        },
+        {
+          "filename": "extraExamples1/MSVisio_DatadiagramMLXForm.ecore.ump",
+          "label": "MSOffice Visio DatadiagramML"
+        },
+        {
+          "filename": "extraExamples1/MSOfficeWord_WordprocessingMLTableElts.ecore.ump",
+          "label": "MSOffice Word Processing Tables"
+        },
+        {
+          "filename": "extraExamples1/ProMarte.ecore.ump",
+          "label": "Marte Real Time Systems"
+        },
+        {
+          "filename": "extraExamples1/Matlab.ecore.ump",
+          "label": "Matlab"
+        },
+        {
+          "filename": "extraExamples1/Maude.ecore.ump",
+          "label": "Maude"
+        },
+        {
+          "filename": "extraExamples1/MavenProject.ecore.ump",
+          "label": "Maven"
+        },
+        {
+          "filename": "extraExamples1/METAH.ecore.ump",
+          "label": "Metah Software Architecture"
+        },
+        {
+          "filename": "extraExamples1/MoDAF-AV.ecore.ump",
+          "label": "Ministry of Defense Architecture"
+        },
+        {
+          "filename": "extraExamples1/MAS.ecore.ump",
+          "label": "Multi-Agent System"
+        },
+        {
+          "filename": "extraExamples1/mlhim2.ecore.ump",
+          "label": "Multilevel Healthcare"
+        },
+        {
+          "filename": "extraExamples1/MySQL.ecore.ump",
+          "label": "MySQL Core"
+        },
+        {
+          "filename": "extraExamples1/News.ecore.ump",
+          "label": "News"
+        },
+        {
+          "filename": "extraExamples1/OCCAM.ecore.ump",
+          "label": "Occam"
+        },
+        {
+          "filename": "extraExamples1/ODP-NV.ecore.ump",
+          "label": "Open Distributed Processing"
+        },
+        {
+          "filename": "extraExamples1/Pascal.ecore.ump",
+          "label": "Pascal Core"
+        },
+        {
+          "filename": "extraExamples1/Perceptory.ecore.ump",
+          "label": "Perceptory"
+        },
+        {
+          "filename": "extraExamples1/CSM.ecore.ump",
+          "label": "Performance Metamodel CSM"
+        },
+        {
+          "filename": "extraExamples1/PNML_structured.ecore.ump",
+          "label": "Petri Net Markup Language"
+        },
+        {
+          "filename": "extraExamples1/HPROF.ecore.ump",
+          "label": "Profile Data HPROF"
+        },
+        {
+          "filename": "extraExamples1/RSS-2.0.ecore.ump",
+          "label": "Really Simple Syndication RSS"
+        },
+        {
+          "filename": "extraExamples1/Repository.ecore.ump",
+          "label": "Repository"
+        },
+        {
+          "filename": "extraExamples1/R2ML.ecore.ump",
+          "label": "Rules Markup R2ML"
+        },
+        {
+          "filename": "extraExamples1/SVG.ecore.ump",
+          "label": "SVG"
+        },
+        {
+          "filename": "extraExamples1/SCADE.ecore.ump",
+          "label": "Safety Critical App Dev"
+        },
+        {
+          "filename": "extraExamples1/SBVRvoc.ecore.ump",
+          "label": "Semantic Business Vocabularies"
+        },
+        {
+          "filename": "extraExamples1/SimpleSBVR.ecore.ump",
+          "label": "Semantic Business Vocabularies SBVR"
+        },
+        {
+          "filename": "extraExamples1/SWRC.ecore.ump",
+          "label": "Semantic Web for Research Communities"
+        },
+        {
+          "filename": "extraExamples1/IEEE1471ConceptualModel.ecore.ump",
+          "label": "Software Arch IEEE 1471"
+        },
+        {
+          "filename": "extraExamples1/SPEM.ecore.ump",
+          "label": "Software Process Engineering"
+        },
+        {
+          "filename": "extraExamples1/SDM.ecore.ump",
+          "label": "System Definition Model"
+        },
+        {
+          "filename": "extraExamples1/UML2.ecore.ump",
+          "label": "UML2"
+        },
+        {
+          "filename": "extraExamples1/UIML-3.0.ecore.ump",
+          "label": "User Interface Markup Language"
+        },
+        {
+          "filename": "extraExamples1/CWMCore.ecore.ump",
+          "label": "WareHouse Metamodel CWM"
+        },
+        {
+          "filename": "extraExamples1/CWMRelationalData.ecore.ump",
+          "label": "WareHouse Metamodel CWM Relational Data"
+        },
+        {
+          "filename": "extraExamples1/WfMC.ecore.ump",
+          "label": "Workflow Management Coalition"
+        },
+        {
+          "filename": "extraExamples1/XPDL-1.14.ecore.ump",
+          "label": "XML Process Definition Language"
+        }
+      ]
+    },
+    {
+      "id": "state-model-examples",
+      "label": "State Machines",
+      "categoryId": "state",
+      "examples": [
+        {
+          "filename": "AgentsCommunication.ump",
+          "label": "Agents Communicating *"
+        },
+        {
+          "filename": "ApplicationProcessing.ump",
+          "label": "Application for a Grant"
+        },
+        {
+          "filename": "Auction.ump",
+          "label": "Auction *"
+        },
+        {
+          "filename": "Booking.ump",
+          "label": "Booking (Airline)"
+        },
+        {
+          "filename": "CanalLockStateMachine.ump",
+          "label": "Canal Lock"
+        },
+        {
+          "filename": "CarTransmission.ump",
+          "label": "Car Transmission"
+        },
+        {
+          "filename": "CollisionAvoidance.ump",
+          "label": "Collision Avoidance With And-Cross Transition"
+        },
+        {
+          "filename": "CollisionAvoidanceA1.ump",
+          "label": "Collision Avoidance - Alternative 1"
+        },
+        {
+          "filename": "CollisionAvoidanceA2.ump",
+          "label": "Collision Avoidance - Alternative 2"
+        },
+        {
+          "filename": "CollisionAvoidanceA3.ump",
+          "label": "Collision Avoidance - Alternative 3"
+        },
+        {
+          "filename": "ComplexStateMachine.ump",
+          "label": "Complex Symbolic *"
+        },
+        {
+          "filename": "CourseSectionFlat.ump",
+          "label": "Course Section"
+        },
+        {
+          "filename": "CourseSectionNested.ump",
+          "label": "Course Section (Nested)"
+        },
+        {
+          "filename": "DigitalWatchNested.ump",
+          "label": "Digital Watch Nested *"
+        },
+        {
+          "filename": "DigitalWatchFlat.ump",
+          "label": "Digital Watch (Flat) *"
+        },
+        {
+          "filename": "Dishwasher.ump",
+          "label": "Dishwasher"
+        },
+        {
+          "filename": "Elevator_State_Machine.ump",
+          "label": "Elevator"
+        },
+        {
+          "filename": "GarageDoor.ump",
+          "label": "Garage Door"
+        },
+        {
+          "filename": "HomeHeater.ump",
+          "label": "Home Heating System"
+        },
+        {
+          "filename": "LibraryLoanStateMachine.ump",
+          "label": "Library Loan"
+        },
+        {
+          "filename": "Lights.ump",
+          "label": "Light (3 alternatives)"
+        },
+        {
+          "filename": "MicrowaveOven2.ump",
+          "label": "Microwave Oven *"
+        },
+        {
+          "filename": "Ovens.ump",
+          "label": "Oven (3 alternatives)"
+        },
+        {
+          "filename": "ParliamentBill.ump",
+          "label": "Parliament Bill"
+        },
+        {
+          "filename": "Phone.ump",
+          "label": "Phone and Lines"
+        },
+        {
+          "filename": "Runway.ump",
+          "label": "Runway"
+        },
+        {
+          "filename": "SecurityLight.ump",
+          "label": "Security Light"
+        },
+        {
+          "filename": "SpecificFlight.ump",
+          "label": "Specific Flight (Airline)"
+        },
+        {
+          "filename": "SpecificFlightFlat.ump",
+          "label": "Specific Flight (Airline - Flat)"
+        },
+        {
+          "filename": "TcpIpSimulation.ump",
+          "label": "TCP/IP Simulation *"
+        },
+        {
+          "filename": "TelephoneSystem2.ump",
+          "label": "Telephone Set Modes"
+        },
+        {
+          "filename": "TicTacToe.ump",
+          "label": "Tic Tac Toe or Noughts and Crosses"
+        },
+        {
+          "filename": "TimedCommands.ump",
+          "label": "Timed Commands *"
+        },
+        {
+          "filename": "TollBooth.ump",
+          "label": "Toll Booth"
+        },
+        {
+          "filename": "TrafficLightsA.ump",
+          "label": "Traffic Lights A"
+        },
+        {
+          "filename": "TrafficLightsB.ump",
+          "label": "Traffic Lights B"
+        }
+      ]
+    },
+    {
+      "id": "feature-model-examples",
+      "label": "Feature Diagram",
+      "categoryId": "feature",
+      "examples": [
+        {
+          "filename": "BerkeleyDB_SPL.ump",
+          "label": "BerkeleyDB SPL"
+        },
+        {
+          "filename": "HelloWorld_SPL.ump",
+          "label": "HelloWorld SPL"
+        },
+        {
+          "filename": "BerkeleyDB_SP_featureDepend.ump",
+          "label": "Feature Dependencies of BerkeleyDB SPL"
+        }
+      ]
+    },
+    {
+      "id": "composite-structure-examples",
+      "label": "Composite Structure",
+      "categoryId": "structure",
+      "examples": [
+        {
+          "filename": "PingPong.ump",
+          "label": "Ping Pong"
+        }
+      ]
+    }
+  ]
+}
