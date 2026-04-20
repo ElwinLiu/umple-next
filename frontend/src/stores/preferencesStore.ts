@@ -96,8 +96,8 @@ interface PreferencesState {
   toggleSidebar: () => void
 
   // Compile behavior
-  autoCompile: boolean
-  setAutoCompile: (autoCompile: boolean) => void
+  dynamicGeneration: boolean
+  setDynamicGeneration: (dynamicGeneration: boolean) => void
 
   // Diagram display preferences
   showAttributes: boolean
@@ -136,9 +136,9 @@ export const usePreferencesStore = create<PreferencesState>()(
       showSidebar: false,
       toggleSidebar: () => set((s) => ({ showSidebar: !s.showSidebar })),
 
-      // Compile behavior
-      autoCompile: true,
-      setAutoCompile: (autoCompile) => set({ autoCompile }),
+      // Generation behavior
+      dynamicGeneration: true,
+      setDynamicGeneration: (dynamicGeneration) => set({ dynamicGeneration }),
 
       // Diagram display preferences (match Umple compiler defaults)
       ...DISPLAY_PREF_DEFAULTS,
@@ -171,7 +171,7 @@ export const usePreferencesStore = create<PreferencesState>()(
     }),
     {
       name: 'umple-preferences-v1',
-      version: 3,
+      version: 4,
       storage: createJSONStorage(getBrowserStorage),
       migrate: (persisted, version) => {
         const state = (persisted ?? {}) as Record<string, unknown>
@@ -179,13 +179,19 @@ export const usePreferencesStore = create<PreferencesState>()(
           return {
             ...state,
             showSidebar: false,
-            autoCompile: state.autoCompile ?? true,
+            dynamicGeneration: state.dynamicGeneration ?? state.autoCompile ?? true,
           } as any
         }
         if (version < 3) {
           return {
             ...state,
-            autoCompile: state.autoCompile ?? true,
+            dynamicGeneration: state.dynamicGeneration ?? state.autoCompile ?? true,
+          } as any
+        }
+        if (version < 4) {
+          return {
+            ...state,
+            dynamicGeneration: state.dynamicGeneration ?? state.autoCompile ?? true,
           } as any
         }
         return state as any
@@ -199,7 +205,7 @@ export const usePreferencesStore = create<PreferencesState>()(
           'theme',
           'hasSeenWelcome',
           'showSidebar',
-          'autoCompile',
+          'dynamicGeneration',
           ...DISPLAY_PREF_KEYS,
           'layoutAlgorithm',
           'activeProvider',
@@ -219,7 +225,7 @@ export const usePreferencesStore = create<PreferencesState>()(
         theme: state.theme,
         hasSeenWelcome: state.hasSeenWelcome,
         showSidebar: state.showSidebar,
-        autoCompile: state.autoCompile,
+        dynamicGeneration: state.dynamicGeneration,
         ...Object.fromEntries(DISPLAY_PREF_KEYS.map((key) => [key, state[key]])),
         layoutAlgorithm: state.layoutAlgorithm,
         activeProvider: state.activeProvider,

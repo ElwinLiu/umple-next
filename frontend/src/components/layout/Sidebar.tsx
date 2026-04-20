@@ -44,9 +44,9 @@ export function AppSidebar() {
 
           <section className="mt-6 space-y-3">
             <div>
-              <h2 className="text-sm font-medium text-ink">Compilation</h2>
+              <h2 className="text-sm font-medium text-ink">Generation</h2>
             </div>
-            <AutoCompileToggle />
+            <DynamicGenerationToggle />
           </section>
         </div>
 
@@ -58,22 +58,22 @@ export function AppSidebar() {
   )
 }
 
-function AutoCompileToggle() {
-  const autoCompile = usePreferencesStore((s) => s.autoCompile)
-  const setAutoCompile = usePreferencesStore((s) => s.setAutoCompile)
+function DynamicGenerationToggle() {
+  const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration)
+  const setDynamicGeneration = usePreferencesStore((s) => s.setDynamicGeneration)
 
   return (
     <div className="flex items-center justify-between rounded-lg border border-border px-3 py-2.5">
       <div>
-        <p className="text-sm font-medium text-ink">Auto-compile</p>
+        <p className="text-sm font-medium text-ink">Dynamically generate while editing</p>
         <p className="text-xs text-ink-muted">
-          Compile every few seconds and hide the manual compile button.
+          Keep the current output updated as you edit. Turn this off on slower machines or networks.
         </p>
       </div>
       <Switch
-        checked={autoCompile}
-        onCheckedChange={setAutoCompile}
-        aria-label="Auto-compile"
+        checked={dynamicGeneration}
+        onCheckedChange={setDynamicGeneration}
+        aria-label="Dynamically generate while editing"
       />
     </div>
   )

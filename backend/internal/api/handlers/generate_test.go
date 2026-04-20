@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/umple/umpleonline/backend/internal/compiler"
 	"github.com/umple/umpleonline/backend/internal/config"
@@ -71,8 +72,8 @@ func TestGenerateJavaClearsStaleSourcesBetweenModels(t *testing.T) {
 		Code:     readExampleFixture(t, "2DShapes.ump"),
 		Language: "Java",
 	})
-	if !strings.Contains(first.Output, "package Shapes.core;") {
-		t.Fatalf("expected first generation to include Shapes.core package:\n%s", first.Output)
+	if !strings.Contains(first.GeneratedOutput, "package Shapes.core;") {
+		t.Fatalf("expected first generation to include Shapes.core package:\n%s", first.GeneratedOutput)
 	}
 
 	second := postGenerate(t, handler, GenerateRequest{
@@ -80,11 +81,11 @@ func TestGenerateJavaClearsStaleSourcesBetweenModels(t *testing.T) {
 		Language: "Java",
 		ModelID:  first.ModelID,
 	})
-	if !strings.Contains(second.Output, "package accessControlSystem;") {
-		t.Fatalf("expected second generation to include accessControlSystem package:\n%s", second.Output)
+	if !strings.Contains(second.GeneratedOutput, "package accessControlSystem;") {
+		t.Fatalf("expected second generation to include accessControlSystem package:\n%s", second.GeneratedOutput)
 	}
-	if strings.Contains(second.Output, "package Shapes.core;") {
-		t.Fatalf("second generation should not include stale Shapes.core output:\n%s", second.Output)
+	if strings.Contains(second.GeneratedOutput, "package Shapes.core;") {
+		t.Fatalf("second generation should not include stale Shapes.core output:\n%s", second.GeneratedOutput)
 	}
 
 	modelDir := store.ModelDir(second.ModelID)
@@ -101,5 +102,41 @@ func TestGenerateJavaClearsStaleSourcesBetweenModels(t *testing.T) {
 	})
 	if len(stray) > 0 {
 		t.Fatalf("expected Java sources to stay inside %s, found stray files: %v", javaRoot, stray)
+	}
+}
+
+func TestLockModelWorkspaceBlocksConcurrentAccessForExistingModels(t *testing.T) {
+	store, err := model.NewStore(t.TempDir())
+	if err != nil {
+		t.Fatalf("create store: %v", err)
+	}
+
+	m, err := store.Create("class Invoice {}")
+	if err != nil {
+		t.Fatalf("create model: %v", err)
+	}
+
+	pool := &compiler.Pool{}
+	unlock := lockModelWorkspace(pool, store, m.ID)
+
+	acquired := make(chan struct{})
+	go func() {
+		defer close(acquired)
+		unlockSecond := lockModelWorkspace(pool, store, m.ID)
+		unlockSecond()
+	}()
+
+	select {
+	case <-acquired:
+		t.Fatal("second lock should block until the first lock is released")
+	case <-time.After(100 * time.Millisecond):
+	}
+
+	unlock()
+
+	select {
+	case <-acquired:
+	case <-time.After(time.Second):
+		t.Fatal("second lock did not acquire after the first lock was released")
 	}
 }

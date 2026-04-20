@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/umple/umpleonline/backend/internal/compiler"
 	"github.com/umple/umpleonline/backend/internal/model"
 )
 
@@ -77,6 +78,21 @@ func resolveModel(store *model.Store, modelID, code, entryFile string) (string, 
 		return "", "", err
 	}
 	return modelID, dir, nil
+}
+
+// lockModelWorkspace serializes requests that mutate an existing model's
+// workspace on disk. New models do not need locking because their directories
+// are not shared with any other request yet.
+func lockModelWorkspace(pool *compiler.Pool, store *model.Store, modelID string) func() {
+	if modelID == "" {
+		return func() {}
+	}
+
+	dir := store.ModelDir(modelID)
+	pool.LockModel(dir)
+	return func() {
+		pool.UnlockModel(dir)
+	}
 }
 
 func writeError(w http.ResponseWriter, code int, msg string) {

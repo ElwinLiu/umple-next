@@ -6,6 +6,7 @@ import { collabLoadBlankModel, collabLoadExample } from "./useCollabTabs";
 import { api } from "../api/client";
 import type { ExampleSet, ExampleSetId, ExampleCategoryId } from "../api/types";
 import { getDefaultViewForExampleCategory } from "../constants/examples";
+import { getGenerateTargetIdForView } from "../generation/targets";
 
 let cachedSets: ExampleSet[] | null = null;
 let fetchPromise: Promise<ExampleSet[]> | null = null;
@@ -66,7 +67,11 @@ export function useExamples() {
           const targetView = getDefaultViewForExampleCategory(
             res.defaultCategoryId,
           );
-          if (targetView) useSessionStore.getState().setViewMode(targetView);
+          if (targetView) {
+            const targetId = getGenerateTargetIdForView(targetView);
+            useSessionStore.getState().setViewMode(targetView);
+            if (targetId) useSessionStore.getState().setGenerateTargetId(targetId);
+          }
         }
 
         if (isCollaborating) {
@@ -102,7 +107,11 @@ export function useExamples() {
     ) => {
       if (options?.switchToDefaultView) {
         const targetView = getDefaultViewForExampleCategory(categoryId);
-        if (targetView) useSessionStore.getState().setViewMode(targetView);
+        if (targetView) {
+          const targetId = getGenerateTargetIdForView(targetView);
+          useSessionStore.getState().setViewMode(targetView);
+          if (targetId) useSessionStore.getState().setGenerateTargetId(targetId);
+        }
       }
 
       if (isCollaborating) {

@@ -45,13 +45,13 @@ Usage:
     },
   }),
 
-  compile: tool({
+  verifyCode: tool({
     description:
-      'Compile the current Umple code and return the result including any errors',
+      'Verify the current Umple code and return any validation errors',
     inputSchema: z.object({}),
     execute: async () => {
       const { code, modelId } = useSessionStore.getState()
-      const res = await api.compile({ code, modelId: modelId ?? undefined })
+      const res = await api.generate({ code, modelId: modelId ?? undefined })
       return {
         success: !res.errors,
         errors: res.errors || null,

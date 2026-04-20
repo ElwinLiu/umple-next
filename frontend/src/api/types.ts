@@ -1,8 +1,9 @@
 // Types matching the Go backend API responses
 
-export interface CompileRequest {
+export interface GenerationRequest {
   code: string;
   modelId?: string;
+  language?: string;
   diagramType?: string;
   suboptions?: string[];
   needsLayout?: boolean;
@@ -23,7 +24,7 @@ export interface GetModelResponse {
   activeTabId?: string;
 }
 
-export interface CompileResponse {
+export interface GenerationResponse {
   result: string;
   errors?: string;
   modelId: string;
@@ -31,6 +32,12 @@ export interface CompileResponse {
   html?: string;
   layout?: GvLayout;
   storedLayout?: StoredLayoutMetadata;
+  generatedOutput?: string;
+  generatedLanguage?: string;
+  generatedKind?: "text" | "html" | "iframe";
+  generatedHtml?: string;
+  generatedIframeUrl?: string;
+  generatedDownloads?: GeneratedArtifact[];
 }
 
 export interface UmpleModel {
@@ -194,13 +201,6 @@ export interface ExampleResponse {
   modelId?: string;
   setId?: ExampleSetId;
   defaultCategoryId?: ExampleCategoryId;
-}
-
-export interface GenerateRequest {
-  code: string;
-  language: string;
-  modelId?: string;
-  activeTabId?: string;
 }
 
 export interface GeneratedArtifact {

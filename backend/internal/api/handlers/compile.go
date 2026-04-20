@@ -8,41 +8,55 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/umple/umpleonline/backend/internal/api/handlers/generate"
 	"github.com/umple/umpleonline/backend/internal/compiler"
+	"github.com/umple/umpleonline/backend/internal/config"
 	"github.com/umple/umpleonline/backend/internal/model"
 )
 
-type CompileHandler struct {
-	pool  *compiler.Pool
-	store *model.Store
+type GenerateHandler struct {
+	pool    *compiler.Pool
+	store   *model.Store
+	service *generate.Service
 }
 
-func NewCompileHandler(pool *compiler.Pool, store *model.Store) *CompileHandler {
-	return &CompileHandler{pool: pool, store: store}
+func NewGenerateHandler(pool *compiler.Pool, store *model.Store, cfg *config.Config) *GenerateHandler {
+	return &GenerateHandler{
+		pool:    pool,
+		store:   store,
+		service: generate.NewService(cfg.UmpleSyncJar),
+	}
 }
 
-type CompileRequest struct {
-	Code        string       `json:"code"`
-	ModelID     string       `json:"modelId,omitempty"`
-	DiagramType string       `json:"diagramType,omitempty"`
-	Suboptions  []string     `json:"suboptions,omitempty"`
-	NeedsLayout *bool        `json:"needsLayout,omitempty"`
-	Tabs        []apiTab     `json:"tabs,omitempty"`
-	ActiveTabID string       `json:"activeTabId,omitempty"`
+type GenerateRequest struct {
+	Code        string   `json:"code"`
+	ModelID     string   `json:"modelId,omitempty"`
+	Language    string   `json:"language,omitempty"`
+	DiagramType string   `json:"diagramType,omitempty"`
+	Suboptions  []string `json:"suboptions,omitempty"`
+	NeedsLayout *bool    `json:"needsLayout,omitempty"`
+	Tabs        []apiTab `json:"tabs,omitempty"`
+	ActiveTabID string   `json:"activeTabId,omitempty"`
 }
 
-type CompileResponse struct {
-	Result       string                `json:"result"`
-	Errors       string                `json:"errors,omitempty"`
-	ModelID      string                `json:"modelId"`
-	SVG          string                `json:"svg,omitempty"`
-	HTML         string                `json:"html,omitempty"`
-	Layout       *GvLayout             `json:"layout,omitempty"`
-	StoredLayout *StoredLayoutMetadata `json:"storedLayout,omitempty"`
+type GenerateResponse struct {
+	Result             string                       `json:"result"`
+	Errors             string                       `json:"errors,omitempty"`
+	ModelID            string                       `json:"modelId"`
+	SVG                string                       `json:"svg,omitempty"`
+	HTML               string                       `json:"html,omitempty"`
+	Layout             *GvLayout                    `json:"layout,omitempty"`
+	StoredLayout       *StoredLayoutMetadata        `json:"storedLayout,omitempty"`
+	GeneratedOutput    string                       `json:"generatedOutput,omitempty"`
+	GeneratedLanguage  string                       `json:"generatedLanguage,omitempty"`
+	GeneratedKind      string                       `json:"generatedKind,omitempty"`
+	GeneratedHTML      string                       `json:"generatedHtml,omitempty"`
+	GeneratedIframeURL string                       `json:"generatedIframeUrl,omitempty"`
+	GeneratedDownloads []generate.GeneratedArtifact `json:"generatedDownloads,omitempty"`
 }
 
-func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
-	var req CompileRequest
+func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
+	var req GenerateRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
@@ -51,6 +65,13 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 	if req.Code == "" {
 		writeError(w, http.StatusBadRequest, "code is required")
 		return
+	}
+	if req.Language != "" {
+		baseLanguage, _ := generate.ParseLanguageSpec(req.Language)
+		if !generate.IsValidLanguage(baseLanguage) {
+			writeError(w, http.StatusBadRequest, fmt.Sprintf("unsupported language: %s", baseLanguage))
+			return
+		}
 	}
 
 	// Determine the compiler entry point: the active tab's file, or the
@@ -76,6 +97,9 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+
+	unlock := lockModelWorkspace(h.pool, h.store, req.ModelID)
+	defer unlock()
 
 	// Ensure model directory exists (single resolveModel for both compile + diagram)
 	modelID, dir, err := resolveModel(h.store, req.ModelID, entryCode, entryFile)
@@ -107,14 +131,14 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Compile to JSON using umplesync
+	// Generate the authoritative JSON model using umplesync
 	command := fmt.Sprintf("-generate Json %s/%s", dir, entryFile)
 	result, err := h.pool.Execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: dir,
 	})
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, fmt.Sprintf("compile failed: %v", err))
+		writeError(w, http.StatusInternalServerError, fmt.Sprintf("generation failed: %v", err))
 		return
 	}
 
@@ -125,7 +149,7 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 		jsonOutput = string(data)
 	}
 
-	resp := CompileResponse{
+	resp := GenerateResponse{
 		Result:  jsonOutput,
 		Errors:  result.Errors,
 		ModelID: modelID,
@@ -145,8 +169,8 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 			entryFile:   entryFile,
 		})
 		if errMsg != "" {
-			log.Printf("diagram generation failed during compile: %s", errMsg)
-			// Don't fail the whole request — return compile result with diagram error appended
+			log.Printf("diagram generation failed during output generation: %s", errMsg)
+			// Don't fail the whole request — return generated result with diagram error appended
 			if resp.Errors != "" {
 				resp.Errors += "\n" + errMsg
 			} else {
@@ -164,6 +188,30 @@ func (h *CompileHandler) Compile(w http.ResponseWriter, r *http.Request) {
 				} else {
 					resp.Errors = diagResp.Errors
 				}
+			}
+		}
+	}
+
+	if req.Language != "" {
+		baseLanguage, suboptions := generate.ParseLanguageSpec(req.Language)
+		genResp, err := h.service.Generate(baseLanguage, dir, modelID, entryFile, suboptions)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, fmt.Sprintf("generation failed: %v", err))
+			return
+		}
+
+		resp.GeneratedOutput = genResp.Output
+		resp.GeneratedLanguage = genResp.Language
+		resp.GeneratedKind = genResp.Kind
+		resp.GeneratedHTML = genResp.HTML
+		resp.GeneratedIframeURL = genResp.IframeURL
+		resp.GeneratedDownloads = genResp.Downloads
+
+		if genResp.Errors != "" {
+			if resp.Errors != "" {
+				resp.Errors += "\n" + genResp.Errors
+			} else {
+				resp.Errors = genResp.Errors
 			}
 		}
 	}

@@ -49,7 +49,7 @@ const TOOL_CONFIG: Record<
   },
   compile: {
     icon: <Play className="size-3" />,
-    labels: { running: 'Compiling', approval: 'Compiling', done: 'Compiled' },
+    labels: { running: 'Generating', approval: 'Generating', done: 'Generated' },
   },
 }
 

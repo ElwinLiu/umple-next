@@ -1,10 +1,8 @@
 import type {
-  CompileRequest,
-  CompileResponse,
+  GenerationRequest,
+  GenerationResponse,
   ExampleSet,
   ExampleResponse,
-  GenerateRequest,
-  GenerateResponse,
   DiagramResponse,
   GetModelResponse,
   CrudSchemaResponse,
@@ -41,8 +39,8 @@ async function requestBlob(path: string, options?: RequestInit): Promise<Blob> {
 }
 
 export const api = {
-  compile(req: CompileRequest, signal?: AbortSignal): Promise<CompileResponse> {
-    return request("/compile", {
+  generate(req: GenerationRequest, signal?: AbortSignal): Promise<GenerationResponse> {
+    return request("/generate", {
       method: "POST",
       body: JSON.stringify(req),
       signal,
@@ -63,13 +61,6 @@ export const api = {
 
   resolveExample(example: string): Promise<ExampleResponse> {
     return request(`/examples/resolve?example=${encodeURIComponent(example)}`);
-  },
-
-  generate(req: GenerateRequest): Promise<GenerateResponse> {
-    return request("/generate", {
-      method: "POST",
-      body: JSON.stringify(req),
-    });
   },
 
   async sync(req: {

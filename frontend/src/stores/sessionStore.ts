@@ -197,7 +197,7 @@ export const useSessionStore = create<SessionState>()(
       selectedExample: null,
       selectedExampleId: null,
       selectedExampleSetId: null,
-      generateTargetId: "Java",
+      generateTargetId: "classDiagram",
       syncPending: false,
       tabsVersion: 0,
 

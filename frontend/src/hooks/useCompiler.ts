@@ -14,6 +14,7 @@ import {
 import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
 import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../api/types'
+import { getGenerateTarget, resolveGenerateRequestLanguage } from '../generation/targets'
 
 /** Diagram-only messages that are transient (not real compilation errors).
  *  Matched via exact equality (case-insensitive, trimmed) to avoid
@@ -48,26 +49,32 @@ function splitDiagramToasts(errors: string): { panelErrors: string; toastMessage
   return { panelErrors: remaining.join('\n').trim(), toastMessages }
 }
 
-/** Core compile + diagram refresh. Shared by auto-compile and manual compile.
+/** Core output generation + refresh. Shared by dynamic generation and manual regenerate.
  *  Returns { success, model } so callers can cache the parsed model. */
-export async function compileAndRefresh(
+export async function generateAndRefresh(
   isDark: boolean,
   signal?: AbortSignal,
+  targetId?: string,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
-  const { code, modelId, setModelId, setUmpleModel, tabs, activeTabId } = useSessionStore.getState()
-  const { viewMode, clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
-  const { setCompiling, setExecutionOutput } = useEphemeralStore.getState()
+  const { code, modelId, setModelId, setUmpleModel, tabs, activeTabId, generateTargetId, viewMode } = useSessionStore.getState()
+  const { clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
+  const { setGeneratingOutput, setExecutionOutput, setGeneratingCode, setGeneratedError, setGeneratedOutput } = useEphemeralStore.getState()
+  const target = getGenerateTarget(targetId ?? generateTargetId)
 
-  if (!code.trim()) return { success: false, model: null }
+  if (!code.trim() || !target) return { success: false, model: null }
 
-  setCompiling(true)
+  setGeneratingOutput(true)
   setExecutionOutput('')
+  if (target.action === 'generate') {
+    setGeneratingCode(true, target.id)
+    setGeneratedError(null)
+  }
 
   let success = false
   let model: UmpleModel | null = null
 
   try {
-    const diagramParams = getDiagramRequestParams(viewMode, isDark)
+    const activeView = target.action === 'diagram' ? target.diagramView ?? viewMode : viewMode
 
     // In collab mode, read tab content from Y.Text (authoritative) instead
     // of the possibly-stale sessionStore cache for non-active tabs.
@@ -79,13 +86,24 @@ export async function compileAndRefresh(
     }))
 
     // Single request: compile + diagram generation
-    const res = await api.compile({
-      code,
-      modelId: modelId ?? undefined,
-      ...diagramParams,
-      tabs: compileTabs,
-      activeTabId,
-    }, signal)
+    const request =
+      target.action === 'diagram'
+        ? {
+            code,
+            modelId: modelId ?? undefined,
+            ...getDiagramRequestParams(activeView, isDark),
+            tabs: compileTabs,
+            activeTabId,
+          }
+        : {
+            code,
+            modelId: modelId ?? undefined,
+            language: resolveGenerateRequestLanguage(target, viewMode),
+            tabs: compileTabs,
+            activeTabId,
+          }
+
+    const res = await api.generate(request, signal)
 
     // If the user switched tabs while the request was in flight, discard the
     // results — they belong to the old tab, not the current one.
@@ -96,8 +114,10 @@ export async function compileAndRefresh(
     // Clear old caches only after the response arrives (not eagerly at the
     // start) so that if the user switches tabs mid-compile, setActiveTab
     // snapshots the previous diagram — not empty caches.
-    clearSvgCache()
-    clearHtmlCache()
+    if (target.action === 'diagram') {
+      clearSvgCache()
+      clearHtmlCache()
+    }
 
     // Read current modelId from the store (not the stale closure value) to
     // avoid overwriting a modelId that was set by useModelFromURL while the
@@ -110,40 +130,79 @@ export async function compileAndRefresh(
     }
 
     // Handle diagram output from the merged response
-    if (res.svg) setSvgForView(viewMode, res.svg)
-    if (res.html) setHtmlForView(viewMode, res.html)
+    if (target.action === 'diagram') {
+      if (res.svg) setSvgForView(activeView, res.svg)
+      if (res.html) setHtmlForView(activeView, res.html)
 
-    const gvLayout: GvLayout | undefined = res.layout
-    const storedLayout: StoredLayoutMetadata | null = res.storedLayout ?? null
+      const gvLayout: GvLayout | undefined = res.layout
+      const storedLayout: StoredLayoutMetadata | null = res.storedLayout ?? null
 
-    if (res.errors) {
-      // Separate transient diagram messages (shown as toasts) from real
-      // compilation errors (shown in the output panel).
-      const { panelErrors, toastMessages } = splitDiagramToasts(res.errors)
-      for (const msg of toastMessages) toast.info(msg, { id: 'diagram-info' })
-      if (panelErrors) {
-        setExecutionOutput('', panelErrors)
+      if (res.errors) {
+        // Separate transient diagram messages (shown as toasts) from real
+        // compilation errors (shown in the output panel).
+        const { panelErrors, toastMessages } = splitDiagramToasts(res.errors)
+        for (const msg of toastMessages) toast.info(msg, { id: 'diagram-info' })
+        if (panelErrors) {
+          setExecutionOutput('', panelErrors)
+        } else {
+          success = true
+        }
       } else {
         success = true
       }
+  
+      // Store the parsed model and layout for UmpleDiagram
+      if (model) {
+        setUmpleModel(
+          model,
+          activeView === 'class' ? gvLayout ?? null : undefined,
+          activeView === 'class' ? storedLayout : undefined,
+        )
+      }
     } else {
-      success = true
-    }
-
-    // Store the parsed model and layout for UmpleDiagram
-    if (model) {
-      setUmpleModel(
-        model,
-        viewMode === 'class' ? gvLayout ?? null : undefined,
-        viewMode === 'class' ? storedLayout : undefined,
+      const requestLanguage = resolveGenerateRequestLanguage(target, viewMode)
+      const hasInlineGeneratedPayload = Boolean(
+        res.generatedOutput ||
+        res.generatedHtml ||
+        res.generatedIframeUrl ||
+        (res.generatedDownloads && res.generatedDownloads.length > 0)
       )
+
+      if (hasInlineGeneratedPayload) {
+        setGeneratedOutput({
+          output: res.generatedOutput ?? '',
+          language: res.generatedLanguage ?? requestLanguage,
+          errors: res.errors,
+          kind: res.generatedKind,
+          html: res.generatedHtml,
+          iframeUrl: res.generatedIframeUrl,
+          downloads: res.generatedDownloads,
+          modelId: res.modelId,
+        }, target.id)
+
+        if (res.errors) {
+          setExecutionOutput('', res.errors)
+        } else {
+          success = true
+        }
+      } else {
+        const msg = `Generation API returned no generated output for ${requestLanguage}.`
+        setGeneratedError(msg)
+        setExecutionOutput('', msg)
+      }
     }
   } catch (err: any) {
     if (err.name === 'AbortError') throw err
-    const msg = err.message || 'Compilation failed'
+    const msg = err.message || 'Generation failed'
     setExecutionOutput('', msg)
+    if (target.action === 'generate') {
+      setGeneratedError(msg)
+    }
   } finally {
-    setCompiling(false)
+    setGeneratingOutput(false)
+    if (target.action === 'generate') {
+      setGeneratingCode(false)
+    }
   }
 
   return { success, model }
@@ -154,7 +213,8 @@ export function useCompiler() {
   const modelId = useSessionStore((s) => s.modelId)
   const tabsVersion = useSessionStore((s) => s.tabsVersion)
   const viewMode = useSessionStore((s) => s.viewMode)
-  const autoCompile = usePreferencesStore((s) => s.autoCompile)
+  const generateTargetId = useSessionStore((s) => s.generateTargetId)
+  const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration)
   const setSvgForView = useSessionStore((s) => s.setSvgForView)
   const setHtmlForView = useSessionStore((s) => s.setHtmlForView)
   const suboptionsKey = usePreferencesStore(selectSuboptionsKey)
@@ -171,6 +231,8 @@ export function useCompiler() {
   modelIdRef.current = modelId
   const viewModeRef = useRef(viewMode)
   viewModeRef.current = viewMode
+  const generateTargetIdRef = useRef(generateTargetId)
+  generateTargetIdRef.current = generateTargetId
   const isDarkRef = useRef(isDark)
   isDarkRef.current = isDark
 
@@ -179,7 +241,7 @@ export function useCompiler() {
   const initialCompileRef = useRef(true)
   useEffect(() => { mountedRef.current = true }, [])
 
-  // Main compile effect — debounced on code changes.
+  // Main generation effect — debounced on code changes.
   // Diagram-sync edits set syncPending, which skips the debounce so the
   // diagram refreshes immediately after a user interaction.
   useEffect(() => {
@@ -188,7 +250,7 @@ export function useCompiler() {
     if (!urlModelResolved) return
 
     if (timerRef.current) clearTimeout(timerRef.current)
-    if (!autoCompile) return
+    if (!dynamicGeneration) return
 
     const { syncPending, clearSyncPending } = useSessionStore.getState()
     if (syncPending) clearSyncPending()
@@ -208,7 +270,7 @@ export function useCompiler() {
       abortRef.current = new AbortController()
 
       try {
-        const result = await compileAndRefresh(
+        const result = await generateAndRefresh(
           isDarkRef.current,
           abortRef.current.signal,
         )
@@ -221,15 +283,17 @@ export function useCompiler() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current)
     }
-    // modelId intentionally excluded — compileAndRefresh reads it from the
+    // modelId intentionally excluded — generateAndRefresh reads it from the
     // store, and every legitimate modelId change is accompanied by a code or
     // tabsVersion change.  Including it here caused a feedback loop: first
     // compile assigns a modelId → dep changes → second (redundant) compile.
-  }, [autoCompile, code, tabsVersion])
+  }, [dynamicGeneration, code, tabsVersion])
 
-  // When viewMode, display preferences, or dark theme change, re-fetch diagram only
+  // When diagram display preferences or dark theme change, re-fetch diagram only
   useEffect(() => {
     if (!mountedRef.current) return
+    const activeTarget = getGenerateTarget(generateTargetIdRef.current)
+    if (activeTarget?.action !== 'diagram') return
     if (viewModeRef.current === 'crud') return // CRUD UI is a local component, no backend diagram
     const currentCode = codeRef.current
     const currentModelId = modelIdRef.current

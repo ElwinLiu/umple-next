@@ -1,41 +1,28 @@
 import { useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
-import { api } from '../api/client'
-import { getGenerateTarget, resolveGenerateRequestLanguage } from '../generation/targets'
+import { getGenerateTarget } from '../generation/targets'
+import { generateAndRefresh } from './useCompiler'
+import { useIsDark } from './useIsDark'
 
 /** Shared hook for generating code via the backend. Reads editor state at call time to avoid re-renders. */
 export function useGenerate() {
-  const setGeneratedOutput = useEphemeralStore((s) => s.setGeneratedOutput)
-  const setGeneratingCode = useEphemeralStore((s) => s.setGeneratingCode)
-  const setGeneratedError = useEphemeralStore((s) => s.setGeneratedError)
+  const isDark = useIsDark()
 
   const generate = useCallback(async (targetId: string) => {
     const target = getGenerateTarget(targetId)
     if (!target) return
 
+    useSessionStore.getState().setGenerateTargetId(target.id)
     if (target.action === 'diagram' && target.diagramView) {
       useSessionStore.getState().setViewMode(target.diagramView)
       useEphemeralStore.getState().setRightPanelView('diagram')
-      return
+    } else {
+      useEphemeralStore.getState().setRightPanelView('generated')
     }
 
-    const { code, modelId, activeTabId, viewMode } = useSessionStore.getState()
-    if (!code.trim()) return
-
-    const requestLanguage = resolveGenerateRequestLanguage(target, viewMode)
-    useSessionStore.getState().setGenerateTargetId(target.id)
-    setGeneratingCode(true, target.id)
-    setGeneratedError(null)
-    try {
-      const res = await api.generate({ code, language: requestLanguage, modelId: modelId ?? undefined, activeTabId })
-      setGeneratedOutput(res, target.id)
-    } catch (err: unknown) {
-      setGeneratedError(err instanceof Error ? err.message : 'Generation failed')
-    } finally {
-      setGeneratingCode(false)
-    }
-  }, [setGeneratedOutput, setGeneratingCode, setGeneratedError])
+    await generateAndRefresh(isDark, undefined, target.id)
+  }, [isDark])
 
   return generate
 }

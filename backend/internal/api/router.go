@@ -29,12 +29,11 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store, task
 	}))
 
 	// Existing handlers
-	compileH := handlers.NewCompileHandler(pool, store)
+	generateH := handlers.NewGenerateHandler(pool, store, cfg)
 	exampleH := handlers.NewExampleHandler(cfg, store)
 	healthH := handlers.NewHealthHandler(cfg)
 
 	// New handlers
-	generateH := handlers.NewGenerateHandler(pool, store, cfg)
 	syncH := handlers.NewSyncHandler(pool, store)
 	diagramH := handlers.NewDiagramHandler(pool, store)
 	exportH := handlers.NewExportHandler(pool, store)
@@ -50,8 +49,7 @@ func NewRouter(cfg *config.Config, pool *compiler.Pool, store *model.Store, task
 	r.Route("/api", func(r chi.Router) {
 		r.Get("/health", healthH.Health)
 
-		// Compile & generate
-		r.Post("/compile", compileH.Compile)
+		// Generate (includes compilation)
 		r.Post("/generate", generateH.Generate)
 		r.Post("/sync", syncH.Sync)
 		r.Post("/diagram", diagramH.Generate)

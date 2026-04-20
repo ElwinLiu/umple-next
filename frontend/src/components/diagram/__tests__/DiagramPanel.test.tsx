@@ -69,7 +69,7 @@ afterEach(() => {
   useEphemeralStore.setState({
     rightPanelView: 'diagram',
     renderMode: 'graphviz',
-    compiling: false,
+    generatingOutput: false,
     generatedCode: '',
     generatedHtml: '',
     generatedKind: 'text',
@@ -174,16 +174,16 @@ describe('DiagramPanel', () => {
     expect(screen.getByTestId('canvas-toolbar')).toBeDefined()
   })
 
-  it('shows the class loading state while compiling without an editable model', () => {
+  it('shows the class loading state while generating without an editable model', () => {
     render(
       <TooltipProvider>
         <DiagramPanel />
       </TooltipProvider>
     )
 
-    // Simulate: user was in editable mode, then a recompile starts
+    // Simulate: user was in editable mode, then a regenerate starts
     act(() => {
-      useEphemeralStore.setState({ renderMode: 'editable', compiling: true })
+      useEphemeralStore.setState({ renderMode: 'editable', generatingOutput: true })
     })
 
     expect(screen.getByText('Loading diagram...')).toBeDefined()
