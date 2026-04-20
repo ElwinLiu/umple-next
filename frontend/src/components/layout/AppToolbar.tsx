@@ -29,6 +29,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Combobox, type ComboboxGroup } from "@/components/ui/combobox";
+import { Input } from "@/components/ui/input";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,8 +38,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Popover,
-  PopoverTrigger,
   PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
 } from "@/components/ui/popover";
 import { Tip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -74,8 +78,10 @@ export function AppToolbar() {
   } = useExamples();
   const selectedGenerateTarget = getGenerateTarget(generateTargetId);
   const canExecuteGenerateTarget = Boolean(selectedGenerateTarget?.executable);
+  const [examplePickerOpen, setExamplePickerOpen] = useState(false);
   const [activeExampleSetId, setActiveExampleSetId] =
     useState<ExampleSetId | null>(null);
+  const [exampleQuery, setExampleQuery] = useState("");
 
   const viewModeGroups = useMemo<ComboboxGroup[]>(
     () =>
@@ -94,40 +100,66 @@ export function AppToolbar() {
     [],
   );
 
-  const exampleSetOptions = useMemo(
+  const selectedExampleSet = useMemo(
     () =>
-      exampleSets.map((set) => ({
-        value: set.id,
-        label: set.label,
-        keywords: [set.label],
-      })),
-    [exampleSets],
+      exampleSets.find((set) => set.id === selectedExampleSetId) ??
+      exampleSets[0] ??
+      null,
+    [exampleSets, selectedExampleSetId],
   );
+
+  const selectedExample = useMemo(
+    () =>
+      exampleSets
+        .flatMap((set) => set.examples)
+        .find((example) => example.id === selectedExampleId) ?? null,
+    [exampleSets, selectedExampleId],
+  );
+
+  const filteredExampleSets = useMemo(() => {
+    const query = exampleQuery.trim().toLowerCase();
+    if (!query) return exampleSets;
+
+    return exampleSets.filter((set) => {
+      const setMatches = set.label.toLowerCase().includes(query);
+      const exampleMatches = set.examples.some((example) =>
+        `${example.name} ${example.label ?? ""}`.toLowerCase().includes(query),
+      );
+      return setMatches || exampleMatches;
+    });
+  }, [exampleSets, exampleQuery]);
 
   const activeExampleSet = useMemo(
     () =>
-      exampleSets.find((set) => set.id === activeExampleSetId) ??
-      exampleSets[0] ??
+      filteredExampleSets.find((set) => set.id === activeExampleSetId) ??
+      filteredExampleSets.find((set) => set.id === selectedExampleSetId) ??
+      filteredExampleSets[0] ??
       null,
-    [exampleSets, activeExampleSetId],
+    [filteredExampleSets, activeExampleSetId, selectedExampleSetId],
   );
 
-  const exampleOptions = useMemo(
-    () => [
-      {
-        value: "blank",
-        label: "Select Example",
-        keywords: ["select example", "blank", "empty", "new model"],
-      },
-      ...(activeExampleSet?.examples.map((example) => ({
-        value: example.id,
-        label: example.label || example.name,
-        keywords: [example.name, example.label, activeExampleSet.label].filter(
-          Boolean,
-        ) as string[],
-      })) ?? []),
-    ],
-    [activeExampleSet],
+  const filteredExamples = useMemo(() => {
+    if (!activeExampleSet) return [];
+
+    const query = exampleQuery.trim().toLowerCase();
+    if (!query) return activeExampleSet.examples;
+
+    return activeExampleSet.examples.filter((example) =>
+      `${example.name} ${example.label ?? ""}`.toLowerCase().includes(query),
+    );
+  }, [activeExampleSet, exampleQuery]);
+
+  const exampleTriggerLabel = useMemo(() => {
+    if (selectedExampleId === "blank") {
+      return "Select Example";
+    }
+
+    return selectedExample?.label || selectedExample?.name || "Select Example";
+  }, [selectedExample, selectedExampleId]);
+
+  const exampleTriggerSetLabel = useMemo(
+    () => selectedExampleSet?.label ?? activeExampleSet?.label ?? null,
+    [selectedExampleSet, activeExampleSet],
   );
 
   const generateGroups = useMemo<ComboboxGroup[]>(
@@ -182,6 +214,12 @@ export function AppToolbar() {
       setActiveExampleSetId(exampleSets[0].id);
     }
   }, [activeExampleSetId, exampleSets]);
+
+  useEffect(() => {
+    if (!examplePickerOpen) {
+      setExampleQuery("");
+    }
+  }, [examplePickerOpen]);
 
   return (
     <div
@@ -239,60 +277,184 @@ export function AppToolbar() {
       <div className="flex flex-1 min-w-0 justify-center">
         <div className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           <div className="flex items-center gap-1" data-tour="examples">
-            <Combobox
-              options={exampleSetOptions}
-              value={activeExampleSet?.id}
-              onSelect={(selection) =>
-                setActiveExampleSetId(selection as ExampleSetId)
-              }
-              placeholder="Example Set"
-              searchPlaceholder="Search example sets..."
-              emptyText={
-                loadingExamples ? "Loading example sets..." : "No example sets."
-              }
-              disabled={loadingExamples && exampleSetOptions.length === 0}
-              className={cn(
-                toolbarBtn,
-                "w-auto h-8 border border-border/70 bg-surface-0 px-2.5 py-1 shadow-sm focus:border-border-strong focus:ring-0",
-              )}
-              contentClassName="w-64 min-w-[16rem]"
-              listClassName="max-h-72"
-              ariaLabel="Example Set"
-            />
-            <Combobox
-              options={exampleOptions}
-              value={
-                selectedExampleId === "blank"
-                  ? "blank"
-                  : (selectedExampleId ?? undefined)
-              }
-              onSelect={(selection) => {
-                if (!activeExampleSet) return;
-                if (selection === "blank") {
-                  loadBlank(activeExampleSet.id, activeExampleSet.categoryId, {
-                    switchToDefaultView: true,
-                  });
-                  return;
-                }
-                void loadExample(selection, { switchToDefaultView: true });
-              }}
-              placeholder="Select Example"
-              searchPlaceholder="Search examples..."
-              emptyText={
-                loadingExamples ? "Loading examples..." : "No examples."
-              }
-              disabled={
-                !activeExampleSet ||
-                (loadingExamples && exampleOptions.length <= 1)
-              }
-              className={cn(
-                toolbarBtn,
-                "w-auto h-8 border border-border/70 bg-surface-0 px-2.5 py-1 shadow-sm focus:border-border-strong focus:ring-0",
-              )}
-              contentClassName="w-64 min-w-[16rem]"
-              listClassName="max-h-72"
-              ariaLabel="Examples"
-            />
+            <Popover
+              open={examplePickerOpen}
+              onOpenChange={setExamplePickerOpen}
+            >
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Examples"
+                  disabled={loadingExamples && exampleSets.length === 0}
+                  className={cn(
+                    toolbarBtn,
+                    "h-8 min-w-[14rem] border border-border/70 bg-surface-0 px-2.5 py-1 shadow-sm focus:border-border-strong focus:ring-0 disabled:cursor-not-allowed disabled:opacity-70",
+                  )}
+                >
+                  <span className="flex min-w-0 items-center gap-1 truncate">
+                    {exampleTriggerSetLabel ? (
+                      <>
+                        <span className="truncate">{exampleTriggerSetLabel}</span>
+                        <span className="text-ink-faint">/</span>
+                      </>
+                    ) : null}
+                    <span
+                      className={cn(
+                        "truncate",
+                        selectedExampleId === "blank" || !selectedExampleId
+                          ? "text-ink-muted"
+                          : "text-ink",
+                      )}
+                    >
+                      {exampleTriggerLabel}
+                    </span>
+                  </span>
+                  <ChevronDown className="size-3 shrink-0" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="center" className="w-[34rem] p-0">
+                <PopoverHeader className="gap-0.5 border-b border-border px-3 py-2.5">
+                  <PopoverTitle className="text-sm">Examples</PopoverTitle>
+                  <PopoverDescription className="text-xs">
+                    Choose a type, then an example.
+                  </PopoverDescription>
+                </PopoverHeader>
+
+                <div className="border-b border-border px-3 py-2">
+                  <Input
+                    value={exampleQuery}
+                    onChange={(event) => setExampleQuery(event.target.value)}
+                    placeholder="Search example types and examples..."
+                    aria-label="Search examples"
+                  />
+                </div>
+
+                <div className="grid grid-cols-[13rem_minmax(0,1fr)]">
+                  <div className="border-r border-border bg-surface-1/40 p-2">
+                    <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+                      {filteredExampleSets.length > 0 ? (
+                        filteredExampleSets.map((set) => {
+                          const isActive = set.id === activeExampleSet?.id;
+                          return (
+                            <button
+                              key={set.id}
+                              type="button"
+                              onClick={() => setActiveExampleSetId(set.id)}
+                              className={cn(
+                                "flex items-center justify-between gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
+                                isActive
+                                  ? "bg-surface-2 text-ink"
+                                  : "text-ink-muted hover:bg-surface-2 hover:text-ink",
+                              )}
+                            >
+                              <span className="truncate">{set.label}</span>
+                              <Check
+                                className={cn(
+                                  "size-3.5 shrink-0",
+                                  isActive ? "opacity-100" : "opacity-0",
+                                )}
+                              />
+                            </button>
+                          );
+                        })
+                      ) : (
+                        <div className="px-2 py-4 text-xs text-ink-faint">
+                          {loadingExamples
+                            ? "Loading example types..."
+                            : "No example types."}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-2">
+                    <div className="flex max-h-80 flex-col gap-1 overflow-y-auto">
+                      {activeExampleSet ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              loadBlank(
+                                activeExampleSet.id,
+                                activeExampleSet.categoryId,
+                                { switchToDefaultView: true },
+                              );
+                              setExamplePickerOpen(false);
+                            }}
+                            className={cn(
+                              "flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
+                              selectedExampleId === "blank" &&
+                                selectedExampleSetId === activeExampleSet.id
+                                ? "bg-surface-2 text-ink"
+                                : "text-ink-muted hover:bg-surface-2 hover:text-ink",
+                            )}
+                          >
+                            <Plus className="size-3.5 shrink-0" />
+                            <span className="truncate">Start Blank Model</span>
+                            <Check
+                              className={cn(
+                                "ml-auto size-3.5 shrink-0",
+                                selectedExampleId === "blank" &&
+                                  selectedExampleSetId === activeExampleSet.id
+                                  ? "opacity-100"
+                                  : "opacity-0",
+                              )}
+                            />
+                          </button>
+
+                          {filteredExamples.length > 0 ? (
+                            filteredExamples.map((example) => {
+                              const isSelected =
+                                selectedExampleId === example.id;
+                              return (
+                                <button
+                                  key={example.id}
+                                  type="button"
+                                  onClick={() => {
+                                    void loadExample(example.id, {
+                                      switchToDefaultView: true,
+                                    });
+                                    setExamplePickerOpen(false);
+                                  }}
+                                  className={cn(
+                                    "flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-colors",
+                                    isSelected
+                                      ? "bg-surface-2 text-ink"
+                                      : "text-ink-muted hover:bg-surface-2 hover:text-ink",
+                                  )}
+                                >
+                                  <span className="truncate">
+                                    {example.label || example.name}
+                                  </span>
+                                  <Check
+                                    className={cn(
+                                      "ml-auto size-3.5 shrink-0",
+                                      isSelected ? "opacity-100" : "opacity-0",
+                                    )}
+                                  />
+                                </button>
+                              );
+                            })
+                          ) : (
+                            <div className="px-2 py-4 text-xs text-ink-faint">
+                              {loadingExamples
+                                ? "Loading examples..."
+                                : "No examples in this type."}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <div className="px-2 py-4 text-xs text-ink-faint">
+                          {loadingExamples
+                            ? "Loading examples..."
+                            : "No examples."}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <DropdownMenu>
