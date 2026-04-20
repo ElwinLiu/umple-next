@@ -119,10 +119,6 @@ export function useModelFromURL() {
           );
           if (nextView) setViewMode(nextView);
         }
-
-        const url = new URL(window.location.href);
-        url.searchParams.delete("example");
-        window.history.replaceState({}, "", url.toString());
       })
       .catch(() => {
         if (cancelled) return;

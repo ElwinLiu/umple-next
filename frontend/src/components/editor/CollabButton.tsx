@@ -53,6 +53,7 @@ export function CollabButton() {
     // after render — too late for the clipboard copy below.
     if (roomId) {
       const url = new URL(window.location.href)
+      url.searchParams.delete('example')
       url.searchParams.set('model', roomId)
       window.history.replaceState({}, '', url.toString())
     }

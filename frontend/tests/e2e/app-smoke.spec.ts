@@ -134,7 +134,49 @@ test("loads an example from the URL into the editor automatically", async ({
   await expect(page.getByTestId("class-node-Account")).toBeVisible({
     timeout: 10_000,
   });
-  await expect(page).toHaveURL(/\/\?model=playwright-model$/);
+  await expect
+    .poll(async () => {
+      const params = new URL(await page.url()).searchParams;
+      return {
+        example: params.get("example"),
+        model: params.get("model"),
+      };
+    })
+    .toEqual({ example: "banking", model: "playwright-model" });
+});
+
+test("share removes the example parameter after URL-based example loading", async ({
+  page,
+}) => {
+  await page.route("**/api/examples/resolve?*", async (route) => {
+    await route.fulfill({
+      json: {
+        id: "ex-banking",
+        name: "Banking",
+        label: "Banking",
+        code: `class Account {\n  balance;\n}\n`,
+        defaultCategoryId: "class",
+      },
+    });
+  });
+
+  await page.goto("/?example=banking");
+
+  await expect(page.getByTestId("app-shell")).toBeVisible();
+  await expect(page.locator(".cm-content")).toContainText("class Account");
+  await expect(page.getByTestId("class-node-Account")).toBeVisible({
+    timeout: 10_000,
+  });
+  await page.getByTestId("collab-share-btn").click();
+  await expect
+    .poll(async () => {
+      const params = new URL(await page.url()).searchParams;
+      return {
+        example: params.get("example"),
+        model: params.get("model"),
+      };
+    })
+    .toEqual({ example: null, model: "playwright-model" });
 });
 
 test("manual compile button appears only when auto-compile is disabled in preferences", async ({
