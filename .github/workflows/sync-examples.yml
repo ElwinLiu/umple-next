@@ -1,0 +1,52 @@
+name: Sync Examples
+
+on:
+  workflow_dispatch:
+    inputs:
+      legacy_ref:
+        description: Legacy Umple git ref to sync from
+        required: false
+        default: master
+        type: string
+  schedule:
+    - cron: "23 6 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: sync-examples
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    name: Sync bundled legacy examples
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Sync examples from legacy repo
+        env:
+          LEGACY_REF: ${{ inputs.legacy_ref || 'master' }}
+        run: |
+          bun scripts/sync-examples.ts \
+            --legacy-repo "https://github.com/umple/umple.git" \
+            --legacy-ref "$LEGACY_REF"
+
+      - name: Create or update pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          commit-message: "chore(examples): sync bundled legacy examples"
+          title: "chore(examples): sync bundled legacy examples"
+          body: |
+            Automated sync of bundled examples from the legacy Umple repository.
+
+            Source:
+            - Repo: `https://github.com/umple/umple.git`
+            - Ref: `${{ inputs.legacy_ref || 'master' }}`
+          branch: automation/sync-examples
+          delete-branch: true
