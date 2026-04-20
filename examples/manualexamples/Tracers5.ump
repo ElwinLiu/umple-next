@@ -1,9 +1,0 @@
-// this example generates tracespoints using
-// the Lttng tracer
-tracer Lttng;
-
-class Student
-{
-  Integer id;
-  trace id;
-}

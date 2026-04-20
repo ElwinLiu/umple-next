@@ -1,9 +1,0 @@
-// This example generates the warning message
-class A {
-  Integer attr;
-}
-
-class B {
-  isA A;
-  attr;
-}

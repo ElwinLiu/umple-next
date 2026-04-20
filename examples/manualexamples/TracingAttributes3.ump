@@ -1,7 +1,0 @@
-// This example traces getId() and setId()
-@SuppressWarnings("deprecation")
-class Student
-{
-  Integer id;
-  trace set,get id;
-}

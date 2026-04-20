@@ -1,9 +1,0 @@
-// This traces setId() and setName()
-@SuppressWarnings("deprecation")
-class Student
-{
-  Integer id;
-  String name;
-  trace id;
-  trace set name;
-}
