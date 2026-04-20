@@ -14,6 +14,22 @@ export interface GenerateTargetGroup {
   targets: GenerateTarget[]
 }
 
+function groupContainsDiagram(group: GenerateTargetGroup): boolean {
+  return group.targets.some((target) => target.action === 'diagram')
+}
+
+function sortGroupTargetsDiagramsFirst(group: GenerateTargetGroup): GenerateTargetGroup {
+  if (!groupContainsDiagram(group)) return group
+
+  return {
+    ...group,
+    targets: [
+      ...group.targets.filter((target) => target.action === 'diagram'),
+      ...group.targets.filter((target) => target.action !== 'diagram'),
+    ],
+  }
+}
+
 export const GENERATE_TARGET_GROUPS: GenerateTargetGroup[] = [
   {
     label: 'Programming Language Code',
@@ -25,7 +41,7 @@ export const GENERATE_TARGET_GROUPS: GenerateTargetGroup[] = [
       { id: 'RTCpp', label: 'C++ Code (Beta)', action: 'generate' },
       { id: 'Ruby', label: 'Ruby Code', action: 'generate' },
       { id: 'Cpp', label: 'C++ Code', action: 'generate' },
-      { id: 'SimpleCpp', label: 'Simple C++', action: 'generate' },
+      { id: 'SimpleCpp', label: 'Simple C++ (under development)', action: 'generate' },
     ],
   },
   {
@@ -33,7 +49,7 @@ export const GENERATE_TARGET_GROUPS: GenerateTargetGroup[] = [
     targets: [
       { id: 'classDiagram', label: 'GraphViz Class Diagram (SVG)', action: 'diagram', diagramView: 'class' },
       { id: 'entityRelationshipDiagram', label: 'Entity Relationship Diagram (GraphViz SVG)', action: 'diagram', diagramView: 'erd' },
-      { id: 'crud', label: 'Objects (CRUD)', action: 'diagram', diagramView: 'crud' },
+      { id: 'crud', label: 'CRUD User Interface', action: 'diagram', diagramView: 'crud' },
       { id: 'Sql', label: 'Sql', action: 'generate' },
     ],
   },
@@ -88,6 +104,10 @@ export const GENERATE_TARGET_GROUPS: GenerateTargetGroup[] = [
 ]
 
 export const GENERATE_TARGETS: GenerateTarget[] = GENERATE_TARGET_GROUPS.flatMap((g) => g.targets)
+export const APP_TOOLBAR_GENERATE_TARGET_GROUPS: GenerateTargetGroup[] = [
+  ...GENERATE_TARGET_GROUPS.filter(groupContainsDiagram).map(sortGroupTargetsDiagramsFirst),
+  ...GENERATE_TARGET_GROUPS.filter((group) => !groupContainsDiagram(group)),
+]
 export const GENERATE_ONLY_TARGET_GROUPS: GenerateTargetGroup[] = GENERATE_TARGET_GROUPS
   .map((group) => ({
     ...group,

@@ -7,7 +7,7 @@ import { useGenerate } from "../../hooks/useGenerate";
 import { useExamples } from "../../hooks/useExamples";
 import type { ExampleSetId } from "../../api/types";
 import {
-  GENERATE_TARGET_GROUPS,
+  APP_TOOLBAR_GENERATE_TARGET_GROUPS,
   getGenerateTarget,
 } from "../../generation/targets";
 import { AiConfigForm } from "@/components/sidebar/AiConfigForm";
@@ -144,7 +144,7 @@ export function AppToolbar() {
 
   const generateGroups = useMemo<ComboboxGroup[]>(
     () =>
-      GENERATE_TARGET_GROUPS.map((group) => ({
+      APP_TOOLBAR_GENERATE_TARGET_GROUPS.map((group) => ({
         label: group.label,
         options: group.targets.map((target) => ({
           value: target.id,
