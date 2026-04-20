@@ -12,8 +12,8 @@ COPY javaRunner/javaRunner.sh /
 RUN chmod +x /javaRunner.sh
 RUN chown -R nodeuser /output
 RUN chown -R nodeuser /input
-RUN chmod -R u=rwx /output
-RUN chmod -R u=r /input
+RUN chmod 700 /output
+RUN chmod 755 /input
 
 USER nodeuser
 
