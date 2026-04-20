@@ -11,7 +11,7 @@ const icon = <span data-testid="icon">I</span>
 describe('ActionRow', () => {
   it('shows no chevron when there are no children', () => {
     const { container } = render(
-      <ActionRow icon={icon} label="Compiling" status="running" />,
+      <ActionRow icon={icon} label="Generating" status="running" />,
     )
     expect(container.querySelector('svg.lucide-chevron-right')).toBeNull()
   })

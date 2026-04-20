@@ -33,6 +33,7 @@ export const GENERATE_TARGET_GROUPS: GenerateTargetGroup[] = [
     targets: [
       { id: 'classDiagram', label: 'GraphViz Class Diagram (SVG)', action: 'diagram', diagramView: 'class' },
       { id: 'entityRelationshipDiagram', label: 'Entity Relationship Diagram (GraphViz SVG)', action: 'diagram', diagramView: 'erd' },
+      { id: 'crud', label: 'Objects (CRUD)', action: 'diagram', diagramView: 'crud' },
       { id: 'Sql', label: 'Sql', action: 'generate' },
     ],
   },
@@ -96,9 +97,18 @@ export const GENERATE_ONLY_TARGET_GROUPS: GenerateTargetGroup[] = GENERATE_TARGE
 export const GENERATE_ONLY_TARGETS: GenerateTarget[] = GENERATE_ONLY_TARGET_GROUPS.flatMap((g) => g.targets)
 
 const TARGETS_BY_ID = new Map(GENERATE_TARGETS.map((target) => [target.id, target]))
+const DIAGRAM_TARGET_IDS_BY_VIEW = new Map(
+  GENERATE_TARGETS
+    .filter((target) => target.action === 'diagram' && target.diagramView)
+    .map((target) => [target.diagramView!, target.id])
+)
 
 export function getGenerateTarget(id: string): GenerateTarget | undefined {
   return TARGETS_BY_ID.get(id)
+}
+
+export function getGenerateTargetIdForView(view: DiagramView): string | null {
+  return DIAGRAM_TARGET_IDS_BY_VIEW.get(view) ?? null
 }
 
 export function resolveGenerateRequestLanguage(target: GenerateTarget, viewMode: DiagramView): string {

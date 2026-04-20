@@ -7,7 +7,7 @@ import { useCollabStore } from '../stores/collabStore'
 import { usePreferencesStore } from '../stores/preferencesStore'
 import { getYDoc } from './useCollab'
 import { replaceYText } from './useCollabTabs'
-import { compileAndRefresh } from './useCompiler'
+import { generateAndRefresh } from './useCompiler'
 
 interface SyncResult {
   success: boolean
@@ -19,7 +19,7 @@ interface SyncResult {
  * Extracts the sync pattern into a reusable hook.
  * sync(action, params) → api.sync() → editorStore.setCodeFromSync(response.code)
  *
- * Calling setCodeFromSync triggers the existing useCompiler debounce → compileAndRefresh() →
+ * Calling setCodeFromSync triggers the existing useCompiler debounce → generateAndRefresh() →
  * diagram updates from backend-authoritative state.
  */
 export function useDiagramSync() {
@@ -65,15 +65,15 @@ export function useDiagramSync() {
         modelIdPromiseRef.current = null
       }
 
-      // Compilation gate: if the backend rejected the edit (the mutated
-      // model failed compilation), do NOT update the code editor. Instead
-      // show an error toast and recompile to revert optimistic UI changes.
+      // Generation gate: if the backend rejected the edit (the mutated
+      // model became invalid), do NOT update the code editor. Instead
+      // show an error toast and regenerate to revert optimistic UI changes.
       if (response.rejected) {
         const msg = response.errors || 'Edit rejected — the change would produce invalid code'
         toast.error('Invalid edit', { description: simplifyError(msg) })
-        // Recompile the existing (unchanged) code so the diagram reverts
+        // Regenerate from the existing (unchanged) code so the diagram reverts
         // any optimistic node/edge additions or removals.
-        compileAndRefresh(resolveIsDark()).catch((e) => console.warn('Revert recompile failed:', e))
+        generateAndRefresh(resolveIsDark()).catch((e) => console.warn('Revert regeneration failed:', e))
         console.warn(`Diagram sync rejected (${action}):`, msg)
         return { success: false, error: msg }
       }
@@ -85,7 +85,7 @@ export function useDiagramSync() {
         toast.warning('Edit had no effect', {
           description: noEffectHint(action),
         })
-        compileAndRefresh(resolveIsDark()).catch((e) => console.warn('Revert recompile failed:', e))
+        generateAndRefresh(resolveIsDark()).catch((e) => console.warn('Revert regeneration failed:', e))
         return { success: false, error: 'no effect' }
       }
 

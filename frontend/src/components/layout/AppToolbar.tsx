@@ -1,13 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useEphemeralStore } from "../../stores/ephemeralStore";
-import { useSessionStore, type DiagramView } from "../../stores/sessionStore";
+import { useSessionStore } from "../../stores/sessionStore";
 import { usePreferencesStore } from "../../stores/preferencesStore";
-import { useCompile, useExecute } from "../../hooks/useExecute";
+import { useRegenerate, useExecute } from "../../hooks/useExecute";
 import { useGenerate } from "../../hooks/useGenerate";
 import { useExamples } from "../../hooks/useExamples";
 import type { ExampleSetId } from "../../api/types";
 import {
-  GENERATE_ONLY_TARGET_GROUPS,
+  GENERATE_TARGET_GROUPS,
   getGenerateTarget,
 } from "../../generation/targets";
 import { AiConfigForm } from "@/components/sidebar/AiConfigForm";
@@ -46,7 +46,6 @@ import {
 } from "@/components/ui/popover";
 import { Tip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { VIEW_MODE_GROUPS } from "../../constants/diagram";
 
 const shellBtn =
   "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink";
@@ -56,16 +55,14 @@ const iconBtn =
   "inline-flex size-8 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink";
 
 export function AppToolbar() {
-  const { compile } = useCompile();
+  const { regenerate, regenerating } = useRegenerate();
   const { execute } = useExecute();
   const openCommandPalette = useEphemeralStore((s) => s.openCommandPalette);
-  const compiling = useEphemeralStore((s) => s.compiling);
+  const generatingOutput = useEphemeralStore((s) => s.generatingOutput);
   const generatingCode = useEphemeralStore((s) => s.generatingCode);
   const executing = useEphemeralStore((s) => s.executing);
   const errorCount = useEphemeralStore((s) => s.outputErrorCount);
-  const autoCompile = usePreferencesStore((s) => s.autoCompile);
-  const viewMode = useSessionStore((s) => s.viewMode);
-  const setViewMode = useSessionStore((s) => s.setViewMode);
+  const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration);
   const generateTargetId = useSessionStore((s) => s.generateTargetId);
   const selectedExampleId = useSessionStore((s) => s.selectedExampleId);
   const selectedExampleSetId = useSessionStore((s) => s.selectedExampleSetId);
@@ -82,23 +79,6 @@ export function AppToolbar() {
   const [activeExampleSetId, setActiveExampleSetId] =
     useState<ExampleSetId | null>(null);
   const [exampleQuery, setExampleQuery] = useState("");
-
-  const viewModeGroups = useMemo<ComboboxGroup[]>(
-    () =>
-      VIEW_MODE_GROUPS.map((group) => ({
-        label: group.label,
-        options: group.modes.map((mode) => ({
-          value: mode.value,
-          label: mode.longLabel ?? mode.label,
-          triggerLabel: mode.label,
-          testId: `diagram-view-${mode.value}`,
-          keywords: [mode.label, mode.longLabel, group.label].filter(
-            Boolean,
-          ) as string[],
-        })),
-      })),
-    [],
-  );
 
   const selectedExampleSet = useMemo(
     () =>
@@ -164,7 +144,7 @@ export function AppToolbar() {
 
   const generateGroups = useMemo<ComboboxGroup[]>(
     () =>
-      GENERATE_ONLY_TARGET_GROUPS.map((group) => ({
+      GENERATE_TARGET_GROUPS.map((group) => ({
         label: group.label,
         options: group.targets.map((target) => ({
           value: target.id,
@@ -175,33 +155,33 @@ export function AppToolbar() {
     [],
   );
 
-  // Compile success micro-interaction
-  const prevCompilingRef = useRef(compiling);
-  const [justCompiled, setJustCompiled] = useState(false);
+  // Regeneration success micro-interaction
+  const prevGeneratingOutputRef = useRef(generatingOutput);
+  const [justRegenerated, setJustRegenerated] = useState(false);
 
   useEffect(() => {
-    const didJustCompile =
-      prevCompilingRef.current && !compiling && errorCount === 0;
-    prevCompilingRef.current = compiling;
+    const didJustRegenerate =
+      prevGeneratingOutputRef.current && !generatingOutput && errorCount === 0;
+    prevGeneratingOutputRef.current = generatingOutput;
 
-    if (didJustCompile) {
-      setJustCompiled(true);
-      const timer = setTimeout(() => setJustCompiled(false), 1200);
+    if (didJustRegenerate) {
+      setJustRegenerated(true);
+      const timer = setTimeout(() => setJustRegenerated(false), 1200);
       return () => clearTimeout(timer);
     }
-  }, [compiling, errorCount]);
+  }, [generatingOutput, errorCount]);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
         e.stopPropagation();
-        compile();
+        regenerate();
       }
     };
     window.addEventListener("keydown", handler, true);
     return () => window.removeEventListener("keydown", handler, true);
-  }, [compile]);
+  }, [regenerate]);
 
   useEffect(() => {
     if (selectedExampleSetId) {
@@ -489,48 +469,36 @@ export function AppToolbar() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {!autoCompile && (
-            <Tip content="Compile (Ctrl+Enter)" side="bottom">
+          {!dynamicGeneration && (
+            <Tip content="Regenerate output (Ctrl+Enter)" side="bottom">
               <button
-                onClick={compile}
-                disabled={compiling}
-                aria-label={compiling ? "Compiling" : "Compile (Ctrl+Enter)"}
-                data-testid="compile-button"
+                onClick={regenerate}
+                disabled={regenerating}
+                aria-label={regenerating ? "Regenerating output" : "Regenerate output (Ctrl+Enter)"}
+                data-testid="regenerate-button"
                 className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/70 bg-surface-0 px-2.5 text-xs font-medium text-ink-muted shadow-sm transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-not-allowed disabled:opacity-70"
               >
-                {compiling ? (
+                {regenerating ? (
                   <Loader2 className="size-3.5 shrink-0 animate-spin" />
-                ) : justCompiled ? (
+                ) : justRegenerated ? (
                   <Check className="size-3.5 shrink-0 text-status-success animate-fade-in" />
                 ) : (
                   <Hammer className="size-3.5 shrink-0" />
                 )}
                 <span className="truncate">
-                  {compiling ? (
-                    "Compiling..."
-                  ) : justCompiled ? (
+                  {regenerating ? (
+                    "Regenerating..."
+                  ) : justRegenerated ? (
                     <span className="text-status-success animate-fade-in">
-                      Compiled
+                      Regenerated
                     </span>
                   ) : (
-                    "Compile"
+                    "Regenerate"
                   )}
                 </span>
               </button>
             </Tip>
           )}
-
-          <Combobox
-            groups={viewModeGroups}
-            value={viewMode}
-            onSelect={(value) => setViewMode(value as DiagramView)}
-            searchPlaceholder="Search views..."
-            className="w-auto h-8 border border-border/70 bg-surface-0 px-2.5 py-1 font-medium text-ink-muted shadow-sm hover:text-ink hover:bg-surface-2 focus:border-border-strong focus:ring-0"
-            contentClassName="w-64 min-w-[16rem]"
-            listClassName="max-h-80"
-            ariaLabel="Diagram view"
-            data-tour="diagram-view"
-          />
 
           <div data-tour="generate">
             <Combobox
@@ -553,7 +521,9 @@ export function AppToolbar() {
                     <Code className="size-3.5 shrink-0" />
                   )}
                   <span className="truncate">
-                    {generatingCode ? "Generating..." : "Generate"}
+                    {generatingCode
+                      ? "Generating..."
+                      : selectedGenerateTarget?.label ?? "Generate"}
                   </span>
                   <ChevronDown className="size-3 shrink-0" />
                 </>
@@ -642,7 +612,7 @@ export function AppToolbar() {
         />
       </div>
 
-      {(compiling || generatingCode || executing) && (
+      {(regenerating || generatingCode || executing) && (
         <div className="absolute bottom-0 left-0 right-0 h-0.5 overflow-hidden">
           <div className="h-full w-1/4 bg-brand animate-progress-indeterminate" />
         </div>

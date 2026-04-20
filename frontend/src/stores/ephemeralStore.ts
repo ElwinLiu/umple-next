@@ -116,7 +116,7 @@ interface EphemeralState {
   selectedEdgeId: string | null
   editingNodeId: string | null
   editingField: 'name' | 'newAttribute' | 'newMethod' | null
-  compiling: boolean
+  generatingOutput: boolean
 
   // Editor ephemeral
   diffPreview: DiffPreviewState | null
@@ -160,7 +160,7 @@ interface EphemeralState {
   setSelectedNode: (id: string | null) => void
   setSelectedEdge: (id: string | null) => void
   setEditing: (nodeId: string | null, field: 'name' | 'newAttribute' | 'newMethod' | null) => void
-  setCompiling: (compiling: boolean) => void
+  setGeneratingOutput: (generatingOutput: boolean) => void
 
 
   // LSP actions
@@ -212,7 +212,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   selectedEdgeId: null,
   editingNodeId: null,
   editingField: null,
-  compiling: false,
+  generatingOutput: false,
 
   // Editor ephemeral
   diffPreview: null,
@@ -300,7 +300,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   setSelectedNode: (selectedNodeId) => set({ selectedNodeId }),
   setSelectedEdge: (selectedEdgeId) => set({ selectedEdgeId }),
   setEditing: (editingNodeId, editingField) => set({ editingNodeId, editingField }),
-  setCompiling: (compiling) => set({ compiling }),
+  setGeneratingOutput: (generatingOutput) => set({ generatingOutput }),
 
 
   // LSP actions

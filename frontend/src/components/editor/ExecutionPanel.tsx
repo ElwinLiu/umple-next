@@ -154,7 +154,7 @@ export function CompileStatusStrip() {
         {isSuccess ? (
           <>
             <AnimatedCheck className="size-3.5 text-status-success" />
-            <span className="text-ink-muted">Compiled successfully</span>
+            <span className="text-ink-muted">Output regenerated</span>
           </>
         ) : (
           <>

@@ -3,7 +3,7 @@ import { useSessionStore } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
 import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
-import { compileAndRefresh } from './useCompiler'
+import { generateAndRefresh } from './useCompiler'
 
 /** Sends code to the backend execute endpoint (code-exec service). */
 export function useExecute() {
@@ -34,21 +34,21 @@ export function useExecute() {
   return { execute }
 }
 
-/** Triggers an immediate compile + diagram refresh (bypasses the auto-compile debounce). */
-export function useCompile() {
-  const [compiling, setCompiling] = useState(false)
-  const compilingRef = useRef(false)
+/** Triggers an immediate regenerate of the currently selected output target. */
+export function useRegenerate() {
+  const [regenerating, setRegenerating] = useState(false)
+  const regeneratingRef = useRef(false)
   const isDark = useIsDark()
 
-  const compile = useCallback(async () => {
-    if (compilingRef.current) return
-    compilingRef.current = true
-    setCompiling(true)
+  const regenerate = useCallback(async () => {
+    if (regeneratingRef.current) return
+    regeneratingRef.current = true
+    setRegenerating(true)
 
     try {
-      const { success } = await compileAndRefresh(isDark)
+      const { success } = await generateAndRefresh(isDark)
       if (success) {
-        useEphemeralStore.getState().setExecutionOutput('Compiled successfully.')
+        useEphemeralStore.getState().setExecutionOutput('Output regenerated.')
         useEphemeralStore.getState().setOutputView('strip')
       } else {
         // Show strip for warnings-only (errors auto-open panel via setExecutionOutput)
@@ -58,12 +58,12 @@ export function useCompile() {
         }
       }
     } catch {
-      // compileAndRefresh handles error reporting
+      // generateAndRefresh handles error reporting
     } finally {
-      compilingRef.current = false
-      setCompiling(false)
+      regeneratingRef.current = false
+      setRegenerating(false)
     }
   }, [isDark])
 
-  return { compile, compiling }
+  return { regenerate, regenerating }
 }

@@ -8,7 +8,7 @@ describe('preferencesStore', () => {
     usePreferencesStore.persist.clearStorage()
     usePreferencesStore.setState({
       showSidebar: false,
-      autoCompile: true,
+      dynamicGeneration: true,
       theme: 'system',
     })
   })
@@ -17,8 +17,8 @@ describe('preferencesStore', () => {
     expect(usePreferencesStore.getState().showSidebar).toBe(false)
   })
 
-  it('enables auto-compile by default', () => {
-    expect(usePreferencesStore.getState().autoCompile).toBe(true)
+  it('enables dynamic generation by default', () => {
+    expect(usePreferencesStore.getState().dynamicGeneration).toBe(true)
   })
 })
 

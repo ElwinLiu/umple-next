@@ -318,7 +318,7 @@ type processDiagramParams struct {
 
 // processDiagram generates a diagram from a model directory that already
 // contains the entry .ump file. It returns a DiagramResponse or an error string.
-// This is shared by both the /api/diagram endpoint and the merged /api/compile
+// This is shared by both the /api/diagram endpoint and the merged /api/generate
 // endpoint when diagramType is provided.
 func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
 	outputKind, ok := diagramTypeInfo[p.diagramType]

@@ -3,8 +3,7 @@ import { useEphemeralStore } from "../../stores/ephemeralStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { useGenerate } from "../../hooks/useGenerate";
 import { useExamples } from "../../hooks/useExamples";
-import { GENERATE_ONLY_TARGET_GROUPS } from "../../generation/targets";
-import { DIAGRAM_VIEW_ICON, VIEW_MODE_GROUPS } from "../../constants/diagram";
+import { GENERATE_TARGET_GROUPS } from "../../generation/targets";
 import type { ExampleCategoryId } from "../../api/types";
 import {
   LayoutGrid,
@@ -46,7 +45,6 @@ export function CommandPalette() {
     setRenderMode,
     renderMode,
   } = useEphemeralStore();
-  const setViewMode = useSessionStore((s) => s.setViewMode);
   const viewMode = useSessionStore((s) => s.viewMode);
   const umpleModel = useSessionStore((s) => s.umpleModel);
   const generate = useGenerate();
@@ -112,7 +110,7 @@ export function CommandPalette() {
       data-testid="command-palette"
     >
       <CommandInput
-        placeholder="Type a command or search examples..."
+        placeholder="Search outputs, views, and examples..."
         data-testid="command-palette-input"
         value={search}
         onValueChange={setSearch}
@@ -121,28 +119,7 @@ export function CommandPalette() {
       <CommandList data-testid="command-palette-results">
         <CommandEmpty>No results found</CommandEmpty>
 
-        {VIEW_MODE_GROUPS.map((group) => (
-          <CommandGroup key={group.label} heading={group.label}>
-            {group.modes.map((mode) => (
-              <CommandItem
-                key={mode.value}
-                onSelect={() => {
-                  setViewMode(mode.value);
-                  useEphemeralStore.getState().setRightPanelView("diagram");
-                  closeCommandPalette();
-                }}
-                data-testid={`command-item-diagram-${mode.value}`}
-              >
-                <DIAGRAM_VIEW_ICON />
-                {mode.longLabel ?? mode.label}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-        ))}
-
-        <CommandSeparator />
-
-        {GENERATE_ONLY_TARGET_GROUPS.map((group) => (
+        {GENERATE_TARGET_GROUPS.map((group) => (
           <CommandGroup key={group.label} heading={group.label}>
             {group.targets.map((target) => (
               <CommandItem
