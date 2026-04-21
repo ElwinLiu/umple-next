@@ -53,6 +53,29 @@ const toolbarBtn =
   "flex items-center gap-1 px-1.5 py-0.5 text-xs font-medium rounded text-ink-muted hover:text-ink hover:bg-surface-2 transition-colors cursor-pointer";
 const iconBtn =
   "inline-flex size-8 items-center justify-center rounded-lg text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink";
+const acknowledgementLinkBtn =
+  "inline-flex items-center rounded-md px-0.5 py-1 text-ink-muted/80 transition-colors hover:bg-surface-2 hover:text-ink xl:px-1";
+
+const toolbarAcknowledgements = [
+  {
+    href: "https://alliancecan.ca/en",
+    label: "Digital Research Alliance of Canada",
+    src: "/alliance-logo.jpeg",
+    imageClassName: "h-[13px] xl:h-[16px]",
+  },
+  {
+    href: "https://www.nserc-crsng.gc.ca/ase-oro/Details-Detailles_eng.asp?id=752498",
+    label: "NSERC",
+    src: "/nserc-logo.png",
+    imageClassName: "h-[15px] xl:h-[18px]",
+  },
+  {
+    href: "https://www.uottawa.ca/faculty-engineering/school-electrical-engineering-computer-science",
+    label: "University of Ottawa",
+    src: "/uottawa-logo.svg",
+    imageClassName: "h-[16px] xl:h-[20px]",
+  },
+] as const;
 
 export function AppToolbar() {
   const { regenerate, regenerating } = useRegenerate();
@@ -437,38 +460,6 @@ export function AppToolbar() {
             </Popover>
           </div>
 
-          <DropdownMenu>
-            <Tip content="Tasks" side="bottom">
-              <DropdownMenuTrigger asChild>
-                <button
-                  className={cn(
-                    shellBtn,
-                    "border border-border/70 bg-surface-0 shadow-sm",
-                  )}
-                  aria-label="Tasks"
-                >
-                  <ClipboardList className="size-3.5" />
-                  Tasks
-                  <ChevronDown className="size-3 shrink-0" />
-                </button>
-              </DropdownMenuTrigger>
-            </Tip>
-            <DropdownMenuContent align="start">
-              <DropdownMenuItem
-                onSelect={() => useTaskStore.getState().openSheet("create")}
-              >
-                <Plus className="size-3.5" />
-                Create Task
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => useTaskStore.getState().openSheet("manage")}
-              >
-                <Search className="size-3.5" />
-                Manage Task
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
           {!dynamicGeneration && (
             <Tip content="Regenerate output (Ctrl+Enter)" side="bottom">
               <button
@@ -581,10 +572,57 @@ export function AppToolbar() {
               <AiConfigForm />
             </PopoverContent>
           </Popover>
+
+          <DropdownMenu>
+            <Tip content="Tasks" side="bottom">
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={cn(
+                    shellBtn,
+                    "border border-border/70 bg-surface-0 shadow-sm",
+                  )}
+                  aria-label="Tasks"
+                >
+                  <ClipboardList className="size-3.5" />
+                  Tasks
+                  <ChevronDown className="size-3 shrink-0" />
+                </button>
+              </DropdownMenuTrigger>
+            </Tip>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem
+                onSelect={() => useTaskStore.getState().openSheet("create")}
+              >
+                <Plus className="size-3.5" />
+                Create Task
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onSelect={() => useTaskStore.getState().openSheet("manage")}
+              >
+                <Search className="size-3.5" />
+                Manage Task
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       <div className="flex items-center gap-1 shrink-0">
+        <TopLinkIconButton
+          href="https://umple.org/questions"
+          label="Ask a question"
+          icon={CircleHelp}
+        />
+        <TopLinkIconButton
+          href="https://github.com/umple/umpleonline"
+          label="GitHub repository"
+          icon={GitFork}
+        />
+        <TopLinkIconButton
+          href="https://umple.org/privacy"
+          label="Privacy and security"
+          icon={Shield}
+        />
         <Tip content="Search commands and examples (Ctrl+K)" side="bottom">
           <button
             onClick={openCommandPalette}
@@ -595,21 +633,32 @@ export function AppToolbar() {
           </button>
         </Tip>
 
-        <TopLinkIconButton
-          href="https://umple.org/privacy"
-          label="Privacy and security"
-          icon={Shield}
-        />
-        <TopLinkIconButton
-          href="https://github.com/umple/umpleonline"
-          label="GitHub repository"
-          icon={GitFork}
-        />
-        <TopLinkIconButton
-          href="https://umple.org/questions"
-          label="Ask a question"
-          icon={CircleHelp}
-        />
+        <div
+          className="ml-1 hidden shrink-0 items-center gap-0.5 border-l border-border/70 pl-1.5 lg:flex xl:gap-1.5 xl:pl-2"
+          aria-label="Project acknowledgements"
+          data-testid="toolbar-acknowledgements"
+        >
+          {toolbarAcknowledgements.map((acknowledgement) => (
+            <Tip key={acknowledgement.label} content={acknowledgement.label} side="bottom">
+              <a
+                href={acknowledgement.href}
+                target="_blank"
+                rel="noreferrer"
+                className={acknowledgementLinkBtn}
+                aria-label={acknowledgement.label}
+              >
+                <img
+                  src={acknowledgement.src}
+                  alt=""
+                  className={cn(
+                    "w-auto shrink-0 object-contain",
+                    acknowledgement.imageClassName,
+                  )}
+                />
+              </a>
+            </Tip>
+          ))}
+        </div>
       </div>
 
       {(regenerating || generatingCode || executing) && (
