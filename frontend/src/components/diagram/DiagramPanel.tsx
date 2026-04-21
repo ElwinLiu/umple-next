@@ -1,5 +1,5 @@
 import { type ReactNode, useCallback, useEffect } from 'react'
-import { BookOpen, Download } from 'lucide-react'
+import { AlertTriangle, BookOpen, Download } from 'lucide-react'
 import { toSvg, toPng } from 'html-to-image'
 import JSZip from 'jszip'
 import { UmpleDiagram } from './UmpleDiagram'
@@ -11,6 +11,8 @@ import { ObjectExplorer } from '../crud/ObjectExplorer'
 import { CanvasBanner } from '../layout/CanvasBanner'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
+import { usePreferencesStore } from '../../stores/preferencesStore'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { ErrorBanner } from '@/components/ui/error-banner'
 import { cn } from '@/lib/utils'
@@ -32,6 +34,9 @@ export function DiagramPanel() {
   const storedLayout = useSessionStore((s) => s.storedLayout)
   const code = useSessionStore((s) => s.code)
   const modelId = useSessionStore((s) => s.modelId)
+  const activeTabId = useSessionStore((s) => s.activeTabId)
+  const generateTargetId = useSessionStore((s) => s.generateTargetId)
+  const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration)
   const renderMode = useEphemeralStore((s) => s.renderMode)
   const generatingOutput = useEphemeralStore((s) => s.generatingOutput)
   const setRenderMode = useEphemeralStore((s) => s.setRenderMode)
@@ -41,7 +46,13 @@ export function DiagramPanel() {
   const generatedKind = useEphemeralStore((s) => s.generatedKind)
   const generatedIframeUrl = useEphemeralStore((s) => s.generatedIframeUrl)
   const generatedDownloads = useEphemeralStore((s) => s.generatedDownloads)
+  const generatedTargetId = useEphemeralStore((s) => s.generatedTargetId)
   const generatedLanguage = useEphemeralStore((s) => s.generatedLanguage)
+  const generatedSourceCode = useEphemeralStore((s) => s.generatedSourceCode)
+  const generatedSourceTabId = useEphemeralStore((s) => s.generatedSourceTabId)
+  const diagramSourceCode = useEphemeralStore((s) => s.diagramSourceCode)
+  const diagramSourceTabId = useEphemeralStore((s) => s.diagramSourceTabId)
+  const diagramTargetId = useEphemeralStore((s) => s.diagramTargetId)
   const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const generatedError = useEphemeralStore((s) => s.generatedError)
   const generationRequested = useEphemeralStore((s) => s.generationRequested)
@@ -55,8 +66,6 @@ export function DiagramPanel() {
   const canToggleRenderer = viewMode === 'class' && hasEditableModel
   const showEditable = canToggleRenderer && renderMode === 'editable'
   const editableLoading = viewMode === 'class' && generatingOutput && !hasEditableModel && !currentSvg
-  const showEmptyCanvasState = viewMode === 'class' && !generatingOutput && !hasEditableModel && !currentSvg
-
   // Default: all views start in graphviz mode
   useEffect(() => {
     setRenderMode('graphviz')
@@ -67,6 +76,33 @@ export function DiagramPanel() {
   const mountEditable = canToggleRenderer
   const mountHtml = outputKind === 'html' && !!currentHtml
   const mountGv = outputKind === 'gv' && !!currentSvg
+  const hasVisibleDiagramOutput = Boolean(hasDiagram || viewMode === 'crud')
+  const showEmptyCanvasState = viewMode === 'class' && !generatingOutput && !hasEditableModel && !currentSvg
+  const diagramOutputStale = Boolean(
+    rightPanelView === 'diagram' &&
+    hasVisibleDiagramOutput &&
+    !generatingOutput &&
+    !dynamicGeneration &&
+    diagramSourceTabId &&
+    (
+      diagramSourceTabId !== activeTabId ||
+      diagramSourceCode !== code ||
+      diagramTargetId !== generateTargetId
+    ),
+  )
+  const hasGeneratedOutput = Boolean(generatedCode || generatedHtml || generatedIframeUrl)
+  const generatedOutputStale = Boolean(
+    generationRequested &&
+    hasGeneratedOutput &&
+    !generatingCode &&
+    !dynamicGeneration &&
+    generatedSourceTabId &&
+    (
+      generatedSourceTabId !== activeTabId ||
+      generatedSourceCode !== code ||
+      generatedTargetId !== generateTargetId
+    ),
+  )
 
   const handleExport = useCallback(async (format: string) => {
     // Umple source code — zip all tabs client-side
@@ -113,55 +149,82 @@ export function DiagramPanel() {
       <CanvasBanner />
       <div className="flex-1 relative" data-testid="diagram-canvas">
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
-          <div className="absolute top-2 left-0 right-0 z-10 flex justify-center pointer-events-none">
-            <CanvasToolbar
-              hasDiagram={hasDiagram}
-              onExport={handleExport}
-              canToggleRenderer={canToggleRenderer}
-              renderMode={renderMode}
-              onRenderModeChange={setRenderMode}
-              showDisplayOptions={!showHtml}
-            />
-          </div>
-          {mountEditable && (
-            <DiagramLayer active={showEditable}>
-              <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} storedLayout={storedLayout ?? undefined} editable={showEditable} />
-            </DiagramLayer>
-          )}
-          {mountHtml && (
-            <DiagramLayer active={showHtml}>
-              <HtmlDiagramView html={currentHtml} viewMode={viewMode} />
-            </DiagramLayer>
-          )}
-          {mountGv && (
-            <DiagramLayer active={showGv}>
-              <SmartSvgView svg={currentSvg} viewMode={viewMode} />
-            </DiagramLayer>
-          )}
-          {editableLoading && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-ink-faint text-sm">
-              <div className="flex flex-col gap-2.5 w-3/4 max-w-sm">
-                <div className="h-3 rounded animate-shimmer" style={{ width: '90%' }} />
-                <div className="h-3 rounded animate-shimmer" style={{ width: '70%', animationDelay: '0.15s' }} />
-                <div className="h-3 rounded animate-shimmer" style={{ width: '80%', animationDelay: '0.3s' }} />
-                <div className="h-3 rounded animate-shimmer" style={{ width: '55%', animationDelay: '0.45s' }} />
-              </div>
-              <span>Loading diagram...</span>
+          <div
+            className={cn(
+              'relative h-full transition-[filter,opacity] duration-200',
+              diagramOutputStale && 'pointer-events-none opacity-60 grayscale',
+            )}
+          >
+            <div className="absolute top-2 left-0 right-0 z-10 flex justify-center pointer-events-none">
+              <CanvasToolbar
+                hasDiagram={hasDiagram}
+                onExport={handleExport}
+                canToggleRenderer={canToggleRenderer}
+                renderMode={renderMode}
+                onRenderModeChange={setRenderMode}
+                showDisplayOptions={!showHtml}
+              />
             </div>
-          )}
-          {showEmptyCanvasState && (
-            <div className="absolute inset-0 flex items-center justify-center p-6">
-              <Button
-                type="button"
-                size="lg"
-                variant="outline"
-                onClick={openExamplesPalette}
-                className="bg-surface-0/88 border-border text-ink shadow-sm backdrop-blur-sm hover:bg-surface-1 hover:border-border-strong"
-                data-testid="empty-canvas-open-examples"
+            {mountEditable && (
+              <DiagramLayer active={showEditable}>
+                <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} storedLayout={storedLayout ?? undefined} editable={showEditable} />
+              </DiagramLayer>
+            )}
+            {mountHtml && (
+              <DiagramLayer active={showHtml}>
+                <HtmlDiagramView html={currentHtml} viewMode={viewMode} />
+              </DiagramLayer>
+            )}
+            {mountGv && (
+              <DiagramLayer active={showGv}>
+                <SmartSvgView svg={currentSvg} viewMode={viewMode} />
+              </DiagramLayer>
+            )}
+            {editableLoading && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 text-ink-faint text-sm">
+                <div className="flex flex-col gap-2.5 w-3/4 max-w-sm">
+                  <div className="h-3 rounded animate-shimmer" style={{ width: '90%' }} />
+                  <div className="h-3 rounded animate-shimmer" style={{ width: '70%', animationDelay: '0.15s' }} />
+                  <div className="h-3 rounded animate-shimmer" style={{ width: '80%', animationDelay: '0.3s' }} />
+                  <div className="h-3 rounded animate-shimmer" style={{ width: '55%', animationDelay: '0.45s' }} />
+                </div>
+                <span>Loading diagram...</span>
+              </div>
+            )}
+            {showEmptyCanvasState && (
+              <div className="absolute inset-0 flex items-center justify-center p-6">
+                <Button
+                  type="button"
+                  size="lg"
+                  variant="outline"
+                  onClick={openExamplesPalette}
+                  className="bg-surface-0/88 border-border text-ink shadow-sm backdrop-blur-sm hover:bg-surface-1 hover:border-border-strong"
+                  data-testid="empty-canvas-open-examples"
+                >
+                  <BookOpen className="size-4" />
+                  Open examples
+                </Button>
+              </div>
+            )}
+            {viewMode === 'crud' && (
+              <div className="absolute inset-0 bg-surface-0 z-20">
+                <ObjectExplorer />
+              </div>
+            )}
+          </div>
+          {diagramOutputStale && (
+            <div
+              className="absolute inset-0 z-30 bg-surface-1/20"
+              data-testid="diagram-output-stale-overlay"
+            >
+              <Alert
+                variant="warning"
+                className="pointer-events-none absolute right-3 top-3 max-w-sm bg-surface-0/92 shadow-sm backdrop-blur-sm"
               >
-                <BookOpen className="size-4" />
-                Open examples
-              </Button>
+                <AlertTriangle />
+                <AlertTitle>Diagram is out of date.</AlertTitle>
+                <AlertDescription>Regenerate to refresh it.</AlertDescription>
+              </Alert>
             </div>
           )}
         </div>
@@ -183,28 +246,39 @@ export function DiagramPanel() {
                 </div>
                 <span>Generating {generatedLanguage}...</span>
               </div>
-            ) : (generatedCode || generatedHtml || generatedIframeUrl) ? (
-              <div className="flex-1 min-h-0 flex flex-col animate-fade-in">
-              <GeneratedOutputView
-                kind={generatedKind}
-                code={generatedCode}
-                html={generatedHtml}
-                iframeUrl={generatedIframeUrl}
-                language={generatedLanguage}
-                downloads={generatedDownloads}
-              />
+            ) : hasGeneratedOutput ? (
+              <div className="relative flex-1 min-h-0 animate-fade-in">
+                <div
+                  className={cn(
+                    'h-full min-h-0 transition-[filter,opacity] duration-200',
+                    generatedOutputStale && 'pointer-events-none opacity-60 grayscale',
+                  )}
+                >
+                  <GeneratedOutputView
+                    kind={generatedKind}
+                    code={generatedCode}
+                    html={generatedHtml}
+                    iframeUrl={generatedIframeUrl}
+                    language={generatedLanguage}
+                    downloads={generatedDownloads}
+                  />
+                </div>
+                {generatedOutputStale && (
+                  <div
+                    className="absolute inset-0 z-10 bg-surface-1/20"
+                    data-testid="generated-output-stale-overlay"
+                  >
+                    <div className="pointer-events-none absolute right-3 top-3 rounded-md border border-border bg-surface-0/92 px-3 py-1.5 text-xs text-ink-muted shadow-sm backdrop-blur-sm">
+                      Output is out of date. Regenerate to refresh it.
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="flex-1 flex items-center justify-center text-ink-faint text-sm">
                 No output returned — try a different model or language
               </div>
             )}
-          </div>
-        )}
-
-        {viewMode === 'crud' && rightPanelView === 'diagram' && (
-          <div className="absolute inset-0 bg-surface-0 z-20">
-            <ObjectExplorer />
           </div>
         )}
       </div>

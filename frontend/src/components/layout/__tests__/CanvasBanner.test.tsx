@@ -1,20 +1,13 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import { CanvasBanner } from '../CanvasBanner'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
+import { useSessionStore } from '@/stores/sessionStore'
 
 vi.mock('@/components/ui/tooltip', () => ({
   Tip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}))
-
-vi.mock('@/components/ui/combobox', () => ({
-  Combobox: () => <button type="button">Change language</button>,
-}))
-
-vi.mock('@/hooks/useGenerate', () => ({
-  useGenerate: () => vi.fn(),
 }))
 
 afterEach(() => {
@@ -27,24 +20,22 @@ afterEach(() => {
     generatingCode: false,
     generatedTargetId: 'Java',
   })
+  useSessionStore.setState({
+    viewMode: 'class',
+    generateTargetId: 'classDiagram',
+  })
 })
 
 describe('CanvasBanner', () => {
-  it('does not switch canvas tabs with Ctrl+number', () => {
+  it('shows the current rendered output label', () => {
     useEphemeralStore.setState({
       rightPanelView: 'generated',
-      generationRequested: true,
       generatedTargetId: 'Java',
     })
 
     render(<CanvasBanner />)
 
-    fireEvent.keyDown(window, { key: '1', ctrlKey: true })
-    expect(useEphemeralStore.getState().rightPanelView).toBe('generated')
-
-    useEphemeralStore.setState({ rightPanelView: 'diagram' })
-    fireEvent.keyDown(window, { key: '2', ctrlKey: true })
-    expect(useEphemeralStore.getState().rightPanelView).toBe('diagram')
+    expect(screen.getByText('Java Code')).toBeDefined()
   })
 
   it("keeps Ctrl+' bound to the output panel toggle", () => {

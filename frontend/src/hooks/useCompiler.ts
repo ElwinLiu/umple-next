@@ -56,12 +56,28 @@ export async function generateAndRefresh(
   signal?: AbortSignal,
   targetId?: string,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
-  const { code, modelId, setModelId, setUmpleModel, tabs, activeTabId, generateTargetId, viewMode } = useSessionStore.getState()
+  const { code, modelId, setModelId, setUmpleModel, tabs, activeTabId, generateTargetId, viewMode, setViewMode } = useSessionStore.getState()
   const { clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
-  const { setGeneratingOutput, setExecutionOutput, setGeneratingCode, setGeneratedError, setGeneratedOutput } = useEphemeralStore.getState()
+  const {
+    setGeneratingOutput,
+    setExecutionOutput,
+    setGeneratingCode,
+    setGeneratedError,
+    setGeneratedOutput,
+    setRightPanelView,
+    markDiagramFresh,
+  } = useEphemeralStore.getState()
   const target = getGenerateTarget(targetId ?? generateTargetId)
+  const sourceSnapshot = { code, tabId: activeTabId }
 
   if (!code.trim() || !target) return { success: false, model: null }
+
+  if (target.action === 'diagram' && target.diagramView) {
+    setViewMode(target.diagramView)
+    setRightPanelView('diagram')
+  } else {
+    setRightPanelView('generated')
+  }
 
   setGeneratingOutput(true)
   setExecutionOutput('')
@@ -159,6 +175,9 @@ export async function generateAndRefresh(
           activeView === 'class' ? storedLayout : undefined,
         )
       }
+      if (success) {
+        markDiagramFresh(target.id, sourceSnapshot)
+      }
     } else {
       const requestLanguage = resolveGenerateRequestLanguage(target, viewMode)
       const hasInlineGeneratedPayload = Boolean(
@@ -178,7 +197,7 @@ export async function generateAndRefresh(
           iframeUrl: res.generatedIframeUrl,
           downloads: res.generatedDownloads,
           modelId: res.modelId,
-        }, target.id)
+        }, target.id, sourceSnapshot)
 
         if (res.errors) {
           setExecutionOutput('', res.errors)

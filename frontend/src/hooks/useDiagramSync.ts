@@ -8,6 +8,7 @@ import { usePreferencesStore } from '../stores/preferencesStore'
 import { getYDoc } from './useCollab'
 import { replaceYText } from './useCollabTabs'
 import { generateAndRefresh } from './useCompiler'
+import { getGenerateTargetIdForView } from '../generation/targets'
 
 interface SyncResult {
   success: boolean
@@ -93,15 +94,37 @@ export function useDiagramSync() {
       // which reflects the actual state, even when umplesync also produces
       // warnings/errors.
       if (response.code) {
-        useSessionStore.getState().setCodeFromSync(response.code)
+        const session = useSessionStore.getState()
+        session.setCodeFromSync(response.code)
+
+        const {
+          renderMode,
+          rightPanelView,
+          markDiagramFresh,
+        } = useEphemeralStore.getState()
+        const diagramTargetId =
+          getGenerateTargetIdForView(session.viewMode) ?? session.generateTargetId
+
+        // Editable class-diagram actions already mutate the visible diagram in-place,
+        // so in manual mode they should not immediately mark that same diagram stale.
+        if (
+          session.viewMode === 'class' &&
+          renderMode === 'editable' &&
+          rightPanelView === 'diagram' &&
+          diagramTargetId
+        ) {
+          markDiagramFresh(diagramTargetId, {
+            code: response.code,
+            tabId: session.activeTabId,
+          })
+        }
 
         // In collab mode, also write to Y.Text so the change propagates
         // to other collaborators. The editor effect no longer does this.
         if (useCollabStore.getState().isCollaborating) {
           const doc = getYDoc()
           if (doc) {
-            const { activeTabId } = useSessionStore.getState()
-            replaceYText(doc.getText(`tab:${activeTabId}`), response.code!)
+            replaceYText(doc.getText(`tab:${session.activeTabId}`), response.code!)
           }
         }
       }
