@@ -150,6 +150,19 @@ async function installGenerationRoutes(page: Page, requests: GenerationRequest[]
   })
 }
 
+async function installDiagramRoutes(page: Page, requests: GenerationRequest[]) {
+  await page.route('**/api/diagram', async (route) => {
+    const body = route.request().postDataJSON() as GenerationRequest
+    requests.push(body)
+    await route.fulfill({
+      json: {
+        modelId: 'playwright-model',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>',
+      },
+    })
+  })
+}
+
 test.describe('Generation UI', () => {
   test('uses class diagram generation as the default output target', async ({ page }) => {
     const requests: GenerationRequest[] = []
@@ -170,6 +183,59 @@ test.describe('Generation UI', () => {
     await expect
       .poll(() => getLastRequest(requests)?.language ?? null)
       .toBe(null)
+  })
+
+  test('refetches class diagrams with legacy filter fields and keeps the renderer toggle working', async ({
+    page,
+  }) => {
+    const generateRequests: GenerationRequest[] = []
+    const diagramRequests: GenerationRequest[] = []
+    await addPreferencesInitScript(page)
+    await installGenerationRoutes(page, generateRequests)
+    await installDiagramRoutes(page, diagramRequests)
+
+    await page.goto('/')
+    await expect(page.getByTestId('app-shell')).toBeVisible()
+
+    await setEditorCode(page, [
+      'filter Focus {',
+      '  include Invoice;',
+      '}',
+      'mixset Metrics {',
+      '}',
+      'class Invoice { number; }',
+      'class ArchivedInvoice { number; }',
+    ].join('\n'))
+
+    await expect(page.getByTestId('class-node-Invoice')).toBeVisible({
+      timeout: 10_000,
+    })
+
+    await page.getByTestId('canvas-display-options-button').click()
+    const filterInput = page.getByTestId('class-filter-input')
+    await filterInput.fill('Invoice ~ArchivedInvoice 2 gvseparator=1.7')
+    await filterInput.press('Enter')
+
+    await expect
+      .poll(() => diagramRequests[diagramRequests.length - 1]?.classFilterQuery)
+      .toBe('Invoice ~ArchivedInvoice 2 gvseparator=1.7')
+
+    await page.getByTestId('class-filter-named-filter-Focus').click()
+    await page.getByTestId('class-filter-mixset-Metrics').click()
+
+    await expect
+      .poll(() => diagramRequests[diagramRequests.length - 1])
+      .toMatchObject({
+        classFilterQuery: 'Invoice ~ArchivedInvoice 2 gvseparator=1.7',
+        namedFilters: ['Focus'],
+        mixsets: ['Metrics'],
+      })
+
+    const rendererToggle = page.getByRole('switch', { name: 'Edit GV' })
+    await rendererToggle.click()
+    await rendererToggle.click()
+
+    await expect(page.getByTestId('class-node-Invoice')).toBeVisible()
   })
 
   test('keeps the last diagram visible after a compile error in dynamic mode', async ({

@@ -10,6 +10,7 @@ import type {
 } from "../api/types";
 import { VIEW_OUTPUT_KIND } from "../constants/diagram";
 import type { DiagramView } from "../constants/diagram";
+import { CLASS_FILTER_DEFAULT_QUERY, normalizeClassFilterQuery } from "../lib/classDiagramFilters";
 import { useEphemeralStore } from "./ephemeralStore";
 import { ensureUmpExt } from "../lib/umpFile";
 
@@ -83,6 +84,9 @@ interface SessionState {
   selectedExampleId: string | null;
   selectedExampleSetId: ExampleSetId | null;
   generateTargetId: string;
+  classFilterQuery: string;
+  activeNamedFilters: string[];
+  activeMixsets: string[];
   /** Set by setCodeFromSync so useCompiler can skip the debounce */
   syncPending: boolean;
   /** Bumped on tab rename/reorder to trigger a compile that persists tabs.json */
@@ -128,6 +132,11 @@ interface SessionState {
   restoreTabs: (tabs: ApiTab[], activeTabId: string) => void;
   setSelectedExample: (name: string | null) => void;
   setGenerateTargetId: (id: string) => void;
+  setClassFilterQuery: (query: string) => void;
+  toggleNamedFilter: (name: string) => void;
+  toggleMixset: (name: string) => void;
+  resetClassDiagramFilters: () => void;
+  reconcileClassDiagramFilters: (namedFilters: string[], mixsets: string[]) => void;
 
   // Diagram actions
   setViewMode: (mode: DiagramView) => void;
@@ -161,6 +170,12 @@ interface SessionState {
 export function getActiveTabName(): string {
   const { tabs, activeTabId } = useSessionStore.getState();
   return tabs.find((t) => t.id === activeTabId)?.name ?? "Model.ump";
+}
+
+export function selectClassFilterKey(
+  s: Pick<SessionState, "classFilterQuery" | "activeNamedFilters" | "activeMixsets">,
+): string {
+  return JSON.stringify([s.classFilterQuery, s.activeNamedFilters, s.activeMixsets])
 }
 
 function suggestBlankTabName(tabs: Tab[], activeTabId: string): string {
@@ -201,6 +216,9 @@ export const useSessionStore = create<SessionState>()(
       selectedExampleId: null,
       selectedExampleSetId: null,
       generateTargetId: "classDiagram",
+      classFilterQuery: CLASS_FILTER_DEFAULT_QUERY,
+      activeNamedFilters: [],
+      activeMixsets: [],
       syncPending: false,
       tabsVersion: 0,
 
@@ -509,6 +527,43 @@ export const useSessionStore = create<SessionState>()(
             : { selectedExampleId: null, selectedExampleSetId: null }),
         }),
       setGenerateTargetId: (generateTargetId) => set({ generateTargetId }),
+      setClassFilterQuery: (classFilterQuery) =>
+        set({ classFilterQuery: normalizeClassFilterQuery(classFilterQuery) }),
+      toggleNamedFilter: (name) =>
+        set((s) => ({
+          activeNamedFilters: s.activeNamedFilters.includes(name)
+            ? s.activeNamedFilters.filter((value) => value !== name)
+            : [...s.activeNamedFilters, name].sort((left, right) => left.localeCompare(right)),
+        })),
+      toggleMixset: (name) =>
+        set((s) => ({
+          activeMixsets: s.activeMixsets.includes(name)
+            ? s.activeMixsets.filter((value) => value !== name)
+            : [...s.activeMixsets, name].sort((left, right) => left.localeCompare(right)),
+        })),
+      resetClassDiagramFilters: () =>
+        set({
+          classFilterQuery: CLASS_FILTER_DEFAULT_QUERY,
+          activeNamedFilters: [],
+          activeMixsets: [],
+        }),
+      reconcileClassDiagramFilters: (namedFilters, mixsets) =>
+        set((s) => {
+          const nextNamedFilters = s.activeNamedFilters.filter((name) => namedFilters.includes(name))
+          const nextMixsets = s.activeMixsets.filter((name) => mixsets.includes(name))
+
+          if (
+            nextNamedFilters.join("\u0000") === s.activeNamedFilters.join("\u0000") &&
+            nextMixsets.join("\u0000") === s.activeMixsets.join("\u0000")
+          ) {
+            return s
+          }
+
+          return {
+            activeNamedFilters: nextNamedFilters,
+            activeMixsets: nextMixsets,
+          }
+        }),
 
       loadExample: (id, name, code, modelId, setId) => {
         set((s) => ({
@@ -517,6 +572,9 @@ export const useSessionStore = create<SessionState>()(
           selectedExampleId: id,
           selectedExampleSetId: setId ?? null,
           ...(modelId ? { modelId } : {}),
+          classFilterQuery: CLASS_FILTER_DEFAULT_QUERY,
+          activeNamedFilters: [],
+          activeMixsets: [],
           tabs: s.tabs.map((t) =>
             t.id === s.activeTabId
               ? {
@@ -552,6 +610,9 @@ export const useSessionStore = create<SessionState>()(
           selectedExample: null,
           selectedExampleId: "blank",
           selectedExampleSetId: setId ?? null,
+          classFilterQuery: CLASS_FILTER_DEFAULT_QUERY,
+          activeNamedFilters: [],
+          activeMixsets: [],
           tabs: s.tabs.map((t) =>
             t.id === s.activeTabId
               ? {
@@ -646,6 +707,9 @@ export const useSessionStore = create<SessionState>()(
             selectedExample: null,
             selectedExampleId: null,
             selectedExampleSetId: null,
+            classFilterQuery: CLASS_FILTER_DEFAULT_QUERY,
+            activeNamedFilters: [],
+            activeMixsets: [],
             // Fresh restore — no cached diagram or model state
             svgCache: {},
             htmlCache: {},

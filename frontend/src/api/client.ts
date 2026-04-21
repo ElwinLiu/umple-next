@@ -93,6 +93,9 @@ export const api = {
     diagramType: string;
     modelId?: string;
     suboptions?: string[];
+    classFilterQuery?: string;
+    namedFilters?: string[];
+    mixsets?: string[];
     needsLayout?: boolean;
     activeTabId?: string;
   }): Promise<DiagramResponse> {

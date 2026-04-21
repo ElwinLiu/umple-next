@@ -6,6 +6,9 @@ export interface GenerationRequest {
   language?: string;
   diagramType?: string;
   suboptions?: string[];
+  classFilterQuery?: string;
+  namedFilters?: string[];
+  mixsets?: string[];
   needsLayout?: boolean;
   tabs?: ApiTab[];
   activeTabId?: string;

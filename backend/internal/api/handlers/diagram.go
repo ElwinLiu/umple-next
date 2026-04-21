@@ -27,12 +27,15 @@ func NewDiagramHandler(pool *compiler.Pool, store *model.Store) *DiagramHandler 
 }
 
 type DiagramRequest struct {
-	Code        string   `json:"code"`
-	DiagramType string   `json:"diagramType"`
-	ModelID     string   `json:"modelId,omitempty"`
-	Suboptions  []string `json:"suboptions,omitempty"`
-	NeedsLayout *bool    `json:"needsLayout,omitempty"`
-	ActiveTabID string   `json:"activeTabId,omitempty"`
+	Code             string   `json:"code"`
+	DiagramType      string   `json:"diagramType"`
+	ModelID          string   `json:"modelId,omitempty"`
+	Suboptions       []string `json:"suboptions,omitempty"`
+	ClassFilterQuery string   `json:"classFilterQuery,omitempty"`
+	NamedFilters     []string `json:"namedFilters,omitempty"`
+	Mixsets          []string `json:"mixsets,omitempty"`
+	NeedsLayout      *bool    `json:"needsLayout,omitempty"`
+	ActiveTabID      string   `json:"activeTabId,omitempty"`
 }
 
 type GvTextLine struct {
@@ -264,7 +267,7 @@ func extractTextLines(ops []gvDrawOp) []GvTextLine {
 	return lines
 }
 
-// validSuboptions lists the allowed -s flags for umplesync.jar diagram generation.
+// validSuboptions lists the fixed -s flags allowed for umplesync.jar diagram generation.
 var validSuboptions = map[string]bool{
 	"hideattributes":        true,
 	"showmethods":           true,
@@ -308,14 +311,17 @@ var diagramTypeInfo = map[string]diagramOutputKind{
 // processDiagramParams bundles everything needed to run diagram generation
 // against an already-resolved model directory.
 type processDiagramParams struct {
-	pool        *compiler.Pool
-	dir         string
-	modelID     string
-	diagramType string
-	suboptions  []string
-	needsLayout bool
-	entryFile   string
-	locked      bool
+	pool             *compiler.Pool
+	dir              string
+	modelID          string
+	diagramType      string
+	suboptions       []string
+	classFilterQuery string
+	namedFilters     []string
+	mixsets          []string
+	needsLayout      bool
+	entryFile        string
+	locked           bool
 }
 
 // processDiagram generates a diagram from a model directory that already
@@ -331,6 +337,14 @@ func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
 	modelPath := filepath.Join(p.dir, p.entryFile)
 	modelData, _ := os.ReadFile(modelPath)
 	storedLayout := extractStoredLayoutMetadata(string(modelData))
+	commandModelPath := modelPath
+
+	if overlayPath, cleanupOverlay, err := buildTransientClassDiagramOverlay(p, modelPath, string(modelData)); err != nil {
+		return nil, fmt.Sprintf("failed to prepare diagram overlay: %v", err)
+	} else if overlayPath != "" {
+		commandModelPath = overlayPath
+		defer cleanupOverlay()
+	}
 
 	// Remove stale .gv files so the directory scan after generation
 	// always picks the newly generated file, not a leftover from a
@@ -346,9 +360,9 @@ func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
 	}
 
 	// Generate .gv file using umple, appending validated suboptions as -s flags
-	command := fmt.Sprintf("-generate %s %s/%s", p.diagramType, p.dir, p.entryFile)
+	command := fmt.Sprintf("-generate %s %s", p.diagramType, commandModelPath)
 	for _, opt := range p.suboptions {
-		if validSuboptions[opt] {
+		if isValidDiagramSuboption(opt) {
 			command += " -s " + opt
 		}
 	}
@@ -506,13 +520,16 @@ func (h *DiagramHandler) Generate(w http.ResponseWriter, r *http.Request) {
 	needsLayout := req.NeedsLayout == nil || *req.NeedsLayout
 
 	resp, errMsg := processDiagram(processDiagramParams{
-		pool:        h.pool,
-		dir:         dir,
-		modelID:     modelID,
-		diagramType: req.DiagramType,
-		suboptions:  req.Suboptions,
-		needsLayout: needsLayout,
-		entryFile:   entryFile,
+		pool:             h.pool,
+		dir:              dir,
+		modelID:          modelID,
+		diagramType:      req.DiagramType,
+		suboptions:       req.Suboptions,
+		classFilterQuery: req.ClassFilterQuery,
+		namedFilters:     req.NamedFilters,
+		mixsets:          req.Mixsets,
+		needsLayout:      needsLayout,
+		entryFile:        entryFile,
 	})
 	if errMsg != "" {
 		writeError(w, http.StatusInternalServerError, errMsg)

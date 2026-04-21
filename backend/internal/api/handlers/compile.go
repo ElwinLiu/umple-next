@@ -29,14 +29,17 @@ func NewGenerateHandler(pool *compiler.Pool, store *model.Store, cfg *config.Con
 }
 
 type GenerateRequest struct {
-	Code        string   `json:"code"`
-	ModelID     string   `json:"modelId,omitempty"`
-	Language    string   `json:"language,omitempty"`
-	DiagramType string   `json:"diagramType,omitempty"`
-	Suboptions  []string `json:"suboptions,omitempty"`
-	NeedsLayout *bool    `json:"needsLayout,omitempty"`
-	Tabs        []apiTab `json:"tabs,omitempty"`
-	ActiveTabID string   `json:"activeTabId,omitempty"`
+	Code             string   `json:"code"`
+	ModelID          string   `json:"modelId,omitempty"`
+	Language         string   `json:"language,omitempty"`
+	DiagramType      string   `json:"diagramType,omitempty"`
+	Suboptions       []string `json:"suboptions,omitempty"`
+	ClassFilterQuery string   `json:"classFilterQuery,omitempty"`
+	NamedFilters     []string `json:"namedFilters,omitempty"`
+	Mixsets          []string `json:"mixsets,omitempty"`
+	NeedsLayout      *bool    `json:"needsLayout,omitempty"`
+	Tabs             []apiTab `json:"tabs,omitempty"`
+	ActiveTabID      string   `json:"activeTabId,omitempty"`
 }
 
 type GenerateResponse struct {
@@ -165,14 +168,17 @@ func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		needsLayout := req.NeedsLayout == nil || *req.NeedsLayout
 
 		diagResp, errMsg := processDiagram(processDiagramParams{
-			pool:        h.pool,
-			dir:         dir,
-			modelID:     modelID,
-			diagramType: req.DiagramType,
-			suboptions:  req.Suboptions,
-			needsLayout: needsLayout,
-			entryFile:   entryFile,
-			locked:      workspaceLocked,
+			pool:             h.pool,
+			dir:              dir,
+			modelID:          modelID,
+			diagramType:      req.DiagramType,
+			suboptions:       req.Suboptions,
+			classFilterQuery: req.ClassFilterQuery,
+			namedFilters:     req.NamedFilters,
+			mixsets:          req.Mixsets,
+			needsLayout:      needsLayout,
+			entryFile:        entryFile,
+			locked:           workspaceLocked,
 		})
 		if errMsg != "" {
 			log.Printf("diagram generation failed during output generation: %s", errMsg)
