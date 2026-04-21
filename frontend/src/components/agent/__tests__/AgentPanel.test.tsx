@@ -6,6 +6,7 @@ import AgentPanel from '../AgentPanel'
 import { createDefaultProviderConfigs, usePreferencesStore } from '@/stores/preferencesStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
+import { TooltipProvider } from '@/components/ui/tooltip'
 
 const mockSend = vi.fn()
 const mockStop = vi.fn()
@@ -55,9 +56,17 @@ afterEach(() => {
     activeProvider: 'openai',
     configs: createDefaultProviderConfigs(),
   })
-  useSessionStore.setState({ showAgentPanel: false, code: '' })
+  useSessionStore.setState({ showAgentPanel: false, showAgentBar: false, code: '' })
   useEphemeralStore.setState({ diffPreview: null })
 })
+
+function renderAgentPanel() {
+  return render(
+    <TooltipProvider>
+      <AgentPanel />
+    </TooltipProvider>,
+  )
+}
 
 describe('AgentPanel', () => {
   it('renders approval UI for static tool parts', async () => {
@@ -89,7 +98,7 @@ describe('AgentPanel', () => {
       ],
     }
 
-    render(<AgentPanel />)
+    renderAgentPanel()
 
     expect(screen.getByText('Edit proposed')).toBeDefined()
     expect(screen.getByText('Rename Student to Person')).toBeDefined()
@@ -110,6 +119,14 @@ describe('AgentPanel', () => {
     expect(mockRejectToolCall).toHaveBeenCalledWith('approval-1', 'call-1', 'editCode')
   })
 
+  it('starts minimized with the launcher visible', () => {
+    renderAgentPanel()
+
+    expect(screen.getByTestId('agent-panel-launcher')).toBeDefined()
+    expect(screen.queryByTestId('agent-panel-collapsed')).toBeNull()
+    expect(screen.queryByTestId('agent-panel')).toBeNull()
+  })
+
   it('keeps the panel collapsed after drag-fold release', () => {
     useSessionStore.setState({ showAgentPanel: true })
 
@@ -124,7 +141,7 @@ describe('AgentPanel', () => {
       ],
     }
 
-    render(<AgentPanel />)
+    renderAgentPanel()
 
     const panel = screen.getByTestId('agent-panel')
     Object.defineProperty(panel, 'offsetHeight', {
@@ -149,6 +166,7 @@ describe('AgentPanel', () => {
 
   it('keeps focus on the input when expanding from the collapsed textarea', async () => {
     const user = userEvent.setup()
+    useSessionStore.setState({ showAgentBar: true })
 
     mockAgentState = {
       ...mockAgentState,
@@ -161,7 +179,7 @@ describe('AgentPanel', () => {
       ],
     }
 
-    render(<AgentPanel />)
+    renderAgentPanel()
 
     await user.click(screen.getByRole('textbox'))
 
@@ -170,5 +188,60 @@ describe('AgentPanel', () => {
     await waitFor(() => {
       expect(screen.getByRole('textbox')).toBe(document.activeElement)
     })
+  })
+
+  it('minimizes the collapsed bar into a launcher and restores focus when reopened', async () => {
+    const user = userEvent.setup()
+    useSessionStore.setState({ showAgentBar: true })
+
+    renderAgentPanel()
+
+    await user.click(screen.getByRole('button', { name: 'Hide AI assistant' }))
+
+    expect(screen.queryByTestId('agent-panel-collapsed')).toBeNull()
+    expect(screen.getByTestId('agent-panel-launcher')).toBeDefined()
+
+    await user.click(screen.getByTestId('agent-panel-launcher'))
+
+    expect(screen.getByTestId('agent-panel-collapsed')).toBeDefined()
+
+    await waitFor(() => {
+      expect(screen.getByRole('textbox')).toBe(document.activeElement)
+    })
+  })
+
+  it('hides the expanded panel into the launcher', async () => {
+    const user = userEvent.setup()
+    useSessionStore.setState({ showAgentPanel: true })
+
+    renderAgentPanel()
+
+    await user.click(screen.getByRole('button', { name: 'Hide AI assistant' }))
+
+    expect(screen.queryByTestId('agent-panel')).toBeNull()
+    expect(screen.queryByTestId('agent-panel-collapsed')).toBeNull()
+    expect(screen.getByTestId('agent-panel-launcher')).toBeDefined()
+  })
+
+  it('reopens the expanded panel from the launcher when conversation history exists', async () => {
+    const user = userEvent.setup()
+
+    mockAgentState = {
+      ...mockAgentState,
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          parts: [{ type: 'text', text: 'Hello again' }],
+        },
+      ],
+    }
+
+    renderAgentPanel()
+
+    await user.click(screen.getByTestId('agent-panel-launcher'))
+
+    expect(screen.getByTestId('agent-panel')).toBeDefined()
+    expect(screen.queryByTestId('agent-panel-collapsed')).toBeNull()
   })
 })

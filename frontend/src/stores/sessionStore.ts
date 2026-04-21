@@ -99,6 +99,7 @@ interface SessionState {
 
   // Agent panel
   showAgentPanel: boolean;
+  showAgentBar: boolean;
   chatMessages: ChatMessage[];
 
   // Editor actions
@@ -151,6 +152,8 @@ interface SessionState {
   openAgentPanel: () => void;
   closeAgentPanel: () => void;
   toggleAgentPanel: () => void;
+  revealAgentBar: () => void;
+  hideAgentBar: () => void;
   setChatMessages: (messages: ChatMessage[]) => void;
 }
 
@@ -212,6 +215,7 @@ export const useSessionStore = create<SessionState>()(
 
       // ── Agent panel ──
       showAgentPanel: false,
+      showAgentBar: false,
       chatMessages: [],
 
       // ── Editor actions ──
@@ -792,15 +796,29 @@ export const useSessionStore = create<SessionState>()(
 
       // ── Agent panel actions ──
 
-      openAgentPanel: () => set({ showAgentPanel: true }),
-      closeAgentPanel: () => set({ showAgentPanel: false }),
+      openAgentPanel: () => set({ showAgentPanel: true, showAgentBar: true }),
+      closeAgentPanel: () => set({ showAgentPanel: false, showAgentBar: true }),
       toggleAgentPanel: () =>
-        set((s) => ({ showAgentPanel: !s.showAgentPanel })),
+        set((s) => ({ showAgentPanel: !s.showAgentPanel, showAgentBar: true })),
+      revealAgentBar: () => set({ showAgentBar: true, showAgentPanel: false }),
+      hideAgentBar: () => set({ showAgentBar: false, showAgentPanel: false }),
       setChatMessages: (chatMessages) => set({ chatMessages }),
     }),
     {
       name: "umple-session-v1",
+      version: 2,
       storage: createJSONStorage(() => sessionStorage),
+      migrate: (persisted, version) => {
+        const state = (persisted ?? {}) as Record<string, unknown>;
+        if (version < 2) {
+          return {
+            ...state,
+            showAgentPanel: false,
+            showAgentBar: false,
+          } as any;
+        }
+        return state as any;
+      },
       partialize: (state) => ({
         modelId: state.modelId,
         selectedExample: state.selectedExample,
@@ -809,6 +827,7 @@ export const useSessionStore = create<SessionState>()(
         generateTargetId: state.generateTargetId,
         viewMode: state.viewMode,
         showAgentPanel: state.showAgentPanel,
+        showAgentBar: state.showAgentBar,
         chatMessages: state.chatMessages,
       }),
     },
