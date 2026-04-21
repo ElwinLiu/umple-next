@@ -77,6 +77,7 @@ jobs:
             echo "backend_image=${PREFIX}/backend:sha-${SHA}"
             echo "frontend_image=${PREFIX}/frontend:sha-${SHA}"
             echo "code_exec_image=${PREFIX}/code-exec:sha-${SHA}"
+            echo "code_runner_image=${PREFIX}/code-runner:sha-${SHA}"
             echo "collab_image=${PREFIX}/collab:sha-${SHA}"
             echo "lsp_proxy_image=${PREFIX}/lsp-proxy:sha-${SHA}"
           } >> "$GITHUB_OUTPUT"
@@ -122,6 +123,7 @@ jobs:
           docker buildx imagetools inspect "${{ steps.meta.outputs.backend_image }}" > /dev/null
           docker buildx imagetools inspect "${{ steps.meta.outputs.frontend_image }}" > /dev/null
           docker buildx imagetools inspect "${{ steps.meta.outputs.code_exec_image }}" > /dev/null
+          docker buildx imagetools inspect "${{ steps.meta.outputs.code_runner_image }}" > /dev/null
           docker buildx imagetools inspect "${{ steps.meta.outputs.collab_image }}" > /dev/null
           docker buildx imagetools inspect "${{ steps.meta.outputs.lsp_proxy_image }}" > /dev/null
 
@@ -155,6 +157,7 @@ jobs:
               "${{ steps.meta.outputs.backend_image }}" \
               "${{ steps.meta.outputs.frontend_image }}" \
               "${{ steps.meta.outputs.code_exec_image }}" \
+              "${{ steps.meta.outputs.code_runner_image }}" \
               "${{ steps.meta.outputs.collab_image }}" \
               "${{ steps.meta.outputs.lsp_proxy_image }}"
 
@@ -173,6 +176,7 @@ jobs:
           - \`${{ steps.meta.outputs.backend_image }}\`
           - \`${{ steps.meta.outputs.frontend_image }}\`
           - \`${{ steps.meta.outputs.code_exec_image }}\`
+          - \`${{ steps.meta.outputs.code_runner_image }}\`
           - \`${{ steps.meta.outputs.collab_image }}\`
           - \`${{ steps.meta.outputs.lsp_proxy_image }}\`
           EOF
@@ -210,6 +214,7 @@ jobs:
             echo "- Backend: \`${{ steps.meta.outputs.backend_image }}\`"
             echo "- Frontend: \`${{ steps.meta.outputs.frontend_image }}\`"
             echo "- Code Exec: \`${{ steps.meta.outputs.code_exec_image }}\`"
+            echo "- Code Runner: \`${{ steps.meta.outputs.code_runner_image }}\`"
             echo "- Collab: \`${{ steps.meta.outputs.collab_image }}\`"
             echo "- LSP Proxy: \`${{ steps.meta.outputs.lsp_proxy_image }}\`"
             echo "- Updated latest release pointer: \`${{ steps.latest.outputs.mark_latest }}\`"

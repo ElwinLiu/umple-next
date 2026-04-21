@@ -100,6 +100,7 @@ func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
 
 	unlock := lockModelWorkspace(h.pool, h.store, req.ModelID)
 	defer unlock()
+	workspaceLocked := req.ModelID != ""
 
 	// Ensure model directory exists (single resolveModel for both compile + diagram)
 	modelID, dir, err := resolveModel(h.store, req.ModelID, entryCode, entryFile)
@@ -133,7 +134,11 @@ func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
 
 	// Generate the authoritative JSON model using umplesync
 	command := fmt.Sprintf("-generate Json %s/%s", dir, entryFile)
-	result, err := h.pool.Execute(compiler.CompileRequest{
+	execute := h.pool.Execute
+	if workspaceLocked {
+		execute = h.pool.ExecuteLocked
+	}
+	result, err := execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: dir,
 	})
@@ -167,6 +172,7 @@ func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
 			suboptions:  req.Suboptions,
 			needsLayout: needsLayout,
 			entryFile:   entryFile,
+			locked:      workspaceLocked,
 		})
 		if errMsg != "" {
 			log.Printf("diagram generation failed during output generation: %s", errMsg)

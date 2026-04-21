@@ -5,6 +5,64 @@ const { execFile } = require('child_process');
 const { promisify } = require('util');
 
 const execFileAsync = promisify(execFile);
+const runnerImageBuilds = new Map();
+
+function readBooleanEnv(name, fallback) {
+    const value = process.env[name];
+    if(value == null || value === '') {
+        return fallback;
+    }
+
+    return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
+}
+
+async function ensureRunnerImage(imageName, autoBuild) {
+    if(!imageName) {
+        throw new Error('execution runner image name is not configured');
+    }
+
+    const existing = runnerImageBuilds.get(imageName);
+    if(existing) {
+        await existing;
+        return;
+    }
+
+    const buildPromise = (async () => {
+        try {
+            await execFileAsync('docker', ['image', 'inspect', imageName]);
+            return;
+        } catch {}
+
+        if(!autoBuild) {
+            throw new Error(
+                `Execution runner image ${imageName} is not available locally. ` +
+                'Ensure the deployment pulled CODE_RUNNER_IMAGE before serving traffic.',
+            );
+        }
+
+        const dockerfilePath = path.join(__dirname, 'javaRunner', 'Dockerfile');
+        console.log(`Execution runner image ${imageName} not found locally. Building it now...`);
+
+        await execFileAsync(
+            'docker',
+            ['build', '-q', '-t', imageName, '-f', dockerfilePath, __dirname],
+            { maxBuffer: 10 * 1024 * 1024 },
+        );
+
+        await execFileAsync('docker', ['image', 'inspect', imageName]);
+        console.log(`Execution runner image ${imageName} is ready.`);
+    })();
+
+    runnerImageBuilds.set(imageName, buildPromise);
+
+    try {
+        await buildPromise;
+    } finally {
+        if(runnerImageBuilds.get(imageName) === buildPromise) {
+            runnerImageBuilds.delete(imageName);
+        }
+    }
+}
 
 class DockerExecution {
     constructor(pathToMainClass, mainFile, modelPath, language="Java") {
@@ -16,7 +74,11 @@ class DockerExecution {
 
         const config = this.readConfig();
         this.baseOutputPath = config['tempPath'] || os.tmpdir();
-        this.tempContainerName = config['tempContainerName'];
+        this.runnerImage = process.env.EXECUTION_RUNNER_IMAGE || config['tempContainerName'];
+        this.autoBuildRunner = readBooleanEnv(
+            'EXECUTION_RUNNER_AUTO_BUILD',
+            !Object.prototype.hasOwnProperty.call(process.env, 'EXECUTION_RUNNER_IMAGE'),
+        );
         this.timeoutValue = +config['timeoutValue'];
     }
 
@@ -50,13 +112,15 @@ class DockerExecution {
     }
 
     async createContainer(mainFilePath) {
+        await ensureRunnerImage(this.runnerImage, this.autoBuildRunner);
+
         const { stdout } = await execFileAsync('docker', [
             'create',
             '--cpus=0.5',
             '--memory=150m',
             '--network',
             'none',
-            this.tempContainerName,
+            this.runnerImage,
             mainFilePath,
         ]);
 

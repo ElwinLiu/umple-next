@@ -1,6 +1,6 @@
 # Umple Code Execution
 
-This code base provides the functionality to securely execute Java code using Docker containers.
+This code base provides the functionality to securely execute generated Java and Python code using Docker containers.
 
 # IMPORTANT
 
@@ -25,7 +25,7 @@ A directory where temporary files can be written. Suggested: /tmp
 Name of the always running container and image. Use the default unless you are running more than one instance.
 
 **tempContainerName**  
-Name of the temporary java container and image created for Java execution. Use the default unless you are running more than one instance.
+Default local runner image used for code execution in development. Production should prefer the `EXECUTION_RUNNER_IMAGE` environment variable so deploys can pin an immutable published runner image.
 
 **portToUse**  
 Port that the Umple Php code uses to communicate with the Docker image. Suggested: 4400. If you are running more than one instance, then each would need a new port.
@@ -41,3 +41,12 @@ This shell script contains commands to build docker images and to run the main d
 # Other Issues
 
 1. If timeout is coming even though the docker is running, make sure that umplePath in config.cfg does not start with '~'.
+
+## Production note
+
+In this repo's containerized deployment, the `code-exec` service is the coordinator and launches a separate runner image for each execution. Production should set:
+
+- `EXECUTION_RUNNER_IMAGE` to a published immutable image ref
+- `EXECUTION_RUNNER_AUTO_BUILD=0`
+
+Development may keep auto-build enabled to create the local runner image on first use.

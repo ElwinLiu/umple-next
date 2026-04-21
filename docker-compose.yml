@@ -73,6 +73,9 @@ services:
       context: ./code-exec
     ports:
       - "4400:4400"
+    environment:
+      - EXECUTION_RUNNER_IMAGE=${CODE_RUNNER_IMAGE:-umple-code-runner:dev}
+      - EXECUTION_RUNNER_AUTO_BUILD=1
     group_add:
       - "${DOCKER_GID:-0}"
     volumes:
