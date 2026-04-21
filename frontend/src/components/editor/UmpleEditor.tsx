@@ -153,6 +153,7 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
   useEffect(() => {
     const view = viewRef.current
     if (!view || prevTabIdRef.current === activeTabId) return
+    const shouldSyncFromStoreCode = !collabConfig
 
     // Save current state for the outgoing tab
     stateCacheRef.current.set(prevTabIdRef.current, {
@@ -166,7 +167,7 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
     // Flag consumed by the code-sync effect (declared later in this file)
     // to skip redundant content replacement. Relies on React firing effects
     // in declaration order within the same render cycle.
-    isTabSwitchRef.current = true
+    isTabSwitchRef.current = shouldSyncFromStoreCode
 
     // Restore cached state or create fresh for the incoming tab
     const cached = stateCacheRef.current.get(activeTabId)
@@ -191,9 +192,9 @@ export const UmpleEditor = forwardRef<UmpleEditorHandle, UmpleEditorProps>(funct
       stateCacheRef.current.set(activeTabId, { ...fresh, state: view.state })
     }
 
-    // If the cached doc drifted from the store (e.g. external sync while away), patch it
+    // In non-collab mode, the store is authoritative. In collab mode, Y.Text is.
     const restoredDoc = view.state.doc.toString()
-    if (restoredDoc !== code) {
+    if (shouldSyncFromStoreCode && restoredDoc !== code) {
       isExternalUpdate.current = true
       view.dispatch({
         changes: { from: 0, to: restoredDoc.length, insert: code },
