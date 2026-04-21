@@ -1,6 +1,7 @@
 .PHONY: dev dev-backend dev-frontend install up-prod down logs logs-backend clean tidy fetch-jar sync-examples test-e2e test-e2e-live test-e2e-ui check check-frontend check-backend
 
 UMPLESYNC_VERSION := $(shell cat .umplesync-version)
+export UMPLE_LSP_VERSION ?= $(shell npm view umple-lsp-server version 2>/dev/null || echo latest)
 export DOCKER_GID := $(shell stat -c '%g' /var/run/docker.sock 2>/dev/null || echo 0)
 LEGACY_UMPLE_GIT_URL ?= https://github.com/umple/umple.git
 LEGACY_UMPLE_REF ?= master

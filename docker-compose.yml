@@ -46,6 +46,8 @@ services:
     build:
       context: .
       dockerfile: lsp-proxy/Dockerfile
+      args:
+        UMPLE_LSP_VERSION: ${UMPLE_LSP_VERSION:-latest}
     ports:
       - "9999:9999"
     volumes:
