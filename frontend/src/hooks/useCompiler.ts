@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
-import { useSessionStore, type DiagramView } from '../stores/sessionStore'
+import { selectClassFilterKey, useSessionStore, type DiagramView } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
 import { urlModelResolved } from './useModelFromURL'
 import {
@@ -13,6 +13,11 @@ import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
 import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../api/types'
 import { getGenerateTarget, resolveGenerateRequestLanguage } from '../generation/targets'
+import {
+  buildClassDiagramFilterRequestFields,
+  discoverNamedClassDiagramOverlays,
+  hasTransientClassDiagramFilters,
+} from '../lib/classDiagramFilters'
 import { getCompileSourceSnapshot } from '../lib/compileSource'
 import { useEffectiveDynamicGeneration } from '../lib/effectiveDynamicGeneration'
 
@@ -29,10 +34,21 @@ const DEBOUNCE_MS = 1500
 /** Build the diagram request params from current store state + isDark flag. */
 function getDiagramRequestParams(view: DiagramView, isDark: boolean) {
   const s = usePreferencesStore.getState()
-  return {
+  const params = {
     diagramType: getEffectiveDiagramType(view, s.showTraits),
     suboptions: buildSuboptions(s, view, isDark),
     needsLayout: view === 'class',
+  }
+  if (view !== 'class') return params
+
+  const session = useSessionStore.getState()
+  return {
+    ...params,
+    ...buildClassDiagramFilterRequestFields(
+      session.classFilterQuery,
+      session.activeNamedFilters,
+      session.activeMixsets,
+    ),
   }
 }
 
@@ -60,7 +76,18 @@ export async function generateAndRefresh(
   signal?: AbortSignal,
   targetId?: string,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
-  const { modelId, setModelId, setUmpleModel, activeTabId, generateTargetId, viewMode, setViewMode } = useSessionStore.getState()
+  const {
+    modelId,
+    setModelId,
+    setUmpleModel,
+    activeTabId,
+    generateTargetId,
+    viewMode,
+    setViewMode,
+    classFilterQuery,
+    activeNamedFilters,
+    activeMixsets,
+  } = useSessionStore.getState()
   const { clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
   const {
     clearGenerationError,
@@ -171,11 +198,15 @@ export async function generateAndRefresh(
 
       // Store the parsed model and layout for UmpleDiagram
       if (model && success) {
-        setUmpleModel(
-          model,
-          activeView === 'class' ? gvLayout ?? null : undefined,
-          activeView === 'class' ? storedLayout : undefined,
-        )
+        if (activeView === 'class' && hasTransientClassDiagramFilters(classFilterQuery, activeNamedFilters, activeMixsets)) {
+          setUmpleModel(model)
+        } else {
+          setUmpleModel(
+            model,
+            activeView === 'class' ? gvLayout ?? null : undefined,
+            activeView === 'class' ? storedLayout : undefined,
+          )
+        }
       }
       if (success) {
         markDiagramFresh(target.id, sourceSnapshot)
@@ -243,6 +274,7 @@ export function useCompiler() {
   const tabsVersion = useSessionStore((s) => s.tabsVersion)
   const viewMode = useSessionStore((s) => s.viewMode)
   const generateTargetId = useSessionStore((s) => s.generateTargetId)
+  const classFilterKey = useSessionStore(selectClassFilterKey)
   const dynamicGeneration = useEffectiveDynamicGeneration()
   const setSvgForView = useSessionStore((s) => s.setSvgForView)
   const setHtmlForView = useSessionStore((s) => s.setHtmlForView)
@@ -318,6 +350,12 @@ export function useCompiler() {
     // compile assigns a modelId → dep changes → second (redundant) compile.
   }, [dynamicGeneration, code, tabsVersion])
 
+  useEffect(() => {
+    const { tabs } = getCompileSourceSnapshot()
+    const discovered = discoverNamedClassDiagramOverlays(tabs)
+    useSessionStore.getState().reconcileClassDiagramFilters(discovered.namedFilters, discovered.mixsets)
+  }, [code, tabsVersion])
+
   // When diagram display preferences or dark theme change, re-fetch diagram only
   useEffect(() => {
     if (!mountedRef.current) return
@@ -329,7 +367,7 @@ export function useCompiler() {
     if (!currentCode?.trim() || !currentModelId) return
 
     fetchDiagramSvg(currentCode, viewModeRef.current, currentModelId)
-  }, [viewMode, suboptionsKey, isDark])
+  }, [viewMode, suboptionsKey, classFilterKey, isDark])
 
   async function fetchDiagramSvg(umpleCode: string, view: DiagramView, mid: string) {
     // Abort previous diagram request
@@ -350,7 +388,12 @@ export function useCompiler() {
         setHtmlForView(view, res.html)
       }
       if (view === 'class' && lastModelRef.current) {
-        useSessionStore.getState().setUmpleModel(lastModelRef.current, res.layout ?? null, res.storedLayout ?? null)
+        const { classFilterQuery, activeNamedFilters, activeMixsets } = useSessionStore.getState()
+        if (hasTransientClassDiagramFilters(classFilterQuery, activeNamedFilters, activeMixsets)) {
+          useSessionStore.getState().setUmpleModel(lastModelRef.current)
+        } else {
+          useSessionStore.getState().setUmpleModel(lastModelRef.current, res.layout ?? null, res.storedLayout ?? null)
+        }
       }
       if (res.errors) {
         const { panelErrors, toastMessages } = splitDiagramToasts(res.errors)
