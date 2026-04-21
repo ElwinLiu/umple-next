@@ -2,8 +2,6 @@ import { useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { useSessionStore, type DiagramView } from '../stores/sessionStore'
 import { useEphemeralStore } from '../stores/ephemeralStore'
-import { useCollabStore } from '../stores/collabStore'
-import { getYDoc } from './useCollab'
 import { urlModelResolved } from './useModelFromURL'
 import {
   usePreferencesStore,
@@ -15,6 +13,7 @@ import { useIsDark } from './useIsDark'
 import { api } from '../api/client'
 import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../api/types'
 import { getGenerateTarget, resolveGenerateRequestLanguage } from '../generation/targets'
+import { getCompileSourceSnapshot } from '../lib/compileSource'
 
 /** Diagram-only messages that are transient (not real compilation errors).
  *  Matched via exact equality (case-insensitive, trimmed) to avoid
@@ -60,7 +59,7 @@ export async function generateAndRefresh(
   signal?: AbortSignal,
   targetId?: string,
 ): Promise<{ success: boolean; model: UmpleModel | null }> {
-  const { code, modelId, setModelId, setUmpleModel, tabs, activeTabId, generateTargetId, viewMode, setViewMode } = useSessionStore.getState()
+  const { modelId, setModelId, setUmpleModel, activeTabId, generateTargetId, viewMode, setViewMode } = useSessionStore.getState()
   const { clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
   const {
     clearGenerationError,
@@ -74,9 +73,10 @@ export async function generateAndRefresh(
     setRightPanelView,
   } = useEphemeralStore.getState()
   const target = getGenerateTarget(targetId ?? generateTargetId)
-  const sourceSnapshot = { code, tabId: activeTabId }
+  const { activeCode, signature, tabs: compileTabs } = getCompileSourceSnapshot()
+  const sourceSnapshot = { code: activeCode, tabId: activeTabId, signature }
 
-  if (!code.trim() || !target) return { success: false, model: null }
+  if (!activeCode.trim() || !target) return { success: false, model: null }
 
   setGeneratingOutput(true)
   setExecutionOutput('')
@@ -91,27 +91,18 @@ export async function generateAndRefresh(
   try {
     const activeView = target.action === 'diagram' ? target.diagramView ?? viewMode : viewMode
 
-    // In collab mode, read tab content from Y.Text (authoritative) instead
-    // of the possibly-stale sessionStore cache for non-active tabs.
-    const doc = useCollabStore.getState().isCollaborating ? getYDoc() : null
-    const compileTabs = tabs.map(({ id, name, code: localCode }) => ({
-      id,
-      name,
-      code: doc ? doc.getText(`tab:${id}`).toString() : localCode,
-    }))
-
     // Single request: compile + diagram generation
     const request =
       target.action === 'diagram'
         ? {
-            code,
+            code: activeCode,
             modelId: modelId ?? undefined,
             ...getDiagramRequestParams(activeView, isDark),
             tabs: compileTabs,
             activeTabId,
           }
         : {
-            code,
+            code: activeCode,
             modelId: modelId ?? undefined,
             language: resolveGenerateRequestLanguage(target, viewMode),
             tabs: compileTabs,
@@ -332,7 +323,7 @@ export function useCompiler() {
     const activeTarget = getGenerateTarget(generateTargetIdRef.current)
     if (activeTarget?.action !== 'diagram') return
     if (viewModeRef.current === 'crud') return // CRUD UI is a local component, no backend diagram
-    const currentCode = codeRef.current
+    const { activeCode: currentCode } = getCompileSourceSnapshot()
     const currentModelId = modelIdRef.current
     if (!currentCode?.trim() || !currentModelId) return
 

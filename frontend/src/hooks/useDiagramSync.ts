@@ -9,6 +9,7 @@ import { getYDoc } from './useCollab'
 import { replaceYText } from './useCollabTabs'
 import { generateAndRefresh } from './useCompiler'
 import { getGenerateTargetIdForView } from '../generation/targets'
+import { getCompileSourceSnapshot } from '../lib/compileSource'
 
 interface SyncResult {
   success: boolean
@@ -105,6 +106,15 @@ export function useDiagramSync() {
         const diagramTargetId =
           getGenerateTargetIdForView(session.viewMode) ?? session.generateTargetId
 
+        // In collab mode, also write to Y.Text so the change propagates
+        // to other collaborators. The editor effect no longer does this.
+        if (useCollabStore.getState().isCollaborating) {
+          const doc = getYDoc()
+          if (doc) {
+            replaceYText(doc.getText(`tab:${session.activeTabId}`), response.code!)
+          }
+        }
+
         // Editable class-diagram actions already mutate the visible diagram in-place,
         // so in manual mode they should not immediately mark that same diagram stale.
         if (
@@ -113,19 +123,12 @@ export function useDiagramSync() {
           rightPanelView === 'diagram' &&
           diagramTargetId
         ) {
+          const source = getCompileSourceSnapshot()
           markDiagramFresh(diagramTargetId, {
-            code: response.code,
-            tabId: session.activeTabId,
+            code: source.activeCode,
+            tabId: source.activeTabId,
+            signature: source.signature,
           })
-        }
-
-        // In collab mode, also write to Y.Text so the change propagates
-        // to other collaborators. The editor effect no longer does this.
-        if (useCollabStore.getState().isCollaborating) {
-          const doc = getYDoc()
-          if (doc) {
-            replaceYText(doc.getText(`tab:${session.activeTabId}`), response.code!)
-          }
         }
       }
 

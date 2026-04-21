@@ -6,6 +6,7 @@ import { useEphemeralStore } from '@/stores/ephemeralStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { buildCompileSourceSignature } from '@/lib/compileSource'
 
 const rendererProps = vi.hoisted(() => ({
   umpleEditable: [] as boolean[],
@@ -73,6 +74,10 @@ afterEach(() => {
   useSessionStore.setState({
     code: '',
     modelId: null,
+    activeTabId: 'main',
+    tabs: [{ id: 'main', name: 'Model.ump', code: '', dirty: false, savedCode: '', undoStack: [], redoStack: [] }],
+    tabsVersion: 0,
+    generateTargetId: 'classDiagram',
     viewMode: 'class',
     diagramData: {},
     svgCache: {},
@@ -93,14 +98,17 @@ afterEach(() => {
     generatedLanguage: 'Java',
     generatedSourceCode: null,
     generatedSourceTabId: null,
+    generatedSourceSignature: null,
     generatingCode: false,
     generatedError: null,
     generationRequested: false,
     generationSuspendedByError: false,
     generationErrorSourceCode: null,
     generationErrorSourceTabId: null,
+    generationErrorSourceSignature: null,
     diagramSourceCode: null,
     diagramSourceTabId: null,
+    diagramSourceSignature: null,
     diagramTargetId: null,
   })
   usePreferencesStore.setState({ dynamicGeneration: true })
@@ -225,6 +233,10 @@ describe('DiagramPanel', () => {
 
   it('greys and freezes generated output when manual generation becomes stale', () => {
     usePreferencesStore.setState({ dynamicGeneration: false })
+    const staleSignature = buildCompileSourceSignature(
+      [{ id: 'main', name: 'Model.ump', code: 'class Invoice { number; }' }],
+      'main',
+    )
     useSessionStore.setState({
       code: 'class UpdatedInvoice { number; }',
       activeTabId: 'main',
@@ -234,6 +246,7 @@ describe('DiagramPanel', () => {
       generatedCode: 'class InvoiceGenerated {}',
       generatedSourceCode: 'class Invoice { number; }',
       generatedSourceTabId: 'main',
+      generatedSourceSignature: staleSignature,
       generationRequested: true,
     })
 
@@ -250,6 +263,10 @@ describe('DiagramPanel', () => {
 
   it('greys and freezes diagram output when manual generation becomes stale', () => {
     usePreferencesStore.setState({ dynamicGeneration: false })
+    const staleSignature = buildCompileSourceSignature(
+      [{ id: 'main', name: 'Model.ump', code: 'class Invoice { number; }' }],
+      'main',
+    )
     useSessionStore.setState({
       code: 'class UpdatedInvoice { number; }',
       activeTabId: 'main',
@@ -263,6 +280,7 @@ describe('DiagramPanel', () => {
       rightPanelView: 'diagram',
       diagramSourceCode: 'class Invoice { number; }',
       diagramSourceTabId: 'main',
+      diagramSourceSignature: staleSignature,
       diagramTargetId: 'classDiagram',
     })
 
@@ -280,6 +298,14 @@ describe('DiagramPanel', () => {
 
   it('keeps diagram output stale in dynamic mode after a compile error', () => {
     usePreferencesStore.setState({ dynamicGeneration: true })
+    const freshSignature = buildCompileSourceSignature(
+      [{ id: 'main', name: 'Model.ump', code: 'class Invoice { number; }' }],
+      'main',
+    )
+    const erroredSignature = buildCompileSourceSignature(
+      [{ id: 'main', name: 'Model.ump', code: 'class Invoice { number }' }],
+      'main',
+    )
     useSessionStore.setState({
       code: 'class Invoice { number }',
       activeTabId: 'main',
@@ -293,10 +319,12 @@ describe('DiagramPanel', () => {
       rightPanelView: 'diagram',
       diagramSourceCode: 'class Invoice { number; }',
       diagramSourceTabId: 'main',
+      diagramSourceSignature: freshSignature,
       diagramTargetId: 'classDiagram',
       generationSuspendedByError: true,
       generationErrorSourceCode: 'class Invoice { number }',
       generationErrorSourceTabId: 'main',
+      generationErrorSourceSignature: erroredSignature,
     })
 
     render(
@@ -313,6 +341,14 @@ describe('DiagramPanel', () => {
 
   it('does not freeze the current dynamic output because another input failed to compile', () => {
     usePreferencesStore.setState({ dynamicGeneration: true })
+    const currentSignature = buildCompileSourceSignature(
+      [{ id: 'main', name: 'Model.ump', code: 'class UpdatedInvoice { number; }' }],
+      'main',
+    )
+    const otherSignature = buildCompileSourceSignature(
+      [{ id: 'main', name: 'Model.ump', code: 'class Broken { number }' }],
+      'other-tab',
+    )
     useSessionStore.setState({
       code: 'class UpdatedInvoice { number; }',
       activeTabId: 'main',
@@ -326,10 +362,12 @@ describe('DiagramPanel', () => {
       rightPanelView: 'diagram',
       diagramSourceCode: 'class Invoice { number; }',
       diagramSourceTabId: 'main',
+      diagramSourceSignature: currentSignature,
       diagramTargetId: 'classDiagram',
       generationSuspendedByError: true,
       generationErrorSourceCode: 'class Broken { number }',
       generationErrorSourceTabId: 'other-tab',
+      generationErrorSourceSignature: otherSignature,
     })
 
     render(
@@ -344,6 +382,10 @@ describe('DiagramPanel', () => {
 
   it('keeps the current diagram visible and stale after a manual-mode target switch', () => {
     usePreferencesStore.setState({ dynamicGeneration: false })
+    const currentSignature = buildCompileSourceSignature(
+      [{ id: 'main', name: 'Model.ump', code: 'class Invoice { number; }' }],
+      'main',
+    )
     useSessionStore.setState({
       code: 'class Invoice { number; }',
       activeTabId: 'main',
@@ -357,6 +399,7 @@ describe('DiagramPanel', () => {
       rightPanelView: 'diagram',
       diagramSourceCode: 'class Invoice { number; }',
       diagramSourceTabId: 'main',
+      diagramSourceSignature: currentSignature,
       diagramTargetId: 'classDiagram',
     })
 

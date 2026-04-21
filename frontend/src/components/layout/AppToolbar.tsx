@@ -10,6 +10,7 @@ import {
   APP_TOOLBAR_GENERATE_TARGET_GROUPS,
   getGenerateTarget,
 } from "../../generation/targets";
+import { getCompileSourceSnapshot } from "@/lib/compileSource";
 import { AiConfigForm } from "@/components/sidebar/AiConfigForm";
 import { useTaskStore } from "../../stores/taskStore";
 import {
@@ -87,12 +88,10 @@ export function AppToolbar() {
   const errorCount = useEphemeralStore((s) => s.outputErrorCount);
   const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration);
   const generateTargetId = useSessionStore((s) => s.generateTargetId);
-  const code = useSessionStore((s) => s.code);
-  const activeTabId = useSessionStore((s) => s.activeTabId);
+  const tabsVersion = useSessionStore((s) => s.tabsVersion);
   const selectedExampleId = useSessionStore((s) => s.selectedExampleId);
   const selectedExampleSetId = useSessionStore((s) => s.selectedExampleSetId);
-  const generationErrorSourceCode = useEphemeralStore((s) => s.generationErrorSourceCode);
-  const generationErrorSourceTabId = useEphemeralStore((s) => s.generationErrorSourceTabId);
+  const generationErrorSourceSignature = useEphemeralStore((s) => s.generationErrorSourceSignature);
   const handleGenerate = useSelectGenerateTarget();
   const {
     sets: exampleSets,
@@ -103,14 +102,15 @@ export function AppToolbar() {
   const selectedGenerateTarget = getGenerateTarget(generateTargetId);
   const canExecuteGenerateTarget = Boolean(selectedGenerateTarget?.executable);
   const regeneratingOutput = regenerating || generatingOutput;
+  const currentSource = getCompileSourceSnapshot();
   const generationSuspendedForCurrentInput =
-    generationErrorSourceTabId === activeTabId &&
-    generationErrorSourceCode === code;
+    generationErrorSourceSignature === currentSource.signature;
   const showTemporaryRegenerate = dynamicGeneration && generationSuspendedForCurrentInput;
   const [examplePickerOpen, setExamplePickerOpen] = useState(false);
   const [activeExampleSetId, setActiveExampleSetId] =
     useState<ExampleSetId | null>(null);
   const [exampleQuery, setExampleQuery] = useState("");
+  void tabsVersion;
 
   const selectedExampleSet = useMemo(
     () =>

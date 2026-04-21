@@ -41,20 +41,46 @@ export function replaceYText(ytext: Y.Text, content: string) {
 function syncToLocal(doc: Y.Doc) {
   const collabTabs = readYTabs(doc);
   const store = useSessionStore.getState();
+  let shouldUpdate = false;
+  let shouldBumpTabsVersion =
+    collabTabs.length !== store.tabs.length ||
+    collabTabs.some((tab, index) => store.tabs[index]?.id !== tab.id);
 
   // Build lookup of local tabs
   const localById = new Map(store.tabs.map((t) => [t.id, t]));
 
   const nextTabs = collabTabs.map((ct) => {
     const local = localById.get(ct.id);
+    const nextCode = ct.id === store.activeTabId ? store.code : ct.code;
+
     if (local) {
+      const sharedFieldsChanged = local.name !== ct.name;
+      const nonActiveCodeChanged =
+        ct.id !== store.activeTabId && local.code !== ct.code;
+      const nextTab =
+        sharedFieldsChanged || local.code !== nextCode
+          ? {
+              ...local,
+              name: ct.name,
+              code: nextCode,
+            }
+          : local;
+
+      shouldUpdate =
+        shouldUpdate ||
+        nextTab !== local;
+      shouldBumpTabsVersion =
+        shouldBumpTabsVersion ||
+        sharedFieldsChanged ||
+        nonActiveCodeChanged;
+
       // Preserve local-only fields; update shared fields
-      return {
-        ...local,
-        name: ct.name,
-        code: ct.id === store.activeTabId ? store.code : ct.code,
-      };
+      return nextTab;
     }
+
+    shouldUpdate = true;
+    shouldBumpTabsVersion = true;
+
     // New tab from remote
     return {
       id: ct.id,
@@ -72,15 +98,23 @@ function syncToLocal(doc: Y.Doc) {
   const activeStillExists = nextTabs.some((t) => t.id === nextActiveTabId);
   if (!activeStillExists && nextTabs.length > 0) {
     nextActiveTabId = nextTabs[0].id;
+    shouldUpdate = true;
+    shouldBumpTabsVersion = true;
   }
 
   const nextCode = nextTabs.find((t) => t.id === nextActiveTabId)?.code ?? "";
+  if (nextCode !== store.code || nextActiveTabId !== store.activeTabId) {
+    shouldUpdate = true;
+  }
 
-  useSessionStore.setState({
+  if (!shouldUpdate && !shouldBumpTabsVersion) return;
+
+  useSessionStore.setState((state) => ({
     tabs: nextTabs,
     activeTabId: nextActiveTabId,
     code: nextCode,
-  });
+    ...(shouldBumpTabsVersion ? { tabsVersion: state.tabsVersion + 1 } : {}),
+  }));
 }
 
 // ── Observer hook ────────────────────────────────────────────────────
@@ -100,15 +134,13 @@ export function useCollabTabs() {
     const doc = getYDoc();
     if (!doc) return;
 
-    const ytabs = doc.getMap("tabs");
-
-    // Deep observer: fires on changes to the map itself (add/delete keys)
-    // AND on changes within nested Y.Maps (name, order updates).
+    // Transaction observer: fires on tab metadata changes AND tab text edits
+    // so non-active collaborative changes still refresh local state/output.
     const observer = () => syncToLocal(doc);
-    ytabs.observeDeep(observer);
+    doc.on('afterTransaction', observer);
 
     return () => {
-      ytabs.unobserveDeep(observer);
+      doc.off('afterTransaction', observer);
     };
   }, [isCollaborating, ready]);
 }
