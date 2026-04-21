@@ -38,6 +38,21 @@ describe('CanvasBanner', () => {
     expect(screen.getByText('Java Code')).toBeDefined()
   })
 
+  it('switches the fullscreen control copy for generated output', () => {
+    useEphemeralStore.setState({
+      rightPanelView: 'generated',
+      generatedTargetId: 'Java',
+    })
+
+    render(<CanvasBanner />)
+
+    const button = screen.getByRole('button', { name: 'Output only' })
+    fireEvent.click(button)
+
+    expect(useEphemeralStore.getState().diagramOnly).toBe(true)
+    expect(screen.getByRole('button', { name: 'Show editor' })).toBeDefined()
+  })
+
   it("keeps Ctrl+' bound to the output panel toggle", () => {
     render(<CanvasBanner />)
 
@@ -46,5 +61,15 @@ describe('CanvasBanner', () => {
 
     fireEvent.keyDown(window, { key: "'", ctrlKey: true })
     expect(useEphemeralStore.getState().outputView).toBe('hidden')
+  })
+
+  it('renders centered operations content while keeping the label separate', () => {
+    render(<CanvasBanner operationsContent={<div>Toolbar</div>} />)
+
+    expect(screen.getByText('GraphViz Class Diagram')).toBeDefined()
+    expect(screen.getByText('Toolbar')).toBeDefined()
+    expect(screen.getByTestId('canvas-banner-leading')).toBeDefined()
+    expect(screen.getByTestId('canvas-banner-operations')).toBeDefined()
+    expect(screen.getByTestId('canvas-banner-operations-content')).toBeDefined()
   })
 })

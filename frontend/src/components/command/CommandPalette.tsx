@@ -41,6 +41,7 @@ export function CommandPalette() {
     closeCommandPalette,
     setDiagramOnly,
     diagramOnly,
+    rightPanelView,
     toggleOutputPanel,
     setRenderMode,
     renderMode,
@@ -98,6 +99,8 @@ export function CommandPalette() {
   );
   const canToggleRenderer =
     viewMode === "class" && !!umpleModel?.umpleClasses?.length;
+  const fullscreenLabel =
+    rightPanelView === "generated" ? "Output Only Mode" : "Diagram Only Mode";
 
   return (
     <CommandDialog
@@ -161,7 +164,7 @@ export function CommandPalette() {
             data-testid="command-item-view-diagram-only"
           >
             {diagramOnly ? <Minimize2 /> : <Maximize2 />}
-            {diagramOnly ? "Exit Diagram Only Mode" : "Diagram Only Mode"}
+            {diagramOnly ? "Exit Fullscreen Output" : fullscreenLabel}
           </CommandItem>
           <CommandItem
             onSelect={() => {

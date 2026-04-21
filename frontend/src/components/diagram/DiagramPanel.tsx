@@ -11,13 +11,13 @@ import { ObjectExplorer } from '../crud/ObjectExplorer'
 import { CanvasBanner } from '../layout/CanvasBanner'
 import { useSessionStore, VIEW_OUTPUT_KIND } from '../../stores/sessionStore'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
-import { usePreferencesStore } from '../../stores/preferencesStore'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import { ErrorBanner } from '@/components/ui/error-banner'
 import { cn } from '@/lib/utils'
 import { api } from '@/api/client'
 import { getCompileSourceSnapshot } from '@/lib/compileSource'
+import { useEffectiveDynamicGeneration } from '@/lib/effectiveDynamicGeneration'
 
 function triggerDownload(href: string, filename: string) {
   const link = document.createElement('a')
@@ -36,7 +36,7 @@ export function DiagramPanel() {
   const modelId = useSessionStore((s) => s.modelId)
   const generateTargetId = useSessionStore((s) => s.generateTargetId)
   const tabsVersion = useSessionStore((s) => s.tabsVersion)
-  const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration)
+  const dynamicGeneration = useEffectiveDynamicGeneration()
   const renderMode = useEphemeralStore((s) => s.renderMode)
   const generatingOutput = useEphemeralStore((s) => s.generatingOutput)
   const setRenderMode = useEphemeralStore((s) => s.setRenderMode)
@@ -75,6 +75,7 @@ export function DiagramPanel() {
   const showHtml = !showEditable && !editableLoading && outputKind === 'html' && !!currentHtml
   const showGv = !showEditable && !editableLoading && !showHtml && !!currentSvg
   const hasDiagram = showEditable || showHtml || showGv
+  const showDiagramToolbar = rightPanelView === 'diagram' && hasDiagram
   const mountEditable = canToggleRenderer
   const mountHtml = outputKind === 'html' && !!currentHtml
   const mountGv = outputKind === 'gv' && !!currentSvg
@@ -158,7 +159,21 @@ export function DiagramPanel() {
 
   return (
     <div className="h-full flex flex-col" data-testid="diagram-panel">
-      <CanvasBanner />
+      <CanvasBanner
+        operationsContent={
+          showDiagramToolbar ? (
+            <CanvasToolbar
+              hasDiagram={hasDiagram}
+              onExport={handleExport}
+              canToggleRenderer={canToggleRenderer}
+              renderMode={renderMode}
+              onRenderModeChange={setRenderMode}
+              showDisplayOptions={!showHtml}
+              variant="banner"
+            />
+          ) : null
+        }
+      />
       <div className="flex-1 relative" data-testid="diagram-canvas">
         <div className={cn('absolute inset-0', rightPanelView !== 'diagram' && 'invisible')}>
           <div
@@ -167,16 +182,6 @@ export function DiagramPanel() {
               diagramOutputStale && 'pointer-events-none opacity-60 grayscale',
             )}
           >
-            <div className="absolute top-2 left-0 right-0 z-10 flex justify-center pointer-events-none">
-              <CanvasToolbar
-                hasDiagram={hasDiagram}
-                onExport={handleExport}
-                canToggleRenderer={canToggleRenderer}
-                renderMode={renderMode}
-                onRenderModeChange={setRenderMode}
-                showDisplayOptions={!showHtml}
-              />
-            </div>
             {mountEditable && (
               <DiagramLayer active={showEditable}>
                 <UmpleDiagram model={umpleModel!} layout={classLayout ?? undefined} storedLayout={storedLayout ?? undefined} editable={showEditable} />

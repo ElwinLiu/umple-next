@@ -14,6 +14,7 @@ import { api } from '../api/client'
 import type { UmpleModel, GvLayout, StoredLayoutMetadata } from '../api/types'
 import { getGenerateTarget, resolveGenerateRequestLanguage } from '../generation/targets'
 import { getCompileSourceSnapshot } from '../lib/compileSource'
+import { useEffectiveDynamicGeneration } from '../lib/effectiveDynamicGeneration'
 
 /** Diagram-only messages that are transient (not real compilation errors).
  *  Matched via exact equality (case-insensitive, trimmed) to avoid
@@ -242,7 +243,7 @@ export function useCompiler() {
   const tabsVersion = useSessionStore((s) => s.tabsVersion)
   const viewMode = useSessionStore((s) => s.viewMode)
   const generateTargetId = useSessionStore((s) => s.generateTargetId)
-  const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration)
+  const dynamicGeneration = useEffectiveDynamicGeneration()
   const setSvgForView = useSessionStore((s) => s.setSvgForView)
   const setHtmlForView = useSessionStore((s) => s.setHtmlForView)
   const suboptionsKey = usePreferencesStore(selectSuboptionsKey)

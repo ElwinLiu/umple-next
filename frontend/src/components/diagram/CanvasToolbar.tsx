@@ -6,6 +6,7 @@ import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuRadioGroup, DropdownMenuRadioItem } from '@/components/ui/dropdown-menu'
 import { Switch } from '@/components/ui/switch'
 import { Tip } from '@/components/ui/tooltip'
+import { cn } from '@/lib/utils'
 
 const btnBase =
   'px-1.5 py-0.5 text-xs cursor-pointer transition-colors rounded focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1 text-ink-muted hover:text-ink hover:bg-surface-2 flex items-center gap-1'
@@ -17,6 +18,7 @@ interface CanvasToolbarProps {
   renderMode: 'editable' | 'graphviz'
   onRenderModeChange: (mode: 'editable' | 'graphviz') => void
   showDisplayOptions?: boolean
+  variant?: 'overlay' | 'banner'
 }
 
 export function CanvasToolbar({
@@ -26,6 +28,7 @@ export function CanvasToolbar({
   renderMode,
   onRenderModeChange,
   showDisplayOptions = true,
+  variant = 'overlay',
 }: CanvasToolbarProps) {
   const viewMode = useSessionStore((s) => s.viewMode)
   const toggles = DISPLAY_TOGGLES[viewMode]
@@ -35,7 +38,12 @@ export function CanvasToolbar({
 
   return (
     <div
-      className="pointer-events-auto flex items-center bg-surface-0/90 backdrop-blur-sm border border-border rounded-lg px-1 py-1 shadow-sm"
+      className={cn(
+        'pointer-events-auto flex items-center rounded-lg',
+        variant === 'overlay'
+          ? 'bg-surface-0/90 backdrop-blur-sm border border-border px-1 py-1 shadow-sm'
+          : 'gap-1'
+      )}
       data-testid="canvas-toolbar"
     >
       {canToggleRenderer && (

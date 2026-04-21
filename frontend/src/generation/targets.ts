@@ -47,7 +47,7 @@ export const GENERATE_TARGET_GROUPS: GenerateTargetGroup[] = [
   {
     label: 'Data Model Views',
     targets: [
-      { id: 'classDiagram', label: 'GraphViz Class Diagram (SVG)', action: 'diagram', diagramView: 'class' },
+      { id: 'classDiagram', label: 'GraphViz Class Diagram', action: 'diagram', diagramView: 'class' },
       { id: 'entityRelationshipDiagram', label: 'Entity Relationship Diagram (GraphViz SVG)', action: 'diagram', diagramView: 'erd' },
       { id: 'crud', label: 'CRUD User Interface', action: 'diagram', diagramView: 'crud' },
       { id: 'Sql', label: 'Sql', action: 'generate' },

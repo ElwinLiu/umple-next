@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/popover";
 import { Tip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useEffectiveDynamicGeneration } from "@/lib/effectiveDynamicGeneration";
 
 const shellBtn =
   "inline-flex h-8 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink";
@@ -87,6 +88,9 @@ export function AppToolbar() {
   const executing = useEphemeralStore((s) => s.executing);
   const errorCount = useEphemeralStore((s) => s.outputErrorCount);
   const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration);
+  const effectiveDynamicGeneration = useEffectiveDynamicGeneration();
+  const diagramOnly = useEphemeralStore((s) => s.diagramOnly);
+  const rightPanelView = useEphemeralStore((s) => s.rightPanelView);
   const generateTargetId = useSessionStore((s) => s.generateTargetId);
   const tabsVersion = useSessionStore((s) => s.tabsVersion);
   const selectedExampleId = useSessionStore((s) => s.selectedExampleId);
@@ -105,7 +109,10 @@ export function AppToolbar() {
   const currentSource = getCompileSourceSnapshot();
   const generationSuspendedForCurrentInput =
     generationErrorSourceSignature === currentSource.signature;
-  const showTemporaryRegenerate = dynamicGeneration && generationSuspendedForCurrentInput;
+  const generationPausedForFullscreen =
+    dynamicGeneration && !effectiveDynamicGeneration && diagramOnly && rightPanelView === "generated";
+  const showTemporaryRegenerate =
+    generationPausedForFullscreen || (dynamicGeneration && generationSuspendedForCurrentInput);
   const [examplePickerOpen, setExamplePickerOpen] = useState(false);
   const [activeExampleSetId, setActiveExampleSetId] =
     useState<ExampleSetId | null>(null);
@@ -469,11 +476,13 @@ export function AppToolbar() {
             </Popover>
           </div>
 
-          {(!dynamicGeneration || showTemporaryRegenerate) && (
+          {(!effectiveDynamicGeneration || showTemporaryRegenerate) && (
             <Tip
               content={
-                showTemporaryRegenerate
-                  ? "Temporary retry while auto-generation is paused by an error"
+                generationPausedForFullscreen
+                  ? "Auto-generation is paused while output is fullscreen"
+                  : showTemporaryRegenerate
+                    ? "Temporary retry while auto-generation is paused by an error"
                   : "Regenerate output (Ctrl+Enter)"
               }
               side="bottom"

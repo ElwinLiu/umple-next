@@ -27,6 +27,7 @@ describe('buildSuboptions', () => {
     const suboptions = buildSuboptions({
       showAttributes: true,
       showMethods: true,
+      showOrthogonalEdges: true,
       showTraits: true,
       showActions: true,
       showTransitionLabels: false,
@@ -38,5 +39,6 @@ describe('buildSuboptions', () => {
     }, 'class', false)
 
     expect(suboptions).toContain('showmethods')
+    expect(suboptions).toContain('gvortho')
   })
 })

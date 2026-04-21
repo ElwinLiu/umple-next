@@ -16,6 +16,12 @@ func TestDiagramTypeInfoIncludesStructureDiagram(t *testing.T) {
 	}
 }
 
+func TestValidSuboptionsIncludesLegacyGvortho(t *testing.T) {
+	if !validSuboptions["gvortho"] {
+		t.Fatal("gvortho should remain supported for legacy Graphviz parity")
+	}
+}
+
 func TestBuildStructureDiagramHTMLWrapsGeneratedScript(t *testing.T) {
 	got := buildStructureDiagramHTML(`ShapesRegistry.paint({ args: { container: "##CANVAS_ID##" } });`)
 
