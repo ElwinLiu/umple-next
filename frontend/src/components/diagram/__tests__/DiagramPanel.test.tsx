@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { DiagramPanel } from '../DiagramPanel'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
+import { usePreferencesStore } from '@/stores/preferencesStore'
 import { useSessionStore } from '@/stores/sessionStore'
 import { TooltipProvider } from '@/components/ui/tooltip'
 
@@ -76,10 +77,16 @@ afterEach(() => {
     generatedIframeUrl: null,
     generatedDownloads: [],
     generatedLanguage: 'Java',
+    generatedSourceCode: null,
+    generatedSourceTabId: null,
     generatingCode: false,
     generatedError: null,
     generationRequested: false,
+    diagramSourceCode: null,
+    diagramSourceTabId: null,
+    diagramTargetId: null,
   })
+  usePreferencesStore.setState({ dynamicGeneration: true })
 })
 
 describe('DiagramPanel', () => {
@@ -197,5 +204,89 @@ describe('DiagramPanel', () => {
     )
 
     expect(screen.getByTestId('empty-canvas-open-examples')).toBeDefined()
+  })
+
+  it('greys and freezes generated output when manual generation becomes stale', () => {
+    usePreferencesStore.setState({ dynamicGeneration: false })
+    useSessionStore.setState({
+      code: 'class UpdatedInvoice { number; }',
+      activeTabId: 'main',
+    })
+    useEphemeralStore.setState({
+      rightPanelView: 'generated',
+      generatedCode: 'class InvoiceGenerated {}',
+      generatedSourceCode: 'class Invoice { number; }',
+      generatedSourceTabId: 'main',
+      generationRequested: true,
+    })
+
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.getByTestId('generated-output-view')).toBeDefined()
+    expect(screen.getByTestId('generated-output-stale-overlay')).toBeDefined()
+    expect(screen.getByText('Output is out of date. Regenerate to refresh it.')).toBeDefined()
+  })
+
+  it('greys and freezes diagram output when manual generation becomes stale', () => {
+    usePreferencesStore.setState({ dynamicGeneration: false })
+    useSessionStore.setState({
+      code: 'class UpdatedInvoice { number; }',
+      activeTabId: 'main',
+      viewMode: 'class',
+      generateTargetId: 'classDiagram',
+      svgCache: {
+        class: '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" /></svg>',
+      },
+    })
+    useEphemeralStore.setState({
+      rightPanelView: 'diagram',
+      diagramSourceCode: 'class Invoice { number; }',
+      diagramSourceTabId: 'main',
+      diagramTargetId: 'classDiagram',
+    })
+
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.getByTestId('smart-svg-view')).toBeDefined()
+    expect(screen.getByTestId('diagram-output-stale-overlay')).toBeDefined()
+    expect(screen.getByText('Diagram is out of date.')).toBeDefined()
+    expect(screen.getByText('Regenerate to refresh it.')).toBeDefined()
+  })
+
+  it('keeps the current diagram visible and stale after a manual-mode target switch', () => {
+    usePreferencesStore.setState({ dynamicGeneration: false })
+    useSessionStore.setState({
+      code: 'class Invoice { number; }',
+      activeTabId: 'main',
+      viewMode: 'class',
+      generateTargetId: 'stateDiagram',
+      svgCache: {
+        class: '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" /></svg>',
+      },
+    })
+    useEphemeralStore.setState({
+      rightPanelView: 'diagram',
+      diagramSourceCode: 'class Invoice { number; }',
+      diagramSourceTabId: 'main',
+      diagramTargetId: 'classDiagram',
+    })
+
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.getByTestId('smart-svg-view')).toBeDefined()
+    expect(screen.getByTestId('diagram-output-stale-overlay')).toBeDefined()
+    expect(screen.getByText('Diagram is out of date.')).toBeDefined()
   })
 })

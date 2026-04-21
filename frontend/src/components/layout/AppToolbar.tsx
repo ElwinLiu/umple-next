@@ -3,7 +3,7 @@ import { useEphemeralStore } from "../../stores/ephemeralStore";
 import { useSessionStore } from "../../stores/sessionStore";
 import { usePreferencesStore } from "../../stores/preferencesStore";
 import { useRegenerate, useExecute } from "../../hooks/useExecute";
-import { useGenerate } from "../../hooks/useGenerate";
+import { useSelectGenerateTarget } from "../../hooks/useGenerate";
 import { useExamples } from "../../hooks/useExamples";
 import type { ExampleSetId } from "../../api/types";
 import {
@@ -89,7 +89,7 @@ export function AppToolbar() {
   const generateTargetId = useSessionStore((s) => s.generateTargetId);
   const selectedExampleId = useSessionStore((s) => s.selectedExampleId);
   const selectedExampleSetId = useSessionStore((s) => s.selectedExampleSetId);
-  const handleGenerate = useGenerate();
+  const handleGenerate = useSelectGenerateTarget();
   const {
     sets: exampleSets,
     loadExample,

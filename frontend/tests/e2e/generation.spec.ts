@@ -1,15 +1,20 @@
 import { expect, test, type Page } from '@playwright/test'
 import type { GenerationRequest } from '../../src/api/types'
 
-const CLASS_MODEL = {
-  umpleClasses: [
-    {
-      name: 'Invoice',
-      attributes: [{ name: 'number', type: '' }],
-      methods: [],
-    },
-  ],
-  umpleAssociations: [],
+test.describe.configure({ timeout: 45_000 })
+
+function buildClassModel(code: string) {
+  const className = code.includes('UpdatedInvoice') ? 'UpdatedInvoice' : 'Invoice'
+  return {
+    umpleClasses: [
+      {
+        name: className,
+        attributes: [{ name: 'number', type: '' }],
+        methods: [],
+      },
+    ],
+    umpleAssociations: [],
+  }
 }
 
 function getLastRequest(requests: GenerationRequest[]) {
@@ -48,7 +53,7 @@ async function chooseGenerateTarget(page: Page, targetId: string) {
 }
 
 async function chooseToolbarGenerateTarget(page: Page, query: string, label: string) {
-  await page.getByRole('button', { name: 'Generate' }).click()
+  await page.getByRole('button', { name: 'Generate', exact: true }).click()
   await page.getByPlaceholder('Search targets...').fill(query)
   await page.getByText(label, { exact: true }).click()
 }
@@ -61,6 +66,7 @@ async function installGenerationRoutes(page: Page, requests: GenerationRequest[]
   await page.route('**/api/generate', async (route) => {
     const body = route.request().postDataJSON() as GenerationRequest
     requests.push(body)
+    const classModel = buildClassModel(body.code)
 
     if (body.language === 'Java') {
       const className = body.code.includes('UpdatedInvoice')
@@ -70,7 +76,7 @@ async function installGenerationRoutes(page: Page, requests: GenerationRequest[]
       await route.fulfill({
         json: {
           modelId: 'playwright-model',
-          result: JSON.stringify(CLASS_MODEL),
+          result: JSON.stringify(classModel),
           generatedOutput: `public class ${className} {\n  public String getNumber() { return number; }\n}`,
           generatedLanguage: 'Java',
           generatedKind: 'text',
@@ -83,7 +89,7 @@ async function installGenerationRoutes(page: Page, requests: GenerationRequest[]
       await route.fulfill({
         json: {
           modelId: 'playwright-model',
-          result: JSON.stringify(CLASS_MODEL),
+          result: JSON.stringify(classModel),
           generatedHtml: '<html><body><h1>Simple Metrics Report</h1><p>Total classes: 1</p></body></html>',
           generatedLanguage: 'SimpleMetrics',
           generatedKind: 'html',
@@ -96,7 +102,7 @@ async function installGenerationRoutes(page: Page, requests: GenerationRequest[]
       await route.fulfill({
         json: {
           modelId: 'playwright-model',
-          result: JSON.stringify(CLASS_MODEL),
+          result: JSON.stringify(classModel),
           generatedLanguage: 'javadoc',
           generatedKind: 'iframe',
           generatedIframeUrl: 'https://example.test/generated/javadoc/index.html',
@@ -116,7 +122,7 @@ async function installGenerationRoutes(page: Page, requests: GenerationRequest[]
       await route.fulfill({
         json: {
           modelId: 'playwright-model',
-          result: JSON.stringify(CLASS_MODEL),
+          result: JSON.stringify(classModel),
           html: '<html><body><div>Structure Diagram Output</div></body></html>',
         },
       })
@@ -126,7 +132,7 @@ async function installGenerationRoutes(page: Page, requests: GenerationRequest[]
     await route.fulfill({
       json: {
         modelId: 'playwright-model',
-        result: JSON.stringify(CLASS_MODEL),
+        result: JSON.stringify(classModel),
         svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"></svg>',
       },
     })
@@ -170,11 +176,12 @@ test.describe('Generation UI', () => {
 
     await expect(page.getByText('InvoiceGenerated')).toBeVisible({ timeout: 10_000 })
     await expect(page.getByTestId('regenerate-button')).toBeVisible()
+    await expect(page.getByTestId('generated-output-stale-overlay')).toHaveCount(0)
     expect(getLastRequest(requests)?.language).toBe('Java')
 
     await setEditorCode(page, 'class UpdatedInvoice { number; }')
-    await page.waitForTimeout(900)
 
+    await expect(page.getByTestId('generated-output-stale-overlay')).toBeVisible()
     expect(requests).toHaveLength(1)
     await expect(page.getByText('InvoiceGenerated')).toBeVisible()
 
@@ -190,6 +197,155 @@ test.describe('Generation UI', () => {
     await expect(page.getByText('UpdatedInvoiceGenerated')).toBeVisible({
       timeout: 10_000,
     })
+    await expect(page.getByTestId('generated-output-stale-overlay')).toHaveCount(0)
+  })
+
+  test('keeps generated code visible when switching to a diagram target in manual mode', async ({
+    page,
+  }) => {
+    const requests: GenerationRequest[] = []
+    await addPreferencesInitScript(page, { dynamicGeneration: false })
+    await installGenerationRoutes(page, requests)
+
+    await page.goto('/')
+    await expect(page.getByTestId('app-shell')).toBeVisible()
+
+    await setEditorCode(page, 'class Invoice { number; }')
+    await chooseGenerateTarget(page, 'Java')
+
+    await expect(page.getByText('InvoiceGenerated')).toBeVisible({ timeout: 10_000 })
+    expect(getLastRequest(requests)?.language).toBe('Java')
+
+    await chooseToolbarGenerateTarget(page, 'State Diagram', 'State Diagram (GraphViz SVG)')
+    await page.waitForTimeout(300)
+
+    expect(requests).toHaveLength(1)
+    await expect(page.getByText('InvoiceGenerated')).toBeVisible()
+    await expect(page.getByTestId('generated-output-stale-overlay')).toBeVisible()
+
+    const regenerateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await page.getByTestId('regenerate-button').click()
+    await regenerateResponse
+
+    expect(requests).toHaveLength(2)
+    expect(getLastRequest(requests)?.diagramType).toBe('GvStateDiagram')
+  })
+
+  test('does not auto-generate when changing the target while dynamic generation is off', async ({
+    page,
+  }) => {
+    const requests: GenerationRequest[] = []
+    await addPreferencesInitScript(page, { dynamicGeneration: false })
+    await installGenerationRoutes(page, requests)
+
+    await page.goto('/')
+    await expect(page.getByTestId('app-shell')).toBeVisible()
+
+    await setEditorCode(page, 'class Invoice { number; }')
+    await page.waitForTimeout(900)
+    expect(requests).toHaveLength(0)
+
+    await chooseToolbarGenerateTarget(page, 'Java', 'Java Code')
+    await page.waitForTimeout(300)
+
+    expect(requests).toHaveLength(0)
+    await expect(page.getByTestId('regenerate-button')).toBeVisible()
+
+    const regenerateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await page.getByTestId('regenerate-button').click()
+    await regenerateResponse
+
+    expect(requests).toHaveLength(1)
+    expect(getLastRequest(requests)?.language).toBe('Java')
+    await expect(page.getByText('InvoiceGenerated')).toBeVisible({ timeout: 10_000 })
+  })
+
+  test('greys stale diagrams until manual regenerate when dynamic generation is off', async ({
+    page,
+  }) => {
+    const requests: GenerationRequest[] = []
+    await addPreferencesInitScript(page, { dynamicGeneration: false })
+    await installGenerationRoutes(page, requests)
+
+    await page.goto('/')
+    await expect(page.getByTestId('app-shell')).toBeVisible()
+
+    await setEditorCode(page, 'class Invoice { number; }')
+
+    const firstRegenerateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await page.getByTestId('regenerate-button').click()
+    await firstRegenerateResponse
+
+    await expect(page.getByTestId('class-node-Invoice')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('diagram-output-stale-overlay')).toHaveCount(0)
+    expect(getLastRequest(requests)?.diagramType).toBe('GvClassDiagram')
+
+    await setEditorCode(page, 'class UpdatedInvoice { number; }')
+
+    await expect(page.getByTestId('diagram-output-stale-overlay')).toBeVisible()
+    expect(requests).toHaveLength(1)
+    await expect(page.getByTestId('class-node-Invoice')).toBeVisible()
+
+    const secondRegenerateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await page.getByTestId('regenerate-button').click()
+    await secondRegenerateResponse
+
+    expect(requests).toHaveLength(2)
+    expect(getLastRequest(requests)?.diagramType).toBe('GvClassDiagram')
+    await expect(page.getByTestId('diagram-output-stale-overlay')).toHaveCount(0)
+  })
+
+  test('keeps the current output visible when switching targets in manual mode until regenerate', async ({
+    page,
+  }) => {
+    const requests: GenerationRequest[] = []
+    await addPreferencesInitScript(page, { dynamicGeneration: false })
+    await installGenerationRoutes(page, requests)
+
+    await page.goto('/')
+    await expect(page.getByTestId('app-shell')).toBeVisible()
+
+    await setEditorCode(page, 'class Invoice { number; }')
+
+    const firstRegenerateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await page.getByTestId('regenerate-button').click()
+    await firstRegenerateResponse
+
+    await expect(page.getByTestId('class-node-Invoice')).toBeVisible({ timeout: 10_000 })
+    expect(getLastRequest(requests)?.diagramType).toBe('GvClassDiagram')
+
+    await chooseToolbarGenerateTarget(page, 'State Diagram', 'State Diagram (GraphViz SVG)')
+    await page.waitForTimeout(300)
+
+    expect(requests).toHaveLength(1)
+    await expect(page.getByTestId('class-node-Invoice')).toBeVisible()
+    await expect(page.getByTestId('diagram-output-stale-overlay')).toBeVisible()
+
+    const secondRegenerateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await page.getByTestId('regenerate-button').click()
+    await secondRegenerateResponse
+
+    expect(requests).toHaveLength(2)
+    expect(getLastRequest(requests)?.diagramType).toBe('GvStateDiagram')
+    await expect(page.getByTestId('diagram-output-stale-overlay')).toHaveCount(0)
   })
 
   test('renders HTML diagrams in the canvas when the selected target is a diagram with HTML output', async ({

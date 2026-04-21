@@ -106,11 +106,16 @@ interface EphemeralState {
   generatedDownloads: GeneratedArtifact[]
   generatedTargetId: string
   generatedLanguage: string
+  generatedSourceCode: string | null
+  generatedSourceTabId: string | null
   generatingCode: boolean
   generatedError: string | null
   generationRequested: boolean
 
   // Diagram ephemeral
+  diagramSourceCode: string | null
+  diagramSourceTabId: string | null
+  diagramTargetId: string | null
   renderMode: 'editable' | 'graphviz'
   selectedNodeId: string | null
   selectedEdgeId: string | null
@@ -150,12 +155,17 @@ interface EphemeralState {
   setExecutionOutput: (output: string, errors?: string | null) => void
 
   // Code generation actions
-  setGeneratedOutput: (result: GenerateResponse, targetId: string) => void
+  setGeneratedOutput: (
+    result: GenerateResponse,
+    targetId: string,
+    source: { code: string; tabId: string },
+  ) => void
   setGeneratingCode: (generating: boolean, targetId?: string) => void
   setGeneratedError: (error: string | null) => void
   clearGenerated: () => void
 
   // Diagram ephemeral actions
+  markDiagramFresh: (targetId: string, source: { code: string; tabId: string }) => void
   setRenderMode: (mode: 'editable' | 'graphviz') => void
   setSelectedNode: (id: string | null) => void
   setSelectedEdge: (id: string | null) => void
@@ -202,11 +212,16 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   generatedDownloads: [],
   generatedTargetId: 'Java',
   generatedLanguage: 'Java',
+  generatedSourceCode: null,
+  generatedSourceTabId: null,
   generatingCode: false,
   generatedError: null,
   generationRequested: false,
 
   // Diagram ephemeral
+  diagramSourceCode: null,
+  diagramSourceTabId: null,
+  diagramTargetId: null,
   renderMode: 'graphviz',
   selectedNodeId: null,
   selectedEdgeId: null,
@@ -267,7 +282,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   },
 
   // Code generation actions
-  setGeneratedOutput: (result, generatedTargetId) =>
+  setGeneratedOutput: (result, generatedTargetId, source) =>
     set({
       generatedCode: result.output ?? '',
       generatedHtml: result.html ?? '',
@@ -276,6 +291,8 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
       generatedDownloads: result.downloads ?? [],
       generatedTargetId,
       generatedLanguage: result.language,
+      generatedSourceCode: source.code,
+      generatedSourceTabId: source.tabId,
       rightPanelView: 'generated',
       generatedError: result.errors ?? null,
     }),
@@ -290,12 +307,19 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
     generatedKind: 'text',
     generatedIframeUrl: null,
     generatedDownloads: [],
+    generatedSourceCode: null,
+    generatedSourceTabId: null,
     generatedError: null,
     rightPanelView: 'diagram',
     generationRequested: false,
   }),
 
   // Diagram ephemeral actions
+  markDiagramFresh: (diagramTargetId, source) => set({
+    diagramTargetId,
+    diagramSourceCode: source.code,
+    diagramSourceTabId: source.tabId,
+  }),
   setRenderMode: (renderMode) => set({ renderMode }),
   setSelectedNode: (selectedNodeId) => set({ selectedNodeId }),
   setSelectedEdge: (selectedEdgeId) => set({ selectedEdgeId }),

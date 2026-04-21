@@ -1,33 +1,23 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect } from 'react'
 import { useEphemeralStore } from '../../stores/ephemeralStore'
-import { useGenerate } from '../../hooks/useGenerate'
-import { GENERATE_ONLY_TARGET_GROUPS, getGenerateTarget } from '../../generation/targets'
-import { ChevronDown, Maximize2, Minimize2 } from 'lucide-react'
-import { Combobox, type ComboboxGroup } from '@/components/ui/combobox'
+import { useSessionStore } from '../../stores/sessionStore'
+import { getGenerateTarget, getGenerateTargetIdForView } from '../../generation/targets'
+import { Maximize2, Minimize2 } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
-import { lineTabClasses } from '@/components/ui/line-tab'
 import { cn } from '@/lib/utils'
 
 export function CanvasBanner() {
   const diagramOnly = useEphemeralStore((s) => s.diagramOnly)
   const setDiagramOnly = useEphemeralStore((s) => s.setDiagramOnly)
   const rightPanelView = useEphemeralStore((s) => s.rightPanelView)
-  const setRightPanelView = useEphemeralStore((s) => s.setRightPanelView)
+  const generateTargetId = useSessionStore((s) => s.generateTargetId)
+  const viewMode = useSessionStore((s) => s.viewMode)
   const generatedTargetId = useEphemeralStore((s) => s.generatedTargetId)
-  const generatingCode = useEphemeralStore((s) => s.generatingCode)
-  const generationRequested = useEphemeralStore((s) => s.generationRequested)
-  const handleGenerate = useGenerate()
-  const generateGroups = useMemo<ComboboxGroup[]>(
-    () => GENERATE_ONLY_TARGET_GROUPS.map((group) => ({
-      label: group.label,
-      options: group.targets.map((target) => ({
-        value: target.id,
-        label: target.label,
-        keywords: [target.id, group.label],
-      })),
-    })),
-    [],
-  )
+  const diagramTargetId = useEphemeralStore((s) => s.diagramTargetId)
+  const currentOutputTargetId = rightPanelView === 'generated'
+    ? generatedTargetId
+    : diagramTargetId ?? getGenerateTargetIdForView(viewMode) ?? generateTargetId
+  const currentOutputLabel = getGenerateTarget(currentOutputTargetId)?.label ?? 'Output'
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -44,45 +34,10 @@ export function CanvasBanner() {
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center h-[var(--toolbar-h)] px-3 shrink-0 border-b border-border" data-testid="canvas-banner">
       <div />
-      <div className="flex items-center justify-center gap-0.5 min-w-0 overflow-hidden">
-        <Tip content="Diagram" side="bottom">
-          <button
-            onClick={() => {
-              if (rightPanelView === 'generated') {
-                setRightPanelView('diagram')
-              }
-            }}
-            className={cn(lineTabClasses({ active: rightPanelView === 'diagram' }), 'text-xs px-2.5 py-1 shrink-0')}
-          >
-            Diagram
-          </button>
-        </Tip>
-        {generationRequested && (
-          <div className="flex items-center min-w-0">
-            <Tip content="Generated code" side="bottom">
-              <button
-                onClick={() => setRightPanelView('generated')}
-                className={cn(lineTabClasses({ active: rightPanelView === 'generated' }), 'text-xs px-2.5 py-1 flex items-center gap-1.5 min-w-0 max-w-48')}
-              >
-                {generatingCode && <><span className="w-1.5 h-1.5 shrink-0 rounded-full bg-status-warning animate-pulse" aria-hidden="true" /><span className="sr-only">Generating</span></>}
-                <span className="truncate">{getGenerateTarget(generatedTargetId)?.label ?? generatedTargetId}</span>
-              </button>
-            </Tip>
-            <Combobox
-              groups={generateGroups}
-              value={generatedTargetId}
-              onSelect={(targetId) => {
-                void handleGenerate(targetId)
-              }}
-              searchPlaceholder="Search targets..."
-              className="h-auto w-auto border-0 bg-transparent px-1 py-0.5 text-xs text-ink-faint hover:text-ink-muted focus:border-transparent focus:ring-0"
-              contentClassName="w-72 min-w-[18rem]"
-              listClassName="max-h-72"
-              triggerChildren={<ChevronDown className="size-3" />}
-              ariaLabel="Change language"
-            />
-          </div>
-        )}
+      <div className="flex items-center justify-center gap-1.5 min-w-0 overflow-hidden">
+        <span className="truncate rounded-full border border-border bg-surface-0 px-2.5 py-1 text-xs text-ink-muted">
+          {currentOutputLabel}
+        </span>
       </div>
 
       <div className="flex items-center justify-end gap-1">

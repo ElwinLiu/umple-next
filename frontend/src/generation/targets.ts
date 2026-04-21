@@ -108,13 +108,6 @@ export const APP_TOOLBAR_GENERATE_TARGET_GROUPS: GenerateTargetGroup[] = [
   ...GENERATE_TARGET_GROUPS.filter(groupContainsDiagram).map(sortGroupTargetsDiagramsFirst),
   ...GENERATE_TARGET_GROUPS.filter((group) => !groupContainsDiagram(group)),
 ]
-export const GENERATE_ONLY_TARGET_GROUPS: GenerateTargetGroup[] = GENERATE_TARGET_GROUPS
-  .map((group) => ({
-    ...group,
-    targets: group.targets.filter((target) => target.action === 'generate'),
-  }))
-  .filter((group) => group.targets.length > 0)
-export const GENERATE_ONLY_TARGETS: GenerateTarget[] = GENERATE_ONLY_TARGET_GROUPS.flatMap((g) => g.targets)
 
 const TARGETS_BY_ID = new Map(GENERATE_TARGETS.map((target) => [target.id, target]))
 const DIAGRAM_TARGET_IDS_BY_VIEW = new Map(
