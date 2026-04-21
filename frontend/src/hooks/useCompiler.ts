@@ -19,7 +19,8 @@ import { getGenerateTarget, resolveGenerateRequestLanguage } from '../generation
 /** Diagram-only messages that are transient (not real compilation errors).
  *  Matched via exact equality (case-insensitive, trimmed) to avoid
  *  accidentally swallowing unrelated errors that contain a substring. */
-const DIAGRAM_TOAST_MESSAGES = new Set([
+const DIAGRAM_TOAST_MESSAGES = new Set<string>([])
+const DIAGRAM_SUPPRESSED_MESSAGES = new Set([
   'no diagram output generated',
 ])
 
@@ -40,6 +41,9 @@ function splitDiagramToasts(errors: string): { panelErrors: string; toastMessage
   const toastMessages: string[] = []
   const remaining = errors.split('\n').filter((line) => {
     const trimmed = line.trim()
+    if (DIAGRAM_SUPPRESSED_MESSAGES.has(trimmed.toLowerCase())) {
+      return false
+    }
     if (DIAGRAM_TOAST_MESSAGES.has(trimmed.toLowerCase())) {
       toastMessages.push(trimmed)
       return false
@@ -59,25 +63,20 @@ export async function generateAndRefresh(
   const { code, modelId, setModelId, setUmpleModel, tabs, activeTabId, generateTargetId, viewMode, setViewMode } = useSessionStore.getState()
   const { clearSvgCache, clearHtmlCache, setSvgForView, setHtmlForView } = useSessionStore.getState()
   const {
-    setGeneratingOutput,
+    clearGenerationError,
+    markGenerationErrored,
+    markDiagramFresh,
     setExecutionOutput,
-    setGeneratingCode,
     setGeneratedError,
     setGeneratedOutput,
+    setGeneratingCode,
+    setGeneratingOutput,
     setRightPanelView,
-    markDiagramFresh,
   } = useEphemeralStore.getState()
   const target = getGenerateTarget(targetId ?? generateTargetId)
   const sourceSnapshot = { code, tabId: activeTabId }
 
   if (!code.trim() || !target) return { success: false, model: null }
-
-  if (target.action === 'diagram' && target.diagramView) {
-    setViewMode(target.diagramView)
-    setRightPanelView('diagram')
-  } else {
-    setRightPanelView('generated')
-  }
 
   setGeneratingOutput(true)
   setExecutionOutput('')
@@ -127,14 +126,6 @@ export async function generateAndRefresh(
       return { success: false, model: null }
     }
 
-    // Clear old caches only after the response arrives (not eagerly at the
-    // start) so that if the user switches tabs mid-compile, setActiveTab
-    // snapshots the previous diagram — not empty caches.
-    if (target.action === 'diagram') {
-      clearSvgCache()
-      clearHtmlCache()
-    }
-
     // Read current modelId from the store (not the stale closure value) to
     // avoid overwriting a modelId that was set by useModelFromURL while the
     // compile request was in flight.
@@ -147,11 +138,14 @@ export async function generateAndRefresh(
 
     // Handle diagram output from the merged response
     if (target.action === 'diagram') {
-      if (res.svg) setSvgForView(activeView, res.svg)
-      if (res.html) setHtmlForView(activeView, res.html)
-
       const gvLayout: GvLayout | undefined = res.layout
       const storedLayout: StoredLayoutMetadata | null = res.storedLayout ?? null
+      const hasDiagramPayload = Boolean(
+        res.svg ||
+        res.html ||
+        (activeView === 'class' && model),
+      )
+      let hasBlockingErrors = false
 
       if (res.errors) {
         // Separate transient diagram messages (shown as toasts) from real
@@ -160,15 +154,31 @@ export async function generateAndRefresh(
         for (const msg of toastMessages) toast.info(msg, { id: 'diagram-info' })
         if (panelErrors) {
           setExecutionOutput('', panelErrors)
-        } else {
-          success = true
+          hasBlockingErrors = useEphemeralStore.getState().outputErrorCount > 0
         }
-      } else {
-        success = true
       }
-  
+
+      if (hasBlockingErrors) {
+        markGenerationErrored(sourceSnapshot)
+      } else {
+        clearGenerationError()
+      }
+
+      if (!hasBlockingErrors && hasDiagramPayload) {
+        success = true
+
+        // Clear old caches only after a successful response has arrived so that
+        // stale diagrams stay visible when compilation fails.
+        clearSvgCache()
+        clearHtmlCache()
+        if (res.svg) setSvgForView(activeView, res.svg)
+        if (res.html) setHtmlForView(activeView, res.html)
+        setViewMode(activeView)
+        setRightPanelView('diagram')
+      }
+
       // Store the parsed model and layout for UmpleDiagram
-      if (model) {
+      if (model && success) {
         setUmpleModel(
           model,
           activeView === 'class' ? gvLayout ?? null : undefined,
@@ -198,10 +208,18 @@ export async function generateAndRefresh(
           downloads: res.generatedDownloads,
           modelId: res.modelId,
         }, target.id, sourceSnapshot)
+        setRightPanelView('generated')
 
+        let hasBlockingErrors = false
         if (res.errors) {
           setExecutionOutput('', res.errors)
+          hasBlockingErrors = useEphemeralStore.getState().outputErrorCount > 0
+        }
+
+        if (hasBlockingErrors) {
+          markGenerationErrored(sourceSnapshot)
         } else {
+          clearGenerationError()
           success = true
         }
       } else {
@@ -350,6 +368,9 @@ export function useCompiler() {
     } catch (err: any) {
       if (err.name === 'AbortError') return
       const msg = err.message || ''
+      if (DIAGRAM_SUPPRESSED_MESSAGES.has(msg.toLowerCase().trim())) {
+        return
+      }
       if (DIAGRAM_TOAST_MESSAGES.has(msg.toLowerCase().trim())) {
         toast.info(msg, { id: 'diagram-info' })
       } else {

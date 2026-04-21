@@ -41,7 +41,8 @@ export function useRegenerate() {
   const isDark = useIsDark()
 
   const regenerate = useCallback(async () => {
-    if (regeneratingRef.current) return
+    const { generatingOutput, generatingCode } = useEphemeralStore.getState()
+    if (regeneratingRef.current || generatingOutput || generatingCode) return
     regeneratingRef.current = true
     setRegenerating(true)
 

@@ -52,6 +52,20 @@ vi.mock('../../generation/GeneratedOutputView', () => ({
   GeneratedOutputView: () => <div data-testid="generated-output-view" />,
 }))
 
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+})
+
 afterEach(() => {
   cleanup()
   window.localStorage?.clear?.()
@@ -82,6 +96,9 @@ afterEach(() => {
     generatingCode: false,
     generatedError: null,
     generationRequested: false,
+    generationSuspendedByError: false,
+    generationErrorSourceCode: null,
+    generationErrorSourceTabId: null,
     diagramSourceCode: null,
     diagramSourceTabId: null,
     diagramTargetId: null,
@@ -228,7 +245,7 @@ describe('DiagramPanel', () => {
 
     expect(screen.getByTestId('generated-output-view')).toBeDefined()
     expect(screen.getByTestId('generated-output-stale-overlay')).toBeDefined()
-    expect(screen.getByText('Output is out of date. Regenerate to refresh it.')).toBeDefined()
+    expect(screen.getByText('Output is out of date. Use Regenerate above to refresh it.')).toBeDefined()
   })
 
   it('greys and freezes diagram output when manual generation becomes stale', () => {
@@ -258,7 +275,71 @@ describe('DiagramPanel', () => {
     expect(screen.getByTestId('smart-svg-view')).toBeDefined()
     expect(screen.getByTestId('diagram-output-stale-overlay')).toBeDefined()
     expect(screen.getByText('Diagram is out of date.')).toBeDefined()
-    expect(screen.getByText('Regenerate to refresh it.')).toBeDefined()
+    expect(screen.getByText('Use Regenerate above to refresh it.')).toBeDefined()
+  })
+
+  it('keeps diagram output stale in dynamic mode after a compile error', () => {
+    usePreferencesStore.setState({ dynamicGeneration: true })
+    useSessionStore.setState({
+      code: 'class Invoice { number }',
+      activeTabId: 'main',
+      viewMode: 'class',
+      generateTargetId: 'classDiagram',
+      svgCache: {
+        class: '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" /></svg>',
+      },
+    })
+    useEphemeralStore.setState({
+      rightPanelView: 'diagram',
+      diagramSourceCode: 'class Invoice { number; }',
+      diagramSourceTabId: 'main',
+      diagramTargetId: 'classDiagram',
+      generationSuspendedByError: true,
+      generationErrorSourceCode: 'class Invoice { number }',
+      generationErrorSourceTabId: 'main',
+    })
+
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.getByTestId('smart-svg-view')).toBeDefined()
+    expect(screen.getByTestId('diagram-output-stale-overlay')).toBeDefined()
+    expect(screen.getByText('Diagram is out of date.')).toBeDefined()
+    expect(screen.getByText('Fix the error in the code.')).toBeDefined()
+  })
+
+  it('does not freeze the current dynamic output because another input failed to compile', () => {
+    usePreferencesStore.setState({ dynamicGeneration: true })
+    useSessionStore.setState({
+      code: 'class UpdatedInvoice { number; }',
+      activeTabId: 'main',
+      viewMode: 'class',
+      generateTargetId: 'classDiagram',
+      svgCache: {
+        class: '<svg viewBox="0 0 10 10" xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10" /></svg>',
+      },
+    })
+    useEphemeralStore.setState({
+      rightPanelView: 'diagram',
+      diagramSourceCode: 'class Invoice { number; }',
+      diagramSourceTabId: 'main',
+      diagramTargetId: 'classDiagram',
+      generationSuspendedByError: true,
+      generationErrorSourceCode: 'class Broken { number }',
+      generationErrorSourceTabId: 'other-tab',
+    })
+
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.getByTestId('smart-svg-view')).toBeDefined()
+    expect(screen.queryByTestId('diagram-output-stale-overlay')).toBeNull()
   })
 
   it('keeps the current diagram visible and stale after a manual-mode target switch', () => {

@@ -111,6 +111,9 @@ interface EphemeralState {
   generatingCode: boolean
   generatedError: string | null
   generationRequested: boolean
+  generationSuspendedByError: boolean
+  generationErrorSourceCode: string | null
+  generationErrorSourceTabId: string | null
 
   // Diagram ephemeral
   diagramSourceCode: string | null
@@ -160,6 +163,8 @@ interface EphemeralState {
     targetId: string,
     source: { code: string; tabId: string },
   ) => void
+  markGenerationErrored: (source: { code: string; tabId: string }) => void
+  clearGenerationError: () => void
   setGeneratingCode: (generating: boolean, targetId?: string) => void
   setGeneratedError: (error: string | null) => void
   clearGenerated: () => void
@@ -217,6 +222,9 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   generatingCode: false,
   generatedError: null,
   generationRequested: false,
+  generationSuspendedByError: false,
+  generationErrorSourceCode: null,
+  generationErrorSourceTabId: null,
 
   // Diagram ephemeral
   diagramSourceCode: null,
@@ -296,8 +304,18 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
       rightPanelView: 'generated',
       generatedError: result.errors ?? null,
     }),
+  markGenerationErrored: (source) => set({
+    generationSuspendedByError: true,
+    generationErrorSourceCode: source.code,
+    generationErrorSourceTabId: source.tabId,
+  }),
+  clearGenerationError: () => set({
+    generationSuspendedByError: false,
+    generationErrorSourceCode: null,
+    generationErrorSourceTabId: null,
+  }),
   setGeneratingCode: (generatingCode, targetId) => set(generatingCode
-    ? { generatingCode, generationRequested: true, rightPanelView: 'generated', ...(targetId ? { generatedTargetId: targetId } : {}) }
+    ? { generatingCode, generationRequested: true, ...(targetId ? { generatedTargetId: targetId } : {}) }
     : { generatingCode }
   ),
   setGeneratedError: (generatedError) => set({ generatedError }),
@@ -312,6 +330,9 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
     generatedError: null,
     rightPanelView: 'diagram',
     generationRequested: false,
+    generationSuspendedByError: false,
+    generationErrorSourceCode: null,
+    generationErrorSourceTabId: null,
   }),
 
   // Diagram ephemeral actions

@@ -56,6 +56,9 @@ export function DiagramPanel() {
   const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const generatedError = useEphemeralStore((s) => s.generatedError)
   const generationRequested = useEphemeralStore((s) => s.generationRequested)
+  const generationSuspendedByError = useEphemeralStore((s) => s.generationSuspendedByError)
+  const generationErrorSourceCode = useEphemeralStore((s) => s.generationErrorSourceCode)
+  const generationErrorSourceTabId = useEphemeralStore((s) => s.generationErrorSourceTabId)
   const openExamplesPalette = useEphemeralStore((s) => s.openExamplesPalette)
 
 
@@ -78,11 +81,19 @@ export function DiagramPanel() {
   const mountGv = outputKind === 'gv' && !!currentSvg
   const hasVisibleDiagramOutput = Boolean(hasDiagram || viewMode === 'crud')
   const showEmptyCanvasState = viewMode === 'class' && !generatingOutput && !hasEditableModel && !currentSvg
+  const generationErrorMatchesCurrentInput = Boolean(
+    generationSuspendedByError &&
+    generationErrorSourceTabId === activeTabId &&
+    generationErrorSourceCode === code,
+  )
+  const staleOutputDescription = generationErrorMatchesCurrentInput
+    ? 'Fix the error in the code.'
+    : 'Use Regenerate above to refresh it.'
   const diagramOutputStale = Boolean(
     rightPanelView === 'diagram' &&
     hasVisibleDiagramOutput &&
     !generatingOutput &&
-    !dynamicGeneration &&
+    (!dynamicGeneration || generationErrorMatchesCurrentInput) &&
     diagramSourceTabId &&
     (
       diagramSourceTabId !== activeTabId ||
@@ -95,7 +106,7 @@ export function DiagramPanel() {
     generationRequested &&
     hasGeneratedOutput &&
     !generatingCode &&
-    !dynamicGeneration &&
+    (!dynamicGeneration || generationErrorMatchesCurrentInput) &&
     generatedSourceTabId &&
     (
       generatedSourceTabId !== activeTabId ||
@@ -219,11 +230,11 @@ export function DiagramPanel() {
             >
               <Alert
                 variant="warning"
-                className="pointer-events-none absolute right-3 top-3 max-w-sm bg-surface-0/92 shadow-sm backdrop-blur-sm"
+                className="absolute right-3 top-3 max-w-sm bg-surface-0/92 shadow-sm backdrop-blur-sm"
               >
                 <AlertTriangle />
                 <AlertTitle>Diagram is out of date.</AlertTitle>
-                <AlertDescription>Regenerate to refresh it.</AlertDescription>
+                <AlertDescription>{staleOutputDescription}</AlertDescription>
               </Alert>
             </div>
           )}
@@ -268,8 +279,8 @@ export function DiagramPanel() {
                     className="absolute inset-0 z-10 bg-surface-1/20"
                     data-testid="generated-output-stale-overlay"
                   >
-                    <div className="pointer-events-none absolute right-3 top-3 rounded-md border border-border bg-surface-0/92 px-3 py-1.5 text-xs text-ink-muted shadow-sm backdrop-blur-sm">
-                      Output is out of date. Regenerate to refresh it.
+                    <div className="absolute right-3 top-3 rounded-md border border-border bg-surface-0/92 px-3 py-1.5 text-xs text-ink-muted shadow-sm backdrop-blur-sm">
+                      Output is out of date. {staleOutputDescription}
                     </div>
                   </div>
                 )}
