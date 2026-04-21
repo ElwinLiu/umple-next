@@ -10,7 +10,7 @@ afterEach(() => {
     outputErrorCount: 0,
     outputWarningCount: 0,
   })
-  useSessionStore.setState({ showAgentPanel: false })
+  useSessionStore.setState({ showAgentPanel: false, showAgentBar: false })
 })
 
 describe('uiStore', () => {

@@ -5,13 +5,17 @@ import {
   useEffect,
   useLayoutEffect,
   useCallback,
+  type MouseEvent,
 } from 'react'
 import {
   ChevronDown,
   ChevronUp,
+  LoaderCircle,
   Maximize2,
   Minimize2,
+  PanelBottomClose,
   RotateCcw,
+  Sparkles,
 } from 'lucide-react'
 import { useSessionStore } from '@/stores/sessionStore'
 import { useEphemeralStore } from '@/stores/ephemeralStore'
@@ -21,6 +25,8 @@ import { useDiffPreviewSync } from '@/ai/useDiffPreviewSync'
 import { useResizablePanel } from './useResizablePanel'
 import { InputBar } from './InputBar'
 import { MessageBubble } from './MessageBubble'
+import { Button } from '@/components/ui/button'
+import { Tip } from '@/components/ui/tooltip'
 import { UmpleSpinner } from '@/components/UmpleSpinner'
 import { SPINNER_VERBS } from '@/constants/spinnerVerbs'
 
@@ -36,12 +42,22 @@ const FOLD_THRESHOLD = 80
 function AgentPanel() {
   const { messages, status, error, send, stop, reset, approveToolCall, rejectToolCall } =
     useAgent()
-  const { showAgentPanel, openAgentPanel, closeAgentPanel } = useSessionStore()
+  const {
+    showAgentPanel,
+    showAgentBar,
+    openAgentPanel,
+    closeAgentPanel,
+    revealAgentBar,
+    hideAgentBar,
+  } = useSessionStore()
   const code = useSessionStore((s) => s.code)
   const selection = useEphemeralStore((s) => s.selection)
   const clearSelection = useEphemeralStore((s) => s.setSelection)
   const activeTabName = useSessionStore((s) => s.tabs.find((t) => t.id === s.activeTabId)?.name) ?? 'Model.ump'
   const expanded = showAgentPanel
+  const collapsedBarVisible = showAgentBar && !expanded
+  const launcherVisible = !showAgentBar && !expanded
+  const [focusCollapsedInput, setFocusCollapsedInput] = useState(false)
   const [focusExpandedInput, setFocusExpandedInput] = useState(false)
 
   /* ── Resize ── */
@@ -176,8 +192,25 @@ function AgentPanel() {
     openAgentPanel()
   }, [openAgentPanel])
 
+  const handleLauncherClick = useCallback(() => {
+    if (messages.length > 0) {
+      handleExpandPanel(true)
+      return
+    }
+
+    setFocusCollapsedInput(true)
+    revealAgentBar()
+  }, [handleExpandPanel, messages.length, revealAgentBar])
+
+  const handleHideAgentBar = useCallback((e: MouseEvent<HTMLButtonElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    setFocusCollapsedInput(false)
+    hideAgentBar()
+  }, [hideAgentBar])
+
   const handleCollapsedClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+    (e: MouseEvent<HTMLDivElement>) => {
       if (shouldSuppressClick()) {
         e.preventDefault()
         e.stopPropagation()
@@ -199,8 +232,26 @@ function AgentPanel() {
     setInput('')
   }, [reset])
 
+  if (launcherVisible) {
+    return (
+      <Tip content="Show AI assistant" side="left">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon-lg"
+          className="absolute bottom-3 right-3 z-20 rounded-full shadow-[var(--shadow-elevated)]"
+          data-testid="agent-panel-launcher"
+          aria-label="Show AI assistant"
+          onClick={handleLauncherClick}
+        >
+          {isStreaming ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
+        </Button>
+      </Tip>
+    )
+  }
+
   /* ── Collapsed: just the input bar ── */
-  if (!expanded) {
+  if (collapsedBarVisible) {
     return (
       <div
         className="absolute bottom-0 left-1/2 z-20 w-full max-w-3xl -translate-x-1/2 px-2 pb-2"
@@ -219,17 +270,37 @@ function AgentPanel() {
           isStreaming={isStreaming}
           canSend={canSend}
           textareaMaxHeight={60}
+          autoFocus={focusCollapsedInput}
+          onAutoFocus={() => setFocusCollapsedInput(false)}
           selectionBadge={selectionBadge}
           onClearSelection={() => clearSelection(null)}
         >
-          {messages.length > 0 && (
-            <button
-              onClick={() => handleExpandPanel(true)}
-              className="flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
-              aria-label="Expand chat"
+          <Tip content="Collapse this bar into the AI button" side="top">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleHideAgentBar}
+              className="shrink-0 rounded-full px-3 text-ink-muted"
+              aria-label="Hide AI assistant"
             >
-              <ChevronUp className="size-4" />
-            </button>
+              <PanelBottomClose data-icon="inline-start" />
+              Hide
+            </Button>
+          </Tip>
+          {messages.length > 0 && (
+            <Tip content="Open chat history" side="top">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => handleExpandPanel(true)}
+                className="shrink-0 rounded-full text-ink-muted"
+                aria-label="Expand chat"
+              >
+                <ChevronUp />
+              </Button>
+            </Tip>
           )}
         </InputBar>
       </div>
@@ -257,15 +328,30 @@ function AgentPanel() {
 
       {/* Header */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-3 pb-2">
-        <button
-          onClick={closeAgentPanel}
-          className="cursor-pointer rounded-full p-2 text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
-          aria-label="Collapse chat panel"
-        >
-          <ChevronDown className="size-4" />
-        </button>
+        <Tip content="Collapse to the input bar" side="bottom">
+          <button
+            onClick={closeAgentPanel}
+            className="cursor-pointer rounded-full p-2 text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
+            aria-label="Collapse chat panel"
+          >
+            <ChevronDown className="size-4" />
+          </button>
+        </Tip>
 
         <div className="flex items-center gap-1">
+          <Tip content="Hide assistant until reopened from the AI button" side="bottom">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={handleHideAgentBar}
+              className="shrink-0 rounded-full px-3 text-ink-muted"
+              aria-label="Hide AI assistant"
+            >
+              <PanelBottomClose data-icon="inline-start" />
+              Hide
+            </Button>
+          </Tip>
           <button
             onClick={toggleMaximize}
             className="cursor-pointer rounded-full p-2 text-ink-muted transition-colors hover:bg-surface-2 hover:text-ink"
