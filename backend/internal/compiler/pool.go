@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"sync"
 	"time"
 )
@@ -14,6 +16,10 @@ const (
 	restartDelay      = 2 * time.Second
 	startupMaxRetries = 20
 	startupPollDelay  = 250 * time.Millisecond
+
+	compilerVersionFilename      = "versionRunning.txt"
+	compilerCommandCountFilename = "commandcount.txt"
+	compilerTXLDir               = "txl"
 )
 
 // Pool manages a long-running umplesync.jar server process and provides
@@ -21,6 +27,7 @@ const (
 type Pool struct {
 	jarPath string
 	port    int
+	workDir string
 
 	mu      sync.Mutex
 	process *exec.Cmd
@@ -31,14 +38,30 @@ type Pool struct {
 }
 
 func NewPool(jarPath string, port int) (*Pool, error) {
+	return NewPoolWithWorkDir(jarPath, port, "")
+}
+
+// NewPoolWithWorkDir starts the compiler pool and pins the long-running
+// umplesync server to a dedicated working directory so helper artifacts stay
+// out of the caller's current directory.
+func NewPoolWithWorkDir(jarPath string, port int, workDir string) (*Pool, error) {
+	if workDir == "" {
+		workDir = defaultCompilerWorkDir(port)
+	}
+
 	p := &Pool{
 		jarPath: jarPath,
 		port:    port,
+		workDir: workDir,
 	}
 	if err := p.startServer(); err != nil {
 		log.Printf("warning: failed to start umplesync server: %v (will retry on first request)", err)
 	}
 	return p, nil
+}
+
+func defaultCompilerWorkDir(port int) string {
+	return filepath.Join(os.TempDir(), fmt.Sprintf("umpleonline-compiler-%d", port))
 }
 
 // Execute sends a command to the umplesync server and returns the result.
@@ -94,7 +117,12 @@ func (p *Pool) startServer() error {
 		p.process.Wait()
 	}
 
-	cmd := exec.Command("java", "-cp", p.jarPath, "cruise.umple.PlaygroundMain", "-server", fmt.Sprintf("%d", p.port))
+	if err := p.prepareWorkDir(); err != nil {
+		p.alive = false
+		return fmt.Errorf("prepare compiler work dir: %w", err)
+	}
+
+	cmd := p.serverCommand()
 	if err := cmd.Start(); err != nil {
 		p.alive = false
 		return fmt.Errorf("failed to start umplesync: %w", err)
@@ -126,6 +154,30 @@ func (p *Pool) startServer() error {
 	}
 
 	return fmt.Errorf("umplesync server did not become ready within %v", startupMaxRetries*startupPollDelay)
+}
+
+func (p *Pool) serverCommand() *exec.Cmd {
+	cmd := exec.Command("java", "-cp", p.jarPath, "cruise.umple.PlaygroundMain", "-server", fmt.Sprintf("%d", p.port))
+	cmd.Dir = p.workDir
+	return cmd
+}
+
+func (p *Pool) prepareWorkDir() error {
+	if err := os.MkdirAll(p.workDir, 0755); err != nil {
+		return err
+	}
+
+	for _, name := range []string{
+		compilerVersionFilename,
+		compilerCommandCountFilename,
+		compilerTXLDir,
+	} {
+		if err := os.RemoveAll(filepath.Join(p.workDir, name)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (p *Pool) ensureRunning() error {

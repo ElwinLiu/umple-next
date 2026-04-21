@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -25,7 +26,11 @@ func main() {
 		log.Fatalf("failed to initialize model store: %v", err)
 	}
 
-	pool, err := compiler.NewPool(cfg.UmpleSyncJar, cfg.UmplePort)
+	pool, err := compiler.NewPoolWithWorkDir(
+		cfg.UmpleSyncJar,
+		cfg.UmplePort,
+		filepath.Join(cfg.ModelStorePath, ".compiler"),
+	)
 	if err != nil {
 		log.Fatalf("failed to initialize compiler pool: %v", err)
 	}
