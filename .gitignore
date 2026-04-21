@@ -11,8 +11,15 @@ test-results/
 *.tsbuildinfo
 
 # Runtime state
+versionRunning.txt
+commandcount.txt
+txl/
 backend/versionRunning.txt
 backend/commandcount.txt
+backend/txl/
+backend/internal/api/handlers/versionRunning.txt
+backend/internal/api/handlers/commandcount.txt
+backend/internal/api/handlers/txl/
 
 # Data — all model directories are runtime artifacts
 data/models/
