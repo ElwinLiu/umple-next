@@ -34,10 +34,19 @@ jobs:
         with:
           ref: ${{ inputs.commit || github.sha }}
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Read shared versions
         id: versions
         run: |
           echo "umplesync_version=$(cat .umplesync-version)" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve latest LSP version
+        id: lsp_version
+        run: |
+          echo "version=$(npm view umple-lsp-server version)" >> "$GITHUB_OUTPUT"
 
       - name: Resolve effective SHA
         id: resolve
@@ -182,6 +191,8 @@ jobs:
         with:
           context: .
           file: lsp-proxy/Dockerfile
+          build-args: |
+            UMPLE_LSP_VERSION=${{ steps.lsp_version.outputs.version }}
           push: true
           tags: |
             ${{ steps.meta.outputs.prefix }}/lsp-proxy:${{ steps.meta.outputs.sha_tag }}

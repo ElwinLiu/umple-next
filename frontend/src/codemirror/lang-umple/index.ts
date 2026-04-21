@@ -1,1 +1,1 @@
-export { umple, umpleLanguage, umpleCompletion } from './umple'
+export { umple, umpleLanguage } from './umple'

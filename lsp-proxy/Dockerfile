@@ -1,8 +1,10 @@
 FROM node:22-alpine
 
+ARG UMPLE_LSP_VERSION=latest
+
 RUN apk add --no-cache openjdk17-jre-headless
 
-RUN npm install -g umple-lsp-server@latest
+RUN npm install -g "umple-lsp-server@${UMPLE_LSP_VERSION}"
 
 WORKDIR /app
 
