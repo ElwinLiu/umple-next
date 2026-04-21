@@ -314,6 +314,7 @@ type processDiagramParams struct {
 	suboptions  []string
 	needsLayout bool
 	entryFile   string
+	locked      bool
 }
 
 // processDiagram generates a diagram from a model directory that already
@@ -350,7 +351,11 @@ func processDiagram(p processDiagramParams) (*DiagramResponse, string) {
 			command += " -s " + opt
 		}
 	}
-	result, err := p.pool.Execute(compiler.CompileRequest{
+	execute := p.pool.Execute
+	if p.locked {
+		execute = p.pool.ExecuteLocked
+	}
+	result, err := execute(compiler.CompileRequest{
 		Command: command,
 		WorkDir: p.dir,
 	})

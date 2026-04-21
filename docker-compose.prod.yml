@@ -111,6 +111,9 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/models:/data/models
+    environment:
+      - EXECUTION_RUNNER_IMAGE=${CODE_RUNNER_IMAGE:-ghcr.io/umple/umpleonline/code-runner:latest}
+      - EXECUTION_RUNNER_AUTO_BUILD=0
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:4400/health"]
       interval: 30s

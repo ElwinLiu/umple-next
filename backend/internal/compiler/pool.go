@@ -44,11 +44,22 @@ func NewPool(jarPath string, port int) (*Pool, error) {
 // Execute sends a command to the umplesync server and returns the result.
 // It acquires a per-model lock to prevent concurrent writes.
 func (p *Pool) Execute(req CompileRequest) (*CompileResult, error) {
-	// Acquire per-model lock
 	mu := p.getModelMutex(req.WorkDir)
 	mu.Lock()
 	defer mu.Unlock()
 
+	return p.execute(req)
+}
+
+// ExecuteLocked sends a command while assuming the caller already holds the
+// per-model lock for req.WorkDir via LockModel. This avoids self-deadlocking
+// flows that need to hold the workspace lock across filesystem writes and the
+// compiler invocation as one atomic operation.
+func (p *Pool) ExecuteLocked(req CompileRequest) (*CompileResult, error) {
+	return p.execute(req)
+}
+
+func (p *Pool) execute(req CompileRequest) (*CompileResult, error) {
 	// Ensure server is running
 	if err := p.ensureRunning(); err != nil {
 		return nil, fmt.Errorf("compiler not available: %w", err)
