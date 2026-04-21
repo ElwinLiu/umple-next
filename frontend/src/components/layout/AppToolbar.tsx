@@ -87,8 +87,12 @@ export function AppToolbar() {
   const errorCount = useEphemeralStore((s) => s.outputErrorCount);
   const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration);
   const generateTargetId = useSessionStore((s) => s.generateTargetId);
+  const code = useSessionStore((s) => s.code);
+  const activeTabId = useSessionStore((s) => s.activeTabId);
   const selectedExampleId = useSessionStore((s) => s.selectedExampleId);
   const selectedExampleSetId = useSessionStore((s) => s.selectedExampleSetId);
+  const generationErrorSourceCode = useEphemeralStore((s) => s.generationErrorSourceCode);
+  const generationErrorSourceTabId = useEphemeralStore((s) => s.generationErrorSourceTabId);
   const handleGenerate = useSelectGenerateTarget();
   const {
     sets: exampleSets,
@@ -98,6 +102,11 @@ export function AppToolbar() {
   } = useExamples();
   const selectedGenerateTarget = getGenerateTarget(generateTargetId);
   const canExecuteGenerateTarget = Boolean(selectedGenerateTarget?.executable);
+  const regeneratingOutput = regenerating || generatingOutput;
+  const generationSuspendedForCurrentInput =
+    generationErrorSourceTabId === activeTabId &&
+    generationErrorSourceCode === code;
+  const showTemporaryRegenerate = dynamicGeneration && generationSuspendedForCurrentInput;
   const [examplePickerOpen, setExamplePickerOpen] = useState(false);
   const [activeExampleSetId, setActiveExampleSetId] =
     useState<ExampleSetId | null>(null);
@@ -460,38 +469,54 @@ export function AppToolbar() {
             </Popover>
           </div>
 
-          {!dynamicGeneration && (
-            <Tip content="Regenerate output (Ctrl+Enter)" side="bottom">
-              <button
-                onClick={regenerate}
-                disabled={regenerating}
-                aria-label={regenerating ? "Regenerating output" : "Regenerate output (Ctrl+Enter)"}
-                data-testid="regenerate-button"
-                className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/70 bg-surface-0 px-2.5 text-xs font-medium text-ink-muted shadow-sm transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {regenerating ? (
-                  <Loader2 className="size-3.5 shrink-0 animate-spin" />
-                ) : justRegenerated ? (
-                  <Check className="size-3.5 shrink-0 text-status-success animate-fade-in" />
-                ) : (
-                  <Hammer className="size-3.5 shrink-0" />
-                )}
-                <span className="truncate">
-                  {regenerating ? (
-                    "Regenerating..."
-                  ) : justRegenerated ? (
-                    <span className="text-status-success animate-fade-in">
-                      Regenerated
-                    </span>
-                  ) : (
-                    "Regenerate"
+          {(!dynamicGeneration || showTemporaryRegenerate) && (
+            <Tip
+              content={
+                showTemporaryRegenerate
+                  ? "Temporary retry while auto-generation is paused by an error"
+                  : "Regenerate output (Ctrl+Enter)"
+              }
+              side="bottom"
+            >
+              <span className="inline-flex" data-testid="regenerate-button-wrapper">
+                <button
+                  onClick={regenerate}
+                  disabled={regeneratingOutput}
+                  aria-label={
+                    regeneratingOutput
+                      ? "Regenerating output"
+                      : "Regenerate output (Ctrl+Enter)"
+                  }
+                  data-testid="regenerate-button"
+                  className={cn(
+                    "inline-flex h-8 items-center gap-1.5 rounded-lg border border-border/70 bg-surface-0 px-2.5 text-xs font-medium text-ink-muted shadow-sm transition-colors hover:bg-surface-2 hover:text-ink disabled:cursor-not-allowed disabled:opacity-70",
+                    showTemporaryRegenerate && "border-brand/70",
                   )}
-                </span>
-              </button>
+                >
+                  {regeneratingOutput ? (
+                    <Loader2 className="size-3.5 shrink-0 animate-spin" />
+                  ) : justRegenerated ? (
+                    <Check className="size-3.5 shrink-0 text-status-success animate-fade-in" />
+                  ) : (
+                    <Hammer className="size-3.5 shrink-0" />
+                  )}
+                  <span className="truncate">
+                    {regeneratingOutput ? (
+                      "Regenerating..."
+                    ) : justRegenerated ? (
+                      <span className="text-status-success animate-fade-in">
+                        Regenerated
+                      </span>
+                    ) : (
+                      "Regenerate"
+                    )}
+                  </span>
+                </button>
+              </span>
             </Tip>
           )}
 
-          <div data-tour="generate">
+          <span className="inline-flex" data-tour="generate" data-testid="generate-target-wrapper">
             <Combobox
               groups={generateGroups}
               value={generateTargetId}
@@ -521,7 +546,7 @@ export function AppToolbar() {
               }
               ariaLabel="Generate"
             />
-          </div>
+          </span>
 
           <Tip
             content={

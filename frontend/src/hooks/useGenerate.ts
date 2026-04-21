@@ -1,6 +1,5 @@
 import { useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
-import { useEphemeralStore } from '../stores/ephemeralStore'
 import { usePreferencesStore } from '../stores/preferencesStore'
 import { getGenerateTarget } from '../generation/targets'
 import { generateAndRefresh } from './useCompiler'

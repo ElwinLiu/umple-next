@@ -68,6 +68,17 @@ async function installGenerationRoutes(page: Page, requests: GenerationRequest[]
     requests.push(body)
     const classModel = buildClassModel(body.code)
 
+    if (body.code.includes('number }')) {
+      await route.fulfill({
+        json: {
+          modelId: 'playwright-model',
+          result: JSON.stringify(classModel),
+          errors: '{"results":[{"severity":"1","message":"Syntax error","line":"1"}]}',
+        },
+      })
+      return
+    }
+
     if (body.language === 'Java') {
       const className = body.code.includes('UpdatedInvoice')
         ? 'UpdatedInvoiceGenerated'
@@ -159,6 +170,88 @@ test.describe('Generation UI', () => {
     await expect
       .poll(() => getLastRequest(requests)?.language ?? null)
       .toBe(null)
+  })
+
+  test('keeps the last diagram visible after a compile error in dynamic mode', async ({
+    page,
+  }) => {
+    const requests: GenerationRequest[] = []
+    await addPreferencesInitScript(page)
+    await installGenerationRoutes(page, requests)
+
+    await page.goto('/')
+    await expect(page.getByTestId('app-shell')).toBeVisible()
+
+    await setEditorCode(page, 'class Invoice { number; }')
+    await expect(page.getByTestId('class-node-Invoice')).toBeVisible({
+      timeout: 10_000,
+    })
+
+    await setEditorCode(page, 'class Invoice { number }')
+
+    await expect(page.getByTestId('diagram-output-stale-overlay')).toBeVisible({
+      timeout: 10_000,
+    })
+    await expect(page.getByTestId('class-node-Invoice')).toBeVisible()
+    await expect(page.getByText('Fix the error in the code.')).toBeVisible()
+    await expect(page.getByTestId('regenerate-button')).toBeVisible()
+
+    const retryResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await page.getByTestId('regenerate-button').click()
+    await retryResponse
+    expect(requests).toHaveLength(3)
+  })
+
+  test('keeps regenerate available after a compile error in manual mode', async ({
+    page,
+  }) => {
+    const requests: GenerationRequest[] = []
+    await addPreferencesInitScript(page, { dynamicGeneration: false })
+    await installGenerationRoutes(page, requests)
+
+    await page.goto('/')
+    await expect(page.getByTestId('app-shell')).toBeVisible()
+
+    await setEditorCode(page, 'class Invoice { number; }')
+    let regenerateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await page.getByTestId('regenerate-button').click()
+    await regenerateResponse
+
+    await expect(page.getByTestId('class-node-Invoice')).toBeVisible({
+      timeout: 10_000,
+    })
+
+    await setEditorCode(page, 'class Invoice { number }')
+    await expect(page.getByTestId('diagram-output-stale-overlay')).toBeVisible()
+    await expect(page.getByText('Use Regenerate above to refresh it.')).toBeVisible()
+    await expect(page.getByTestId('regenerate-button')).toBeVisible()
+
+    regenerateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await expect(page.getByTestId('regenerate-button')).toBeEnabled()
+    await page.getByTestId('regenerate-button').click()
+    await regenerateResponse
+
+    expect(requests).toHaveLength(2)
+    await expect(page.getByText('Fix the error in the code.')).toBeVisible()
+    await expect(page.getByTestId('regenerate-button')).toBeEnabled()
+
+    regenerateResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes('/api/generate') && response.request().method() === 'POST',
+    )
+    await page.getByTestId('regenerate-button').click()
+    await regenerateResponse
+
+    expect(requests).toHaveLength(3)
   })
 
   test('preserves stale generated code until manual regenerate when dynamic generation is off', async ({
