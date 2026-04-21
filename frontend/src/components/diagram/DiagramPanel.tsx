@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button'
 import { ErrorBanner } from '@/components/ui/error-banner'
 import { cn } from '@/lib/utils'
 import { api } from '@/api/client'
+import { getCompileSourceSnapshot } from '@/lib/compileSource'
 
 function triggerDownload(href: string, filename: string) {
   const link = document.createElement('a')
@@ -32,10 +33,9 @@ export function DiagramPanel() {
   const umpleModel = useSessionStore((s) => s.umpleModel)
   const classLayout = useSessionStore((s) => s.classLayout)
   const storedLayout = useSessionStore((s) => s.storedLayout)
-  const code = useSessionStore((s) => s.code)
   const modelId = useSessionStore((s) => s.modelId)
-  const activeTabId = useSessionStore((s) => s.activeTabId)
   const generateTargetId = useSessionStore((s) => s.generateTargetId)
+  const tabsVersion = useSessionStore((s) => s.tabsVersion)
   const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration)
   const renderMode = useEphemeralStore((s) => s.renderMode)
   const generatingOutput = useEphemeralStore((s) => s.generatingOutput)
@@ -48,18 +48,17 @@ export function DiagramPanel() {
   const generatedDownloads = useEphemeralStore((s) => s.generatedDownloads)
   const generatedTargetId = useEphemeralStore((s) => s.generatedTargetId)
   const generatedLanguage = useEphemeralStore((s) => s.generatedLanguage)
-  const generatedSourceCode = useEphemeralStore((s) => s.generatedSourceCode)
-  const generatedSourceTabId = useEphemeralStore((s) => s.generatedSourceTabId)
-  const diagramSourceCode = useEphemeralStore((s) => s.diagramSourceCode)
-  const diagramSourceTabId = useEphemeralStore((s) => s.diagramSourceTabId)
+  const generatedSourceSignature = useEphemeralStore((s) => s.generatedSourceSignature)
+  const diagramSourceSignature = useEphemeralStore((s) => s.diagramSourceSignature)
   const diagramTargetId = useEphemeralStore((s) => s.diagramTargetId)
   const generatingCode = useEphemeralStore((s) => s.generatingCode)
   const generatedError = useEphemeralStore((s) => s.generatedError)
   const generationRequested = useEphemeralStore((s) => s.generationRequested)
   const generationSuspendedByError = useEphemeralStore((s) => s.generationSuspendedByError)
-  const generationErrorSourceCode = useEphemeralStore((s) => s.generationErrorSourceCode)
-  const generationErrorSourceTabId = useEphemeralStore((s) => s.generationErrorSourceTabId)
+  const generationErrorSourceSignature = useEphemeralStore((s) => s.generationErrorSourceSignature)
   const openExamplesPalette = useEphemeralStore((s) => s.openExamplesPalette)
+  const currentSource = getCompileSourceSnapshot()
+  void tabsVersion
 
 
   const currentSvg = svgCache[viewMode] ?? ''
@@ -83,8 +82,7 @@ export function DiagramPanel() {
   const showEmptyCanvasState = viewMode === 'class' && !generatingOutput && !hasEditableModel && !currentSvg
   const generationErrorMatchesCurrentInput = Boolean(
     generationSuspendedByError &&
-    generationErrorSourceTabId === activeTabId &&
-    generationErrorSourceCode === code,
+    generationErrorSourceSignature === currentSource.signature,
   )
   const staleOutputDescription = generationErrorMatchesCurrentInput
     ? 'Fix the error in the code.'
@@ -94,10 +92,9 @@ export function DiagramPanel() {
     hasVisibleDiagramOutput &&
     !generatingOutput &&
     (!dynamicGeneration || generationErrorMatchesCurrentInput) &&
-    diagramSourceTabId &&
+    diagramSourceSignature &&
     (
-      diagramSourceTabId !== activeTabId ||
-      diagramSourceCode !== code ||
+      diagramSourceSignature !== currentSource.signature ||
       diagramTargetId !== generateTargetId
     ),
   )
@@ -107,22 +104,21 @@ export function DiagramPanel() {
     hasGeneratedOutput &&
     !generatingCode &&
     (!dynamicGeneration || generationErrorMatchesCurrentInput) &&
-    generatedSourceTabId &&
+    generatedSourceSignature &&
     (
-      generatedSourceTabId !== activeTabId ||
-      generatedSourceCode !== code ||
+      generatedSourceSignature !== currentSource.signature ||
       generatedTargetId !== generateTargetId
     ),
   )
 
   const handleExport = useCallback(async (format: string) => {
+    const latestSource = getCompileSourceSnapshot()
+
     // Umple source code — zip all tabs client-side
     if (format === 'ump') {
-      const { tabs, activeTabId } = useSessionStore.getState()
       const zip = new JSZip()
-      for (const tab of tabs) {
-        const content = tab.id === activeTabId ? code : tab.code
-        zip.file(tab.name, content)
+      for (const tab of latestSource.tabs) {
+        zip.file(tab.name, tab.code)
       }
       const blob = await zip.generateAsync({ type: 'blob' })
       const url = URL.createObjectURL(blob)
@@ -149,11 +145,16 @@ export function DiagramPanel() {
 
     // GV mode or fallback: use backend export
     const activeTabId = useSessionStore.getState().activeTabId
-    const blob = await api.export({ code, format, modelId: modelId ?? undefined, activeTabId })
+    const blob = await api.export({
+      code: latestSource.activeCode,
+      format,
+      modelId: modelId ?? undefined,
+      activeTabId,
+    })
     const url = URL.createObjectURL(blob)
     triggerDownload(url, filename)
     URL.revokeObjectURL(url)
-  }, [code, modelId, viewMode, showGv])
+  }, [modelId, viewMode, showGv])
 
   return (
     <div className="h-full flex flex-col" data-testid="diagram-panel">

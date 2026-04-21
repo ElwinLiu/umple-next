@@ -108,16 +108,19 @@ interface EphemeralState {
   generatedLanguage: string
   generatedSourceCode: string | null
   generatedSourceTabId: string | null
+  generatedSourceSignature: string | null
   generatingCode: boolean
   generatedError: string | null
   generationRequested: boolean
   generationSuspendedByError: boolean
   generationErrorSourceCode: string | null
   generationErrorSourceTabId: string | null
+  generationErrorSourceSignature: string | null
 
   // Diagram ephemeral
   diagramSourceCode: string | null
   diagramSourceTabId: string | null
+  diagramSourceSignature: string | null
   diagramTargetId: string | null
   renderMode: 'editable' | 'graphviz'
   selectedNodeId: string | null
@@ -161,16 +164,16 @@ interface EphemeralState {
   setGeneratedOutput: (
     result: GenerateResponse,
     targetId: string,
-    source: { code: string; tabId: string },
+    source: { code: string; tabId: string; signature: string },
   ) => void
-  markGenerationErrored: (source: { code: string; tabId: string }) => void
+  markGenerationErrored: (source: { code: string; tabId: string; signature: string }) => void
   clearGenerationError: () => void
   setGeneratingCode: (generating: boolean, targetId?: string) => void
   setGeneratedError: (error: string | null) => void
   clearGenerated: () => void
 
   // Diagram ephemeral actions
-  markDiagramFresh: (targetId: string, source: { code: string; tabId: string }) => void
+  markDiagramFresh: (targetId: string, source: { code: string; tabId: string; signature: string }) => void
   setRenderMode: (mode: 'editable' | 'graphviz') => void
   setSelectedNode: (id: string | null) => void
   setSelectedEdge: (id: string | null) => void
@@ -219,16 +222,19 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   generatedLanguage: 'Java',
   generatedSourceCode: null,
   generatedSourceTabId: null,
+  generatedSourceSignature: null,
   generatingCode: false,
   generatedError: null,
   generationRequested: false,
   generationSuspendedByError: false,
   generationErrorSourceCode: null,
   generationErrorSourceTabId: null,
+  generationErrorSourceSignature: null,
 
   // Diagram ephemeral
   diagramSourceCode: null,
   diagramSourceTabId: null,
+  diagramSourceSignature: null,
   diagramTargetId: null,
   renderMode: 'graphviz',
   selectedNodeId: null,
@@ -301,6 +307,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
       generatedLanguage: result.language,
       generatedSourceCode: source.code,
       generatedSourceTabId: source.tabId,
+      generatedSourceSignature: source.signature,
       rightPanelView: 'generated',
       generatedError: result.errors ?? null,
     }),
@@ -308,11 +315,13 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
     generationSuspendedByError: true,
     generationErrorSourceCode: source.code,
     generationErrorSourceTabId: source.tabId,
+    generationErrorSourceSignature: source.signature,
   }),
   clearGenerationError: () => set({
     generationSuspendedByError: false,
     generationErrorSourceCode: null,
     generationErrorSourceTabId: null,
+    generationErrorSourceSignature: null,
   }),
   setGeneratingCode: (generatingCode, targetId) => set(generatingCode
     ? { generatingCode, generationRequested: true, ...(targetId ? { generatedTargetId: targetId } : {}) }
@@ -327,12 +336,14 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
     generatedDownloads: [],
     generatedSourceCode: null,
     generatedSourceTabId: null,
+    generatedSourceSignature: null,
     generatedError: null,
     rightPanelView: 'diagram',
     generationRequested: false,
     generationSuspendedByError: false,
     generationErrorSourceCode: null,
     generationErrorSourceTabId: null,
+    generationErrorSourceSignature: null,
   }),
 
   // Diagram ephemeral actions
@@ -340,6 +351,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
     diagramTargetId,
     diagramSourceCode: source.code,
     diagramSourceTabId: source.tabId,
+    diagramSourceSignature: source.signature,
   }),
   setRenderMode: (renderMode) => set({ renderMode }),
   setSelectedNode: (selectedNodeId) => set({ selectedNodeId }),
