@@ -274,6 +274,7 @@ var validSuboptions = map[string]bool{
 	"showguardlabels":       true,
 	"hidenaturallanguage":   true,
 	"showFeatureDependency": true,
+	"gvortho":               true,
 	"gvdot":                 true,
 	"gvsfdp":                true,
 	"gvcirco":               true,

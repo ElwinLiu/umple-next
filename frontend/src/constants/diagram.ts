@@ -16,6 +16,7 @@ export type DiagramOutputKind = 'gv' | 'html' | 'component'
 export type DisplayPrefKey =
   | 'showAttributes'
   | 'showMethods'
+  | 'showOrthogonalEdges'
   | 'showTraits'
   | 'showActions'
   | 'showTransitionLabels'
@@ -66,6 +67,7 @@ export type GvLayoutAlgorithm = (typeof LAYOUT_OPTIONS)[number]['value']
 export interface DiagramDisplayPrefs {
   showAttributes: boolean
   showMethods: boolean
+  showOrthogonalEdges: boolean
   showTraits: boolean
   showActions: boolean
   showTransitionLabels: boolean
@@ -79,6 +81,7 @@ export interface DiagramDisplayPrefs {
 const CLASS_TOGGLES: DiagramDisplayToggle[] = [
   { key: 'showAttributes', label: 'Attributes', disabledSuboption: 'hideattributes' },
   { key: 'showMethods', label: 'Methods', enabledSuboption: 'showmethods' },
+  { key: 'showOrthogonalEdges', label: 'Orthogonal Edges', enabledSuboption: 'gvortho' },
   { key: 'showTraits', label: 'Traits' },
 ]
 
@@ -208,6 +211,7 @@ export const DISPLAY_TOGGLES = Object.fromEntries(
 export const DISPLAY_PREF_DEFAULTS: Record<DisplayPrefKey, boolean> = {
   showAttributes: true,
   showMethods: false,
+  showOrthogonalEdges: false,
   showTraits: false,
   showActions: true,
   showTransitionLabels: false,

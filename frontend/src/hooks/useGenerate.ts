@@ -1,9 +1,9 @@
 import { useCallback } from 'react'
 import { useSessionStore } from '../stores/sessionStore'
-import { usePreferencesStore } from '../stores/preferencesStore'
 import { getGenerateTarget } from '../generation/targets'
 import { generateAndRefresh } from './useCompiler'
 import { useIsDark } from './useIsDark'
+import { useEffectiveDynamicGeneration } from '../lib/effectiveDynamicGeneration'
 
 function selectGenerateTarget(targetId: string) {
   const target = getGenerateTarget(targetId)
@@ -27,7 +27,7 @@ export function useGenerate() {
 
 /** Target-picker behavior. Respects the dynamic generation preference. */
 export function useSelectGenerateTarget() {
-  const dynamicGeneration = usePreferencesStore((s) => s.dynamicGeneration)
+  const dynamicGeneration = useEffectiveDynamicGeneration()
   const isDark = useIsDark()
 
   return useCallback(async (targetId: string) => {

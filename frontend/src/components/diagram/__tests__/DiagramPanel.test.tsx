@@ -46,7 +46,7 @@ vi.mock('../HtmlDiagramView', () => ({
 }))
 
 vi.mock('../../layout/CanvasBanner', () => ({
-  CanvasBanner: () => <div data-testid="canvas-banner" />,
+  CanvasBanner: ({ operationsContent }: any) => <div data-testid="canvas-banner">{operationsContent}</div>,
 }))
 
 vi.mock('../../generation/GeneratedOutputView', () => ({
@@ -87,6 +87,7 @@ afterEach(() => {
     storedLayout: null,
   })
   useEphemeralStore.setState({
+    diagramOnly: false,
     rightPanelView: 'diagram',
     renderMode: 'graphviz',
     generatingOutput: false,
@@ -242,6 +243,37 @@ describe('DiagramPanel', () => {
       activeTabId: 'main',
     })
     useEphemeralStore.setState({
+      rightPanelView: 'generated',
+      generatedCode: 'class InvoiceGenerated {}',
+      generatedSourceCode: 'class Invoice { number; }',
+      generatedSourceTabId: 'main',
+      generatedSourceSignature: staleSignature,
+      generationRequested: true,
+    })
+
+    render(
+      <TooltipProvider>
+        <DiagramPanel />
+      </TooltipProvider>
+    )
+
+    expect(screen.getByTestId('generated-output-view')).toBeDefined()
+    expect(screen.getByTestId('generated-output-stale-overlay')).toBeDefined()
+    expect(screen.getByText('Output is out of date. Use Regenerate above to refresh it.')).toBeDefined()
+  })
+
+  it('treats fullscreen generated output like manual mode for staleness', () => {
+    usePreferencesStore.setState({ dynamicGeneration: true })
+    const staleSignature = buildCompileSourceSignature(
+      [{ id: 'main', name: 'Model.ump', code: 'class Invoice { number; }' }],
+      'main',
+    )
+    useSessionStore.setState({
+      code: 'class UpdatedInvoice { number; }',
+      activeTabId: 'main',
+    })
+    useEphemeralStore.setState({
+      diagramOnly: true,
       rightPanelView: 'generated',
       generatedCode: 'class InvoiceGenerated {}',
       generatedSourceCode: 'class Invoice { number; }',

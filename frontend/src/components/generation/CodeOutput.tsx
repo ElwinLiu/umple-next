@@ -4,6 +4,7 @@ import { EditorState } from '@codemirror/state'
 import { basicSetup } from 'codemirror'
 import { java } from '@codemirror/lang-java'
 import { python } from '@codemirror/lang-python'
+import { sql } from '@codemirror/lang-sql'
 import { getEditorTheme } from '../../codemirror/theme'
 import { useIsDark } from '../../hooks/useIsDark'
 
@@ -12,12 +13,14 @@ interface CodeOutputProps {
   language: string
 }
 
-function getLanguageExtension(language: string) {
+export function getLanguageExtension(language: string) {
   switch (language.toLowerCase()) {
     case 'java':
       return java()
     case 'python':
       return python()
+    case 'sql':
+      return sql()
     case 'php':
     case 'ruby':
     case 'cpp':
@@ -26,7 +29,7 @@ function getLanguageExtension(language: string) {
       // Use Java as a reasonable fallback for C-like / curly-brace languages
       return java()
     default:
-      // No language extension for JSON, SQL, Alloy, NuSMV, USE, Ecore, etc.
+      // No language extension for JSON, Alloy, NuSMV, USE, Ecore, etc.
       return null
   }
 }

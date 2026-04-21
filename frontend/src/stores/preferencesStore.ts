@@ -102,6 +102,7 @@ interface PreferencesState {
   // Diagram display preferences
   showAttributes: boolean
   showMethods: boolean
+  showOrthogonalEdges: boolean
   showTraits: boolean
   showActions: boolean
   showTransitionLabels: boolean
@@ -252,6 +253,7 @@ export function selectDiagramDisplayPrefs(
   return {
     showAttributes: s.showAttributes,
     showMethods: s.showMethods,
+    showOrthogonalEdges: s.showOrthogonalEdges,
     showTraits: s.showTraits,
     showActions: s.showActions,
     showTransitionLabels: s.showTransitionLabels,
