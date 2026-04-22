@@ -56,6 +56,7 @@ type GenerateResponse struct {
 	GeneratedHTML      string                       `json:"generatedHtml,omitempty"`
 	GeneratedIframeURL string                       `json:"generatedIframeUrl,omitempty"`
 	GeneratedDownloads []generate.GeneratedArtifact `json:"generatedDownloads,omitempty"`
+	GeneratedFiles     []generate.GeneratedFile     `json:"generatedFiles,omitempty"`
 }
 
 func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
@@ -218,6 +219,7 @@ func (h *GenerateHandler) Generate(w http.ResponseWriter, r *http.Request) {
 		resp.GeneratedHTML = genResp.HTML
 		resp.GeneratedIframeURL = genResp.IframeURL
 		resp.GeneratedDownloads = genResp.Downloads
+		resp.GeneratedFiles = genResp.Files
 
 		if genResp.Errors != "" {
 			if resp.Errors != "" {

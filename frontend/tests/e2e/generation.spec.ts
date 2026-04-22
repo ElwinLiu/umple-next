@@ -88,9 +88,45 @@ async function installGenerationRoutes(page: Page, requests: GenerationRequest[]
         json: {
           modelId: 'playwright-model',
           result: JSON.stringify(classModel),
-          generatedOutput: `public class ${className} {\n  public String getNumber() { return number; }\n}`,
+          generatedOutput: [
+            `package billing;`,
+            '',
+            `public class ${className} {`,
+            '  public String getNumber() { return number; }',
+            '}',
+            '',
+            'package billing;',
+            '',
+            'public class CustomerGenerated {',
+            '  public String getName() { return name; }',
+            '}',
+          ].join('\n'),
           generatedLanguage: 'Java',
           generatedKind: 'text',
+          generatedFiles: [
+            {
+              name: `${className}.java`,
+              path: `billing/${className}.java`,
+              content: [
+                'package billing;',
+                '',
+                `public class ${className} {`,
+                '  public String getNumber() { return number; }',
+                '}',
+              ].join('\n'),
+            },
+            {
+              name: 'CustomerGenerated.java',
+              path: 'billing/CustomerGenerated.java',
+              content: [
+                'package billing;',
+                '',
+                'public class CustomerGenerated {',
+                '  public String getName() { return name; }',
+                '}',
+              ].join('\n'),
+            },
+          ],
         },
       })
       return
@@ -183,6 +219,26 @@ test.describe('Generation UI', () => {
     await expect
       .poll(() => getLastRequest(requests)?.language ?? null)
       .toBe(null)
+  })
+
+  test('keeps all generated code visible by default and offers per-file tabs', async ({ page }) => {
+    const requests: GenerationRequest[] = []
+    await addPreferencesInitScript(page, { dynamicGeneration: false })
+    await installGenerationRoutes(page, requests)
+
+    await page.goto('/')
+    await expect(page.getByTestId('app-shell')).toBeVisible()
+
+    await setEditorCode(page, 'class Invoice { number; }\nclass Customer { name; }')
+    await chooseGenerateTarget(page, 'Java')
+
+    await expect(page.getByTestId('generated-output-all-code')).toContainText('public class InvoiceGenerated')
+    await expect(page.getByTestId('generated-output-all-code')).toContainText('public class CustomerGenerated')
+    await expect(page.getByRole('tab', { name: 'All code' })).toHaveAttribute('data-state', 'active')
+
+    await page.getByRole('tab', { name: 'CustomerGenerated.java' }).click()
+
+    await expect(page.getByTestId('code-output')).toContainText('public class CustomerGenerated')
   })
 
   test('refetches class diagrams with legacy filter fields and keeps the renderer toggle working', async ({
@@ -333,7 +389,10 @@ test.describe('Generation UI', () => {
     await setEditorCode(page, 'class Invoice { number; }')
     await chooseGenerateTarget(page, 'Java')
 
-    await expect(page.getByText('InvoiceGenerated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('generated-output-highlighted-all-code')).toContainText(
+      'InvoiceGenerated',
+      { timeout: 10_000 },
+    )
     await expect(page.getByTestId('regenerate-button')).toBeVisible()
     await expect(page.getByTestId('generated-output-stale-overlay')).toHaveCount(0)
     expect(getLastRequest(requests)?.language).toBe('Java')
@@ -342,7 +401,9 @@ test.describe('Generation UI', () => {
 
     await expect(page.getByTestId('generated-output-stale-overlay')).toBeVisible()
     expect(requests).toHaveLength(1)
-    await expect(page.getByText('InvoiceGenerated')).toBeVisible()
+    await expect(page.getByTestId('generated-output-highlighted-all-code')).toContainText(
+      'InvoiceGenerated',
+    )
 
     const regenerateResponse = page.waitForResponse(
       (response) =>
@@ -353,9 +414,10 @@ test.describe('Generation UI', () => {
 
     expect(requests).toHaveLength(2)
     expect(getLastRequest(requests)?.language).toBe('Java')
-    await expect(page.getByText('UpdatedInvoiceGenerated')).toBeVisible({
-      timeout: 10_000,
-    })
+    await expect(page.getByTestId('generated-output-highlighted-all-code')).toContainText(
+      'UpdatedInvoiceGenerated',
+      { timeout: 10_000 },
+    )
     await expect(page.getByTestId('generated-output-stale-overlay')).toHaveCount(0)
   })
 
@@ -372,14 +434,19 @@ test.describe('Generation UI', () => {
     await setEditorCode(page, 'class Invoice { number; }')
     await chooseGenerateTarget(page, 'Java')
 
-    await expect(page.getByText('InvoiceGenerated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('generated-output-highlighted-all-code')).toContainText(
+      'InvoiceGenerated',
+      { timeout: 10_000 },
+    )
     expect(getLastRequest(requests)?.language).toBe('Java')
 
     await chooseToolbarGenerateTarget(page, 'State Diagram', 'State Diagram (GraphViz SVG)')
     await page.waitForTimeout(300)
 
     expect(requests).toHaveLength(1)
-    await expect(page.getByText('InvoiceGenerated')).toBeVisible()
+    await expect(page.getByTestId('generated-output-highlighted-all-code')).toContainText(
+      'InvoiceGenerated',
+    )
     await expect(page.getByTestId('generated-output-stale-overlay')).toBeVisible()
 
     const regenerateResponse = page.waitForResponse(
@@ -422,7 +489,10 @@ test.describe('Generation UI', () => {
 
     expect(requests).toHaveLength(1)
     expect(getLastRequest(requests)?.language).toBe('Java')
-    await expect(page.getByText('InvoiceGenerated')).toBeVisible({ timeout: 10_000 })
+    await expect(page.getByTestId('generated-output-highlighted-all-code')).toContainText(
+      'InvoiceGenerated',
+      { timeout: 10_000 },
+    )
   })
 
   test('greys stale diagrams until manual regenerate when dynamic generation is off', async ({

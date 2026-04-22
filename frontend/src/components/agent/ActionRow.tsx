@@ -9,6 +9,7 @@ interface ActionRowProps {
   label: string
   status?: ActionStatus
   children?: ReactNode
+  autoOpen?: boolean
 }
 
 /**
@@ -25,10 +26,11 @@ export function ActionRow({
   label,
   status,
   children,
+  autoOpen = false,
 }: ActionRowProps) {
   const hasContent = !!children
   const [open, setOpen] = useState(
-    status === 'approval' || status === 'error',
+    status === 'approval' || status === 'error' || autoOpen,
   )
   const prevStatus = useRef(status)
   const [flash, setFlash] = useState(false)
@@ -37,6 +39,11 @@ export function ActionRow({
   useEffect(() => {
     if (status === 'approval' || status === 'error') setOpen(true)
   }, [status])
+
+  /* Auto-expand when content becomes available and the caller wants it visible */
+  useEffect(() => {
+    if (autoOpen && hasContent) setOpen(true)
+  }, [autoOpen, hasContent])
 
   /* Flash green when transitioning to done */
   useEffect(() => {

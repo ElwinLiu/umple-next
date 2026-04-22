@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef } from 'react'
 import { EditorView } from '@codemirror/view'
 import { EditorState } from '@codemirror/state'
 import { basicSetup } from 'codemirror'
@@ -11,6 +11,7 @@ import { useIsDark } from '../../hooks/useIsDark'
 interface CodeOutputProps {
   code: string
   language: string
+  testId?: string
 }
 
 export function getLanguageExtension(language: string) {
@@ -34,18 +35,10 @@ export function getLanguageExtension(language: string) {
   }
 }
 
-export function CodeOutput({ code, language }: CodeOutputProps) {
+export function CodeOutput({ code, language, testId = 'code-output' }: CodeOutputProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const viewRef = useRef<EditorView | null>(null)
-  const [copied, setCopied] = useState(false)
   const isDark = useIsDark()
-
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }, [code])
 
   useEffect(() => {
     if (!containerRef.current) return
@@ -81,17 +74,7 @@ export function CodeOutput({ code, language }: CodeOutputProps) {
   }, [code, language, isDark])
 
   return (
-    <div className="h-full relative">
-      <button
-        onClick={handleCopy}
-        className={`absolute top-2 right-3 z-10 px-2.5 py-1 text-xs border rounded cursor-pointer transition-colors ${
-          copied
-            ? 'bg-surface-1 text-status-success border-status-success'
-            : 'bg-surface-0 text-ink-muted border-border hover:bg-surface-1 hover:border-border-strong'
-        }`}
-      >
-        {copied ? 'Copied!' : 'Copy'}
-      </button>
+    <div className="h-full relative" data-testid={testId}>
       <div
         ref={containerRef}
         className="h-full w-full overflow-hidden"

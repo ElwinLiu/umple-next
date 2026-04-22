@@ -52,9 +52,9 @@ func (s *Service) generateGeneric(language, dir, modelID, entryFile string, subo
 	}
 	output := strings.TrimSpace(stdout)
 
-	files, paths, err := readGeneratedFiles(outputDir, language, entryFile)
-	if err == nil && files != "" {
-		output = files
+	outputFiles, generatedFiles, paths, err := readGeneratedFiles(outputDir, language, entryFile)
+	if err == nil && outputFiles != "" {
+		output = outputFiles
 	}
 
 	if runErr != nil && strings.TrimSpace(stderr) == "" {
@@ -67,6 +67,7 @@ func (s *Service) generateGeneric(language, dir, modelID, entryFile string, subo
 		Errors:   strings.TrimSpace(stderr),
 		ModelID:  modelID,
 		Kind:     "text",
+		Files:    generatedFiles,
 	}
 
 	if IsHTMLLanguage(language) {
@@ -108,9 +109,9 @@ func (s *Service) generateJavadoc(dir, modelID, entryFile string) (GenerateRespo
 		return GenerateResponse{}, err
 	}
 
-	files, javaFiles, err := readGeneratedFiles(javadocSrcDir, "Java", entryFile)
-	if err == nil && files != "" {
-		output = files
+	outputFiles, _, javaFiles, err := readGeneratedFiles(javadocSrcDir, "Java", entryFile)
+	if err == nil && outputFiles != "" {
+		output = outputFiles
 	}
 
 	if len(javaFiles) == 0 {
@@ -174,8 +175,8 @@ func (s *Service) generateYuml(dir, modelID, entryFile string) (GenerateResponse
 	stdout, stderr, runErr := s.runGenerateCommand("Yuml", filepath.Join(dir, entryFile), dir, nil)
 	output := strings.TrimSpace(stdout)
 	if output == "" {
-		if files, _, err := readGeneratedFiles(dir, "Yuml", entryFile); err == nil && files != "" {
-			output = strings.TrimSpace(files)
+		if outputFiles, _, _, err := readGeneratedFiles(dir, "Yuml", entryFile); err == nil && outputFiles != "" {
+			output = strings.TrimSpace(outputFiles)
 		}
 	}
 

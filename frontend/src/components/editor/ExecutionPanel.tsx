@@ -415,7 +415,7 @@ export function OutputPanel() {
           <div className="flex flex-col items-center justify-center h-full gap-2 text-center px-4 animate-fade-in">
             <Terminal className="size-5 text-ink-faint/50" strokeWidth={1.5} />
             <p className="text-xs text-ink-faint max-w-48 leading-relaxed">
-              Output from compilation and code generation will appear here.
+              Message output will appear here.
             </p>
           </div>
         )}
