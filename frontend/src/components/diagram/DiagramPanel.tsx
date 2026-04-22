@@ -46,6 +46,7 @@ export function DiagramPanel() {
   const generatedKind = useEphemeralStore((s) => s.generatedKind)
   const generatedIframeUrl = useEphemeralStore((s) => s.generatedIframeUrl)
   const generatedDownloads = useEphemeralStore((s) => s.generatedDownloads)
+  const generatedFiles = useEphemeralStore((s) => s.generatedFiles)
   const generatedTargetId = useEphemeralStore((s) => s.generatedTargetId)
   const generatedLanguage = useEphemeralStore((s) => s.generatedLanguage)
   const generatedSourceSignature = useEphemeralStore((s) => s.generatedSourceSignature)
@@ -278,6 +279,7 @@ export function DiagramPanel() {
                     iframeUrl={generatedIframeUrl}
                     language={generatedLanguage}
                     downloads={generatedDownloads}
+                    files={generatedFiles}
                   />
                 </div>
                 {generatedOutputStale && (

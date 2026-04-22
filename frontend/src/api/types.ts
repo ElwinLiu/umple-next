@@ -41,6 +41,7 @@ export interface GenerationResponse {
   generatedHtml?: string;
   generatedIframeUrl?: string;
   generatedDownloads?: GeneratedArtifact[];
+  generatedFiles?: GeneratedCodeFile[];
 }
 
 export interface UmpleModel {
@@ -212,6 +213,12 @@ export interface GeneratedArtifact {
   filename?: string;
 }
 
+export interface GeneratedCodeFile {
+  name: string;
+  path: string;
+  content: string;
+}
+
 export interface GenerateResponse {
   output: string;
   language: string;
@@ -221,6 +228,7 @@ export interface GenerateResponse {
   html?: string;
   iframeUrl?: string;
   downloads?: GeneratedArtifact[];
+  files?: GeneratedCodeFile[];
 }
 
 // CRUD schema types (from POST /api/crud/schema)

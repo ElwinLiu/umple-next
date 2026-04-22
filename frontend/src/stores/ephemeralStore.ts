@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { DiffPreviewState } from '@/ai/editPreview'
-import type { GenerateResponse, GeneratedArtifact } from '../api/types'
+import type { GenerateResponse, GeneratedArtifact, GeneratedCodeFile } from '../api/types'
 import { useSessionStore } from './sessionStore'
 import { usePreferencesStore } from './preferencesStore'
 
@@ -104,6 +104,7 @@ interface EphemeralState {
   generatedKind: 'text' | 'html' | 'iframe'
   generatedIframeUrl: string | null
   generatedDownloads: GeneratedArtifact[]
+  generatedFiles: GeneratedCodeFile[]
   generatedTargetId: string
   generatedLanguage: string
   generatedSourceCode: string | null
@@ -221,6 +222,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
   generatedKind: 'text',
   generatedIframeUrl: null,
   generatedDownloads: [],
+  generatedFiles: [],
   generatedTargetId: 'Java',
   generatedLanguage: 'Java',
   generatedSourceCode: null,
@@ -307,6 +309,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
       generatedKind: result.kind ?? (result.iframeUrl ? 'iframe' : result.html ? 'html' : 'text'),
       generatedIframeUrl: result.iframeUrl ?? null,
       generatedDownloads: result.downloads ?? [],
+      generatedFiles: result.files ?? [],
       generatedTargetId,
       generatedLanguage: result.language,
       generatedSourceCode: source.code,
@@ -338,6 +341,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
     generatedKind: 'text',
     generatedIframeUrl: null,
     generatedDownloads: [],
+    generatedFiles: [],
     generatedSourceCode: null,
     generatedSourceTabId: null,
     generatedSourceSignature: null,

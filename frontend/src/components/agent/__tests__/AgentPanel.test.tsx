@@ -119,6 +119,176 @@ describe('AgentPanel', () => {
     expect(mockRejectToolCall).toHaveBeenCalledWith('approval-1', 'call-1', 'editCode')
   })
 
+  it('renders tool output in an expanded wrapped block', () => {
+    useSessionStore.setState({ showAgentPanel: true })
+
+    mockAgentState = {
+      ...mockAgentState,
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          parts: [
+            {
+              type: 'tool-readEditorCode',
+              toolCallId: 'call-1',
+              state: 'output-available',
+              input: {},
+              output: 'class Student {\n  name;\n}',
+            },
+          ],
+        },
+      ],
+    }
+
+    renderAgentPanel()
+
+    const output = screen.getByText((content, element) => {
+      return element?.tagName === 'PRE' && content.includes('class Student {') && content.includes('name;')
+    })
+    const pre = output.closest('pre')
+
+    expect(screen.getByText('Read code')).toBeDefined()
+    expect(pre).not.toBeNull()
+    expect(pre?.className).toContain('whitespace-pre-wrap')
+    expect(pre?.className).toContain('break-words')
+  })
+
+  it('renders verifyCode output with a structured verification card', () => {
+    useSessionStore.setState({
+      showAgentPanel: true,
+      activeTabId: 'main',
+      tabs: [
+        { id: 'main', name: 'Model.ump', code: 'class Person {}', dirty: false, savedCode: 'class Person {}', undoStack: [], redoStack: [] },
+        { id: 'support', name: 'Main.ump', code: 'class Order {}', dirty: false, savedCode: 'class Order {}', undoStack: [], redoStack: [] },
+      ],
+    })
+    useEphemeralStore.setState({ pendingEditorJump: null })
+
+    mockAgentState = {
+      ...mockAgentState,
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          parts: [
+            {
+              type: 'tool-verifyCode',
+              toolCallId: 'call-verify',
+              state: 'output-available',
+              input: {},
+              output: {
+                success: false,
+                modelId: 'model-123',
+                errors: [
+                  JSON.stringify({
+                    results: [
+                      {
+                        severity: 1,
+                        errorCode: 'E001',
+                        message: 'Missing semicolon',
+                        line: 3,
+                        filename: 'Main.ump',
+                        url: 'https://example.com/error/E001',
+                      },
+                      {
+                        severity: 3,
+                        errorCode: 'W010',
+                        message: 'Unused attribute',
+                        line: 7,
+                        filename: 'Main.ump',
+                        url: 'https://example.com/error/W010',
+                      },
+                    ],
+                  }),
+                ].join('\n'),
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    renderAgentPanel()
+
+    expect(screen.getByText('Verified code')).toBeDefined()
+    expect(screen.getByText('Verification found issues')).toBeDefined()
+    expect(screen.getByText('1 error and 1 warning.')).toBeDefined()
+    expect(
+      screen.getByText((_, element) =>
+        (element?.tagName === 'P' &&
+          (element.textContent?.includes('Error on line 3 in Main.ump: Missing semicolon') ?? false)) ||
+        false,
+      ),
+    ).toBeDefined()
+    expect(
+      screen.getByText((_, element) =>
+        (element?.tagName === 'P' &&
+          (element.textContent?.includes('Warning on line 7 in Main.ump: Unused attribute') ?? false)) ||
+        false,
+      ),
+    ).toBeDefined()
+    expect(screen.getByText('model-123')).toBeDefined()
+    expect(screen.getAllByText('Main.ump')).toHaveLength(2)
+  })
+
+  it('clicks verifyCode line numbers to jump the editor to the matching tab', async () => {
+    const user = userEvent.setup()
+    useSessionStore.setState({
+      showAgentPanel: true,
+      activeTabId: 'main',
+      tabs: [
+        { id: 'main', name: 'Model.ump', code: 'class Person {}', dirty: false, savedCode: 'class Person {}', undoStack: [], redoStack: [] },
+        { id: 'support', name: 'Main.ump', code: 'class Order {}', dirty: false, savedCode: 'class Order {}', undoStack: [], redoStack: [] },
+      ],
+    })
+    useEphemeralStore.setState({ pendingEditorJump: null })
+
+    mockAgentState = {
+      ...mockAgentState,
+      messages: [
+        {
+          id: 'assistant-1',
+          role: 'assistant',
+          parts: [
+            {
+              type: 'tool-verifyCode',
+              toolCallId: 'call-verify',
+              state: 'output-available',
+              input: {},
+              output: {
+                success: false,
+                modelId: 'model-123',
+                errors: JSON.stringify({
+                  results: [
+                    {
+                      severity: 1,
+                      errorCode: 'E001',
+                      message: 'Missing semicolon',
+                      line: 3,
+                      filename: 'Main.ump',
+                      url: 'https://example.com/error/E001',
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+        },
+      ],
+    }
+
+    renderAgentPanel()
+
+    await user.click(screen.getByRole('button', { name: /line 3/i }))
+
+    expect(useSessionStore.getState().activeTabId).toBe('support')
+    expect(useEphemeralStore.getState().pendingEditorJump).toEqual({
+      tabId: 'support',
+      line: 3,
+    })
+  })
+
   it('starts minimized with the launcher visible', () => {
     renderAgentPanel()
 

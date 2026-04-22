@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useCallback, useMemo } from 'react'
 import { getToolName, isToolUIPart, type UIMessage } from 'ai'
 import {
   Eye,
@@ -9,11 +9,15 @@ import {
   Wrench,
   Check,
   XIcon,
+  AlertTriangle,
 } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { cn } from '@/lib/utils'
 import type { ToolPreviewInfo } from '@/ai/editPreview'
+import { useEphemeralStore } from '@/stores/ephemeralStore'
+import { useSessionStore } from '@/stores/sessionStore'
+import { resolveIssueTab } from '@/components/editor/issueNavigation'
 import { ActionRow } from './ActionRow'
 
 /* ── Memoized Markdown ── */
@@ -50,6 +54,10 @@ const TOOL_CONFIG: Record<
   compile: {
     icon: <Play className="size-3" />,
     labels: { running: 'Generating', approval: 'Generating', done: 'Generated' },
+  },
+  verifyCode: {
+    icon: <Check className="size-3" />,
+    labels: { running: 'Verifying code', approval: 'Verifying code', done: 'Verified code' },
   },
 }
 
@@ -107,6 +115,233 @@ function DiffBlock({
     >
       {text || '\u00A0'}
     </pre>
+  )
+}
+
+function formatToolOutput(output: unknown): string {
+  if (typeof output === 'string') return output
+  if (output == null) return ''
+  if (typeof output === 'number' || typeof output === 'boolean') return String(output)
+
+  try {
+    return JSON.stringify(output, null, 2)
+  } catch {
+    return String(output)
+  }
+}
+
+function ToolOutputBlock({ output }: { output: unknown }) {
+  const formatted = formatToolOutput(output)
+
+  return (
+    <pre className="max-h-48 overflow-auto whitespace-pre-wrap break-words rounded border border-border bg-surface-0 p-2 font-mono text-xxs leading-relaxed text-ink">
+      {formatted || 'No output returned.'}
+    </pre>
+  )
+}
+
+interface VerifyCodeOutput {
+  success?: boolean
+  errors?: string | null
+  modelId?: string | null
+}
+
+interface ParsedVerifyIssue {
+  severity: number
+  errorCode: string
+  message: string
+  line: number
+  filename: string
+  url: string
+}
+
+function parseVerifyIssues(raw: string | null | undefined): {
+  issues: ParsedVerifyIssue[]
+  rawText: string
+  errorCount: number
+  warningCount: number
+} {
+  if (!raw) return { issues: [], rawText: '', errorCount: 0, warningCount: 0 }
+
+  const allResults: ParsedVerifyIssue[] = []
+  const rawLines: string[] = []
+
+  for (const line of raw.split('\n')) {
+    const trimmed = line.trim()
+    if (!trimmed) continue
+
+    try {
+      const parsed = JSON.parse(trimmed)
+      const results = parsed?.results
+
+      if (Array.isArray(results)) {
+        for (const result of results) {
+          allResults.push({
+            severity: Number(result.severity ?? 1),
+            errorCode: String(result.errorCode ?? ''),
+            message: String(result.message ?? ''),
+            line: Number(result.line ?? 0),
+            filename: String(result.filename ?? ''),
+            url: String(result.url ?? ''),
+          })
+        }
+      } else {
+        rawLines.push(trimmed)
+      }
+    } catch {
+      rawLines.push(trimmed)
+    }
+  }
+
+  const seen = new Set<string>()
+  const issues: ParsedVerifyIssue[] = []
+
+  for (const issue of allResults) {
+    const key = `${issue.errorCode}:${issue.line}:${issue.message}`
+    if (!seen.has(key)) {
+      seen.add(key)
+      issues.push(issue)
+    }
+  }
+
+  issues.sort((a, b) => {
+    const aBucket = a.severity <= 2 ? 0 : 1
+    const bBucket = b.severity <= 2 ? 0 : 1
+    if (aBucket !== bBucket) return aBucket - bBucket
+    return a.line - b.line
+  })
+
+  const rawText = rawLines.join('\n')
+  const errorCount = issues.filter((issue) => issue.severity <= 2).length + (rawText && !issues.length ? 1 : 0)
+  const warningCount = issues.filter((issue) => issue.severity > 2).length
+
+  return { issues, rawText, errorCount, warningCount }
+}
+
+function VerifyIssueRow({ issue }: { issue: ParsedVerifyIssue }) {
+  const isError = issue.severity <= 2
+  const toneClass = isError ? 'text-status-error' : 'text-status-warning'
+  const bgClass = isError ? 'bg-status-error/6' : 'bg-status-warning/8'
+  const tabs = useSessionStore((state) => state.tabs)
+  const activeTabId = useSessionStore((state) => state.activeTabId)
+  const targetTab = useMemo(
+    () => resolveIssueTab(tabs, activeTabId, issue.filename),
+    [tabs, activeTabId, issue.filename],
+  )
+  const showTabLabel = !!issue.filename && !!targetTab
+
+  const handleJump = useCallback(() => {
+    if (!issue.line || !targetTab) return
+
+    const { setActiveTab } = useSessionStore.getState()
+    if (targetTab.id !== useSessionStore.getState().activeTabId) {
+      setActiveTab(targetTab.id)
+    }
+
+    useEphemeralStore.getState().requestEditorJump({
+      tabId: targetTab.id,
+      line: issue.line,
+    })
+  }, [issue.line, targetTab])
+
+  return (
+    <div className={`rounded-md px-2.5 py-2 ${bgClass}`}>
+      <p className={`break-words font-mono text-xxs leading-relaxed ${toneClass}`}>
+        <span className="font-semibold">{isError ? 'Error' : 'Warning'}</span>
+        {issue.line > 0 && targetTab ? (
+          <>
+            <span>{' on '}</span>
+            <button
+              type="button"
+              onClick={handleJump}
+              className={cn(
+                'inline cursor-pointer rounded px-0.5 font-semibold underline decoration-current/70 underline-offset-2 transition-colors',
+                'focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1',
+                isError ? 'hover:text-status-error' : 'hover:text-status-warning',
+              )}
+            >
+              {`line ${issue.line}`}
+            </button>
+          </>
+        ) : issue.line > 0 ? (
+          <span>{` on line ${issue.line}`}</span>
+        ) : null}
+        {issue.filename ? ` in ${issue.filename}` : ''}
+        {`: ${issue.message}`}
+      </p>
+      {(showTabLabel || issue.errorCode || issue.url) && (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          {issue.errorCode ? (
+            <span className="rounded-full bg-surface-0 px-1.5 py-0.5 font-mono text-[10px] text-ink-muted">
+              {issue.errorCode}
+            </span>
+          ) : null}
+          {issue.url ? (
+            <a
+              href={issue.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-[10px] text-brand underline underline-offset-2"
+            >
+              More information
+            </a>
+          ) : null}
+          {showTabLabel ? (
+            <span className="rounded-full bg-surface-0 px-1.5 py-0.5 font-mono text-[10px] text-ink-muted">
+              {targetTab.name}
+            </span>
+          ) : null}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function VerifyCodeResultCard({ output }: { output: VerifyCodeOutput }) {
+  const { issues, rawText, errorCount, warningCount } = parseVerifyIssues(output.errors)
+  const isSuccess = Boolean(output.success) && errorCount === 0
+
+  return (
+    <div className="space-y-2 rounded-lg border border-border bg-surface-0 p-3">
+      <div className="flex flex-wrap items-start gap-2">
+        <div
+          className={cn(
+            'flex size-5 items-center justify-center rounded-full',
+            isSuccess ? 'bg-status-success/12 text-status-success' : 'bg-status-error/10 text-status-error',
+          )}
+        >
+          {isSuccess ? <Check className="size-3" /> : <AlertTriangle className="size-3" />}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xs font-medium text-ink">
+            {isSuccess ? 'Verification passed' : 'Verification found issues'}
+          </p>
+          <p className="mt-0.5 text-xs text-ink-muted">
+            {isSuccess
+              ? 'No validation issues were reported.'
+              : `${errorCount} ${errorCount === 1 ? 'error' : 'errors'} and ${warningCount} ${warningCount === 1 ? 'warning' : 'warnings'}.`}
+          </p>
+        </div>
+        {output.modelId ? (
+          <span className="rounded-full bg-surface-1 px-2 py-0.5 font-mono text-[10px] text-ink-muted">
+            {output.modelId}
+          </span>
+        ) : null}
+      </div>
+
+      {issues.length > 0 ? (
+        <div className="space-y-1.5">
+          {issues.map((issue, index) => (
+            <VerifyIssueRow
+              key={`${issue.errorCode}-${issue.line}-${issue.message}-${index}`}
+              issue={issue}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {rawText ? <ToolOutputBlock output={rawText} /> : null}
+    </div>
   )
 }
 
@@ -188,18 +423,10 @@ function ToolActionRow({
     )
   } else if (state === 'output-available' && output != null) {
     children =
-      typeof output === 'string' ? (
-        output.includes('\n') || output.length > 80 ? (
-          <pre className="max-h-32 overflow-auto rounded border border-border bg-surface-0 p-2 font-mono text-xxs text-ink-muted">
-            {output}
-          </pre>
-        ) : (
-          <p className="text-xs text-ink-muted">{output}</p>
-        )
+      toolName === 'verifyCode' ? (
+        <VerifyCodeResultCard output={output as VerifyCodeOutput} />
       ) : (
-        <pre className="max-h-32 overflow-auto rounded border border-border bg-surface-0 p-2 font-mono text-xxs text-ink-muted">
-          {JSON.stringify(output, null, 2)}
-        </pre>
+        <ToolOutputBlock output={output} />
       )
   } else if (state === 'output-error') {
     children = <p className="text-xs text-status-error">{errorText}</p>
@@ -216,6 +443,7 @@ function ToolActionRow({
       icon={icon}
       label={actionLabel(toolName, state)}
       status={actionStatus(state)}
+      autoOpen={state === 'output-available'}
     >
       {children}
     </ActionRow>

@@ -3,9 +3,9 @@ package generate
 import "strings"
 
 type GenerateRequest struct {
-	Code      string `json:"code"`
-	Language  string `json:"language"`
-	ModelID   string `json:"modelId,omitempty"`
+	Code        string `json:"code"`
+	Language    string `json:"language"`
+	ModelID     string `json:"modelId,omitempty"`
 	ActiveTabID string `json:"activeTabId,omitempty"`
 }
 
@@ -13,6 +13,12 @@ type GeneratedArtifact struct {
 	Label    string `json:"label"`
 	URL      string `json:"url"`
 	Filename string `json:"filename,omitempty"`
+}
+
+type GeneratedFile struct {
+	Name    string `json:"name"`
+	Path    string `json:"path"`
+	Content string `json:"content"`
 }
 
 type GenerateResponse struct {
@@ -24,6 +30,7 @@ type GenerateResponse struct {
 	HTML      string              `json:"html,omitempty"`
 	IframeURL string              `json:"iframeUrl,omitempty"`
 	Downloads []GeneratedArtifact `json:"downloads,omitempty"`
+	Files     []GeneratedFile     `json:"files,omitempty"`
 }
 
 var validLanguages = map[string]bool{

@@ -74,10 +74,10 @@ func cleanGeneratedFiles(dir, language, entryFile string) {
 	})
 }
 
-func readGeneratedFiles(dir, language, entryFile string) (string, []string, error) {
+func readGeneratedFiles(dir, language, entryFile string) (string, []GeneratedFile, []string, error) {
 	exts := languageExtensions(language)
 	if len(exts) == 0 {
-		return "", nil, fmt.Errorf("unknown language: %s", language)
+		return "", nil, nil, fmt.Errorf("unknown language: %s", language)
 	}
 
 	extSet := make(map[string]bool, len(exts))
@@ -98,19 +98,32 @@ func readGeneratedFiles(dir, language, entryFile string) (string, []string, erro
 	sort.Strings(paths)
 
 	if len(paths) == 0 {
-		return "", nil, fmt.Errorf("no generated files found")
+		return "", nil, nil, fmt.Errorf("no generated files found")
 	}
 
 	var parts []string
+	files := make([]GeneratedFile, 0, len(paths))
 	for _, p := range paths {
 		data, err := os.ReadFile(p)
 		if err != nil {
 			continue
 		}
-		parts = append(parts, string(data))
+		content := string(data)
+		parts = append(parts, content)
+
+		relPath, err := filepath.Rel(dir, p)
+		if err != nil {
+			relPath = filepath.Base(p)
+		}
+		relPath = filepath.ToSlash(relPath)
+		files = append(files, GeneratedFile{
+			Name:    filepath.Base(p),
+			Path:    relPath,
+			Content: content,
+		})
 	}
 
-	return strings.Join(parts, "\n"), paths, nil
+	return strings.Join(parts, "\n"), files, paths, nil
 }
 
 func prepareGeneratedWorkspace(dir, name string) (string, error) {

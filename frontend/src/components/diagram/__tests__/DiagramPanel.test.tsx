@@ -96,6 +96,7 @@ afterEach(() => {
     generatedKind: 'text',
     generatedIframeUrl: null,
     generatedDownloads: [],
+    generatedFiles: [],
     generatedLanguage: 'Java',
     generatedSourceCode: null,
     generatedSourceTabId: null,

@@ -229,6 +229,7 @@ export async function generateAndRefresh(
           html: res.generatedHtml,
           iframeUrl: res.generatedIframeUrl,
           downloads: res.generatedDownloads,
+          files: res.generatedFiles,
           modelId: res.modelId,
         }, target.id, sourceSnapshot)
         setRightPanelView('generated')
