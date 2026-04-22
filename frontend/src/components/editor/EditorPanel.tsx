@@ -14,6 +14,7 @@ import { useCollabTabs } from '../../hooks/useCollabTabs'
 import { useLsp } from '../../hooks/useLsp'
 import { attachLspToView } from '../../codemirror/lsp'
 import { findDiagramRange, type DiagramSelectDetail } from './diagramSelection'
+import { jumpEditorViewToLine } from './issueNavigation'
 
 const AgentPanel = lazy(() => import('../agent/AgentPanel'))
 
@@ -24,6 +25,8 @@ export function EditorPanel() {
   const collabConfig = useCollabEditor()
   useCollabTabs()
   const diffPreview = useEphemeralStore((s) => s.diffPreview)
+  const pendingEditorJump = useEphemeralStore((s) => s.pendingEditorJump)
+  const clearPendingEditorJump = useEphemeralStore((s) => s.clearPendingEditorJump)
   const readOnly = useEphemeralStore((s) => s.readOnly)
   const isAiConfigured = usePreferencesStore(
     (s) => {
@@ -70,6 +73,20 @@ export function EditorPanel() {
     window.addEventListener('umple:diagram-select', handler)
     return () => window.removeEventListener('umple:diagram-select', handler)
   }, [])
+
+  useEffect(() => {
+    if (!pendingEditorJump || pendingEditorJump.tabId !== activeTabId) return
+
+    const frame = window.requestAnimationFrame(() => {
+      const view = editorViewRef.current ?? editorRef.current?.view
+      if (!view) return
+
+      jumpEditorViewToLine(view, pendingEditorJump.line)
+      clearPendingEditorJump()
+    })
+
+    return () => window.cancelAnimationFrame(frame)
+  }, [activeTabId, clearPendingEditorJump, diffPreview, pendingEditorJump])
 
   const handleChange = useCallback((newCode: string) => {
     setCode(newCode)

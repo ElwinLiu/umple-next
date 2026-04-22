@@ -3,9 +3,10 @@ import { useEphemeralStore } from '../../stores/ephemeralStore'
 import type { ParsedIssue } from '../../stores/ephemeralStore'
 import { useSessionStore } from '../../stores/sessionStore'
 import { usePreferencesStore } from '@/stores/preferencesStore'
-import { ChevronDown, Check, AlertTriangle, X, XCircle, Sparkles, Loader2, Copy, ExternalLink, Terminal } from 'lucide-react'
+import { ChevronDown, Check, AlertTriangle, X, XCircle, Sparkles, Loader2, Copy, Terminal } from 'lucide-react'
 import { Tip } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
+import { resolveIssueTab } from './issueNavigation'
 
 /** Animated checkmark that draws itself on mount */
 function AnimatedCheck({ className }: { className?: string }) {
@@ -117,30 +118,78 @@ function Badges() {
 
 function IssueRow({ issue }: { issue: ParsedIssue }) {
   const isError = issue.severity <= 2
+  const severityLabel = isError ? 'error' : 'warning'
   const colorClass = isError ? 'text-status-error' : 'text-status-warning'
-  const bgClass = isError ? 'bg-status-error/5 hover:bg-status-error/10' : 'bg-status-warning/5 hover:bg-status-warning/10'
+  const bgClass = isError ? 'bg-status-error/5' : 'bg-status-warning/5'
   const Icon = isError ? XCircle : AlertTriangle
+  const tabs = useSessionStore((s) => s.tabs)
+  const activeTabId = useSessionStore((s) => s.activeTabId)
+  const targetTab = useMemo(
+    () => resolveIssueTab(tabs, activeTabId, issue.filename),
+    [tabs, activeTabId, issue.filename],
+  )
+  const showTabLabel = !!issue.filename && !!targetTab
+
+  const handleJump = useCallback(() => {
+    if (!issue.line || !targetTab) return
+
+    const { setActiveTab } = useSessionStore.getState()
+    if (targetTab.id !== useSessionStore.getState().activeTabId) {
+      setActiveTab(targetTab.id)
+    }
+
+    useEphemeralStore.getState().requestEditorJump({
+      tabId: targetTab.id,
+      line: issue.line,
+    })
+  }, [issue.line, targetTab])
 
   return (
-    <div className={`flex items-start gap-2 rounded px-2 py-1.5 ${bgClass} transition-colors`}>
-      <Icon className={`size-3.5 shrink-0 mt-0.5 ${colorClass}`} />
-      <span className={`flex-1 min-w-0 font-mono text-xs leading-relaxed ${colorClass}`}>
-        {issue.message}
-      </span>
-      <div className="flex items-center gap-2 shrink-0">
-        {issue.line > 0 && (
-          <span className="text-xxs text-ink-faint">line {issue.line}</span>
-        )}
-        {issue.url && (
-          <a
-            href={issue.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-ink-faint hover:text-brand transition-colors"
-            title="View documentation"
-          >
-            <ExternalLink className="size-3" />
-          </a>
+    <div className={`flex cursor-default items-start gap-2 rounded-lg px-2.5 py-2 ${bgClass}`}>
+      <Icon className={`mt-0.5 size-3.5 shrink-0 ${colorClass}`} />
+      <div className="min-w-0 flex-1">
+        <div className={`min-w-0 break-words font-mono text-xs leading-relaxed ${colorClass}`}>
+          <span className="font-semibold">{severityLabel}</span>
+          {issue.line > 0 && targetTab ? (
+            <>
+              <span>{' on '}</span>
+              <button
+                type="button"
+                onClick={handleJump}
+                className={cn(
+                  'inline cursor-pointer rounded px-0.5 font-semibold underline decoration-current/70 underline-offset-2 transition-colors',
+                  'focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-1',
+                  isError
+                    ? 'hover:text-status-error'
+                    : 'hover:text-status-warning',
+                )}
+              >
+                {`line ${issue.line}`}
+              </button>
+            </>
+          ) : issue.line > 0 ? (
+            <span>{` on line ${issue.line}`}</span>
+          ) : null}
+          <span>{`: ${issue.message}`}</span>
+        </div>
+        {(showTabLabel || issue.url) && (
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {issue.url && (
+              <a
+                href={issue.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-mono text-xxs leading-relaxed text-ink-muted underline decoration-border-strong/70 underline-offset-2 transition-colors hover:text-brand"
+              >
+                {issue.errorCode ? `More information (${issue.errorCode})` : 'More information'}
+              </a>
+            )}
+            {showTabLabel && (
+              <span className="rounded-full bg-surface-0/80 px-1.5 py-0.5 font-mono text-xxs text-ink-muted">
+                {targetTab.name}
+              </span>
+            )}
+          </div>
         )}
       </div>
     </div>
