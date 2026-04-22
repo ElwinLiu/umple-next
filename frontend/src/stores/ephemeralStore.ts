@@ -131,6 +131,7 @@ interface EphemeralState {
 
   // Editor ephemeral
   diffPreview: DiffPreviewState | null
+  pendingEditorJump: { tabId: string; line: number } | null
   selection: { fromLine: number; toLine: number; text: string; coords?: { x: number; yTop: number; yBottom: number } } | null
 
   // LSP
@@ -187,6 +188,8 @@ interface EphemeralState {
   // Editor ephemeral actions
   showDiffPreview: (preview: DiffPreviewState) => void
   clearDiffPreview: (toolCallId?: string) => void
+  requestEditorJump: (jump: { tabId: string; line: number }) => void
+  clearPendingEditorJump: () => void
   setSelection: (sel: EphemeralState['selection']) => void
 
   // Agent message queue actions
@@ -245,6 +248,7 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
 
   // Editor ephemeral
   diffPreview: null,
+  pendingEditorJump: null,
   selection: null,
 
   // LSP
@@ -369,6 +373,8 @@ export const useEphemeralStore = create<EphemeralState>((set, get) => ({
     if (toolCallId && s.diffPreview?.toolCallId !== toolCallId) return s
     return { diffPreview: null }
   }),
+  requestEditorJump: (pendingEditorJump) => set({ pendingEditorJump }),
+  clearPendingEditorJump: () => set({ pendingEditorJump: null }),
   setSelection: (selection) => set({ selection }),
 
   // Agent message queue actions

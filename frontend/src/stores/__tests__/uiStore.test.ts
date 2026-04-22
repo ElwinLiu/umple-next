@@ -9,6 +9,7 @@ afterEach(() => {
     executionErrors: null,
     outputErrorCount: 0,
     outputWarningCount: 0,
+    pendingEditorJump: null,
   })
   useSessionStore.setState({ showAgentPanel: false, showAgentBar: false })
 })
