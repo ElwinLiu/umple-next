@@ -1,52 +1,52 @@
 # Umple Code Execution
 
-This code base provides the functionality to securely execute generated Java and Python code using Docker containers.
+This service runs generated Java and Python code inside short-lived Docker runner containers. In this repo it is the `code-exec` service that the Go backend calls when a user clicks Run.
 
-# IMPORTANT
+## How This Differs From The Legacy Service
 
-If you development the project on Windows, MUST set eof to LF
+- The legacy repo's `UmpleCodeExecution` defaulted to port `4400`.
+- This rewrite defaults to port `4401` so you can run both side by side on the same machine while testing.
+- The modern repo uses Docker Compose and environment variables for wiring instead of the old `setup.sh` / `setup.bat` flow.
+- Production should set `EXECUTION_RUNNER_IMAGE` to an immutable published runner image and keep `EXECUTION_RUNNER_AUTO_BUILD=0`.
 
-# Setup
+## Local Configuration
 
-1. Create config.cfg file from config.cfg.template with correct parameters (Explained below).
-2. Run ./setup.sh (run setup.bat on cmd prompt on windows)
-3. (Optional) Run the following command to compile and use latest Javascript changes if haven't done yet.  
-   **ant -DshouldPackageUmpleOnline=true -Dmyenv=wlocal -f build.umple.xml packageUmpleonline**
-
-# Config.cfg
+The committed [`config.cfg`](./config.cfg) file is used when you run the service outside Docker Compose.
 
 **umplePath**  
-Path to the Umple's ump folder where temporary user folders are created. The full path to umpleonline/ump
+Path to the model storage directory. In this repo's containerized setup that is `/data/models`.
 
 **tempPath**  
-A directory where temporary files can be written. Suggested: /tmp
+Directory where temporary execution artifacts can be written. Suggested: `/tmp`
 
 **mainContainerName**  
-Name of the always running container and image. Use the default unless you are running more than one instance.
+Legacy field kept for compatibility with the config format. The current service no longer launches a long-running execution container with this name.
 
 **tempContainerName**  
 Default local runner image used for code execution in development. Production should prefer the `EXECUTION_RUNNER_IMAGE` environment variable so deploys can pin an immutable published runner image.
 
 **portToUse**  
-Port that the Umple Php code uses to communicate with the Docker image. Suggested: 4400. If you are running more than one instance, then each would need a new port.
+Port used when the service is started directly from `config.cfg`. Default: `4401`
 
 **timeoutValue**  
-How many seconds execution will run before the execution is ended. Default 20, but reduce if the server resources are limited.
+How many seconds execution will run before it is ended. Default: `20`
 
-# Setup.sh or setup.bat
+## Docker Compose Defaults
 
-This shell script contains commands to build docker images and to run the main docker container. The server will start at the following url by default.  
-**http:localhost:4400**
+For normal development, use the repo root commands:
 
-# Other Issues
+```bash
+make dev
+```
 
-1. If timeout is coming even though the docker is running, make sure that umplePath in config.cfg does not start with '~'.
+That starts `code-exec` through Docker Compose, passes `PORT=${CODE_EXEC_PORT:-4401}`, and points the backend at `http://code-exec:${CODE_EXEC_PORT:-4401}`.
 
-## Production note
+If you need a different port, set `CODE_EXEC_PORT` in the repo root `.env` before starting Compose.
 
-In this repo's containerized deployment, the `code-exec` service is the coordinator and launches a separate runner image for each execution. Production should set:
+## Windows Line Endings
 
-- `EXECUTION_RUNNER_IMAGE` to a published immutable image ref
-- `EXECUTION_RUNNER_AUTO_BUILD=0`
+This repo expects LF line endings for checked-in text files and shell scripts. The repo root [`.gitattributes`](../.gitattributes) enforces that.
 
-Development may keep auto-build enabled to create the local runner image on first use.
+## Other Issues
+
+If timeouts happen even though Docker is running, make sure `umplePath` in `config.cfg` does not start with `~`.

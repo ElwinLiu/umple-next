@@ -17,15 +17,15 @@ services:
       - UMPLE_SYNC_JAR=/jars/umplesync.jar
       - MODEL_STORE_PATH=/data/models
       - EXAMPLE_PATH=/examples
-      - EXECUTION_URL=http://code-exec:4400
-      - PORT=3001
+      - CODE_EXEC_PORT=${CODE_EXEC_PORT:-4401}
+      - PORT=${BACKEND_PORT:-3001}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     depends_on:
       code-exec:
         condition: service_healthy
     healthcheck:
       test:
-        ["CMD", "wget", "--spider", "-q", "http://localhost:3001/api/health"]
+        ["CMD", "wget", "--spider", "-q", "http://localhost:${BACKEND_PORT:-3001}/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -40,9 +40,9 @@ services:
     security_opt:
       - no-new-privileges:true
     environment:
-      - PORT=3002
+      - PORT=${COLLAB_PORT:-3002}
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3002/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:${COLLAB_PORT:-3002}/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -56,6 +56,10 @@ services:
     pids_limit: 128
     security_opt:
       - no-new-privileges:true
+    environment:
+      - BACKEND_PORT=${BACKEND_PORT:-3001}
+      - COLLAB_PORT=${COLLAB_PORT:-3002}
+      - LSP_PORT=${LSP_PORT:-9999}
     ports:
       - "${FRONTEND_BIND_HOST:-127.0.0.1}:${FRONTEND_HOST_PORT:-3100}:80"
     depends_on:
@@ -84,14 +88,14 @@ services:
     environment:
       - UMP_BASE_DIR=/data/models
       - UMPLESYNC_JAR_PATH=/jars/umplesync.jar
-      - LSP_PORT=9999
+      - LSP_PORT=${LSP_PORT:-9999}
     healthcheck:
       test:
         [
           "CMD",
           "node",
           "-e",
-          "const W=require('ws'),c=new W('ws://127.0.0.1:9999');c.on('open',()=>{c.close();process.exit(0)});c.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),4000)",
+          "const W=require('ws'),c=new W('ws://127.0.0.1:${LSP_PORT:-9999}');c.on('open',()=>{c.close();process.exit(0)});c.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),4000)",
         ]
       interval: 30s
       timeout: 5s
@@ -112,10 +116,11 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./data/models:/data/models
     environment:
+      - PORT=${CODE_EXEC_PORT:-4401}
       - EXECUTION_RUNNER_IMAGE=${CODE_RUNNER_IMAGE:-ghcr.io/umple/umpleonline/code-runner:latest}
       - EXECUTION_RUNNER_AUTO_BUILD=0
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4400/health"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:${CODE_EXEC_PORT:-4401}/health"]
       interval: 30s
       timeout: 5s
       retries: 3

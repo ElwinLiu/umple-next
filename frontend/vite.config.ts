@@ -5,11 +5,23 @@ import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig(({ mode }) => {
 // VITE_ALLOWED_HOSTS: comma-separated hostnames or patterns (e.g. ".umple.org")
-// Defaults to localhost only. Set in frontend/.env for dev behind a reverse proxy.
-const env = loadEnv(mode, __dirname, 'VITE_')
+// Defaults to localhost only. Root .env controls service ports; frontend/.env can override them.
+const env = {
+  ...loadEnv(mode, path.resolve(__dirname, '..'), ''),
+  ...loadEnv(mode, __dirname, ''),
+}
 const allowedHosts = env.VITE_ALLOWED_HOSTS
   ? ['localhost', ...env.VITE_ALLOWED_HOSTS.split(',').map(h => h.trim()).filter(Boolean)]
   : ['localhost']
+
+function readPort(value: string | undefined, fallback: number) {
+  const port = Number(value)
+  return Number.isInteger(port) && port > 0 ? port : fallback
+}
+
+const backendPort = readPort(env.BACKEND_PORT, 3001)
+const collabPort = readPort(env.COLLAB_PORT, 3002)
+const lspPort = readPort(env.LSP_PORT, 9999)
 
 return {
   plugins: [tailwindcss(), react()],
@@ -33,15 +45,15 @@ return {
     allowedHosts,
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: `http://localhost:${backendPort}`,
         changeOrigin: true,
       },
       '/ws/collab': {
-        target: 'ws://localhost:3002',
+        target: `ws://localhost:${collabPort}`,
         ws: true,
       },
       '/ws/lsp': {
-        target: 'ws://localhost:9999',
+        target: `ws://localhost:${lspPort}`,
         ws: true,
         rewrite: (path) => path.replace(/^\/ws\/lsp/, ''),
       },
