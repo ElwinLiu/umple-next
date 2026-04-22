@@ -1,5 +1,5 @@
 # This dockerfile sets up an image to run node.js, which will
-# act as a server on port 4400 to prepare to execute code
+# act as a server on port 4401 by default to prepare to execute code
 # The actual execution of the code is done in a docker-in-docker within this
 # For that, see the Dockerfile in the javarunner directory
 FROM alpine:3.22
@@ -18,7 +18,9 @@ RUN npm install
 # Bundle app source
 COPY . .
 
-EXPOSE 4400
+ENV PORT=4401
+
+EXPOSE 4401
 
 RUN chown -R nodeuser:nodeuser /usr/src/app
 RUN chown -R nodeuser:nodeuser /home

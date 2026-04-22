@@ -10,6 +10,14 @@ This project reproduces the legacy PHP/jQuery stack with a contemporary architec
 
 **Live instance:** [umpleonline.org](https://umpleonline.org/)
 
+## How This Differs From The Original
+
+- The original UmpleOnline in the legacy `umple` repo is a PHP/jQuery application; this repo splits the app into a React/Vite frontend, a Go API, and a Node-based code execution service.
+- Local development is container-first: `make dev` brings up the backend services and the frontend hot-reload server, instead of the older mixed script-based setup.
+- The `code-exec` service defaults to port `4401`, while the legacy `UmpleCodeExecution` service defaults to `4400`, so both stacks can run on the same machine without a port collision.
+- Backend, collab, LSP, and code-exec ports can all be remapped from the repo root `.env` when you need to run multiple local stacks side by side.
+- This repo is forward-only. We keep the same compiler capabilities, but we are not preserving the old stack's implementation details or setup flow.
+
 ## Architecture
 
 ```
@@ -26,7 +34,7 @@ This project reproduces the legacy PHP/jQuery stack with a contemporary architec
 └────────────┬────────────────┘
              │
 ┌────────────▼────────────────┐
-│   Code Exec (Node.js)       │  Port 4400
+│   Code Exec (Node.js)       │  Port 4401
 │   Sandboxed code runner     │
 └─────────────────────────────┘
 ```

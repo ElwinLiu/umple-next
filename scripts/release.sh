@@ -99,7 +99,7 @@ wait_for_backend() {
 
   echo "==> Waiting for backend readiness..."
   for i in $(seq 1 "$attempts"); do
-    if compose -f docker-compose.prod.yml exec -T backend wget -q --spider http://localhost:3001/api/health 2>/dev/null; then
+    if compose -f docker-compose.prod.yml exec -T backend wget -q --spider "http://localhost:${BACKEND_PORT}/api/health" 2>/dev/null; then
       echo "Backend ready."
       return 0
     fi
@@ -180,6 +180,8 @@ FRONTEND_BIND_HOST="$(read_env_value "FRONTEND_BIND_HOST" .env || true)"
 FRONTEND_BIND_HOST="${FRONTEND_BIND_HOST:-127.0.0.1}"
 FRONTEND_HOST_PORT="$(read_env_value "FRONTEND_HOST_PORT" .env || true)"
 FRONTEND_HOST_PORT="${FRONTEND_HOST_PORT:-3100}"
+BACKEND_PORT="$(read_env_value "BACKEND_PORT" .env || true)"
+BACKEND_PORT="${BACKEND_PORT:-3001}"
 
 FRONTEND_CHECK_HOST="$FRONTEND_BIND_HOST"
 if [ "$FRONTEND_CHECK_HOST" = "0.0.0.0" ]; then
@@ -212,6 +214,7 @@ echo "    CODE_RUNNER_IMAGE=$CODE_RUNNER_IMAGE"
 echo "    COLLAB_IMAGE=$COLLAB_IMAGE"
 echo "    LSP_PROXY_IMAGE=$LSP_PROXY_IMAGE"
 echo "    DOCKER_GID=$DOCKER_GID"
+echo "    BACKEND_PORT=$BACKEND_PORT"
 echo "    FRONTEND_BIND_HOST=$FRONTEND_BIND_HOST"
 echo "    FRONTEND_HOST_PORT=$FRONTEND_HOST_PORT"
 

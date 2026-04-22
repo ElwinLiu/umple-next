@@ -10,7 +10,50 @@ app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
 const server = http.createServer(app);
-const port=4400;
+const DEFAULT_PORT = 4401;
+
+function readConfig() {
+    try {
+        const file = fs.readFileSync(path.join(__dirname, 'config.cfg'), 'utf8');
+        const config = file.toString().replace(/\r\n/g, '\n').split('\n');
+        const obj = {};
+
+        for(const line of config) {
+            if(!line || line.startsWith('#')) {
+                continue;
+            }
+
+            const separatorIndex = line.indexOf('=');
+            if(separatorIndex === -1) {
+                continue;
+            }
+
+            const key = line.slice(0, separatorIndex).trim();
+            const value = line.slice(separatorIndex + 1).trim();
+            if(key) {
+                obj[key] = value;
+            }
+        }
+
+        return obj;
+    } catch (err) {
+        console.warn(`Unable to read config.cfg: ${err.message}`);
+        return {};
+    }
+}
+
+function resolvePort() {
+    const config = readConfig();
+    const configuredPort = Number(process.env.PORT || process.env.CODE_EXEC_PORT || config['portToUse']);
+
+    if(Number.isInteger(configuredPort) && configuredPort > 0) {
+        return configuredPort;
+    }
+
+    return DEFAULT_PORT;
+}
+
+const port = resolvePort();
 
 // Declare max requests
 const MAX_REQUESTS = 20;
@@ -181,5 +224,4 @@ const canProceed = (callback) => {
 server.listen(port, () => {
     console.log("Listening at "+port)
 });
-
 
