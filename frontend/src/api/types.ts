@@ -286,6 +286,21 @@ export interface PromoteResponse {
   newId: string;
 }
 
+export interface StatusResponse {
+  status: "ok" | "degraded" | string;
+  generatedAt: string;
+  uptimeSeconds: number;
+  build: Record<string, unknown>;
+  process: Record<string, unknown>;
+  config: Record<string, unknown>;
+  dependencies: Array<Record<string, unknown>>;
+  checks: Record<string, Record<string, unknown>>;
+  umplesync: Record<string, unknown>;
+  services: Record<string, Record<string, unknown>>;
+  counters: Record<string, unknown>;
+  legacy: Record<string, unknown>;
+}
+
 // ── Task types ──
 
 export interface TaskTab {

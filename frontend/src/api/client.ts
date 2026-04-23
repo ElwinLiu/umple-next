@@ -7,6 +7,7 @@ import type {
   GetModelResponse,
   CrudSchemaResponse,
   PromoteResponse,
+  StatusResponse,
 } from "./types";
 
 const API_BASE = "/api";
@@ -151,5 +152,20 @@ export const api = {
     return request(`/models/${encodeURIComponent(id)}/promote`, {
       method: "POST",
     });
+  },
+
+  status(signal?: AbortSignal): Promise<StatusResponse> {
+    return request("/status", { signal });
+  },
+
+  async recordSessionStarted(): Promise<void> {
+    const res = await fetch(`${API_BASE}/status/session`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || res.statusText);
+    }
   },
 };

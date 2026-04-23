@@ -54,11 +54,14 @@ function resolvePort() {
 }
 
 const port = resolvePort();
+const startedAt = Date.now();
 
 // Declare max requests
 const MAX_REQUESTS = 20;
 let mainFileName;
 let numberOfRequests = 0;
+let totalRunRequests = 0;
+let rejectedRequests = 0;
 
 function sendAndRelease(res, payload) {
     numberOfRequests--;
@@ -69,6 +72,22 @@ app.get('/health', (req, res) => {
     res.json({ status: 'ok', requestsInFlight: numberOfRequests });
 });
 
+app.get('/status', (req, res) => {
+    res.json({
+        status: 'ok',
+        port,
+        pid: process.pid,
+        uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
+        nodeVersion: process.version,
+        requestsInFlight: numberOfRequests,
+        maxConcurrentRequests: MAX_REQUESTS,
+        totalRunRequests,
+        rejectedRequests,
+        runnerImage: process.env.EXECUTION_RUNNER_IMAGE || 'umple-code-runner:dev',
+        runnerAutoBuild: process.env.EXECUTION_RUNNER_AUTO_BUILD === '1',
+    });
+});
+
 app.post('/run' , (req, res)  => 
 {
     canProceed((err) => {
@@ -76,6 +95,7 @@ app.post('/run' , (req, res)  =>
             return res.send(err); 
         } else {
             numberOfRequests++;
+            totalRunRequests++;
 
             // Extract out path and validate
             const path = req.body.path;
@@ -212,6 +232,7 @@ const validatePath = (path) => {
 const canProceed = (callback) => {
     // Check max number of requests allowed
     if(numberOfRequests >= MAX_REQUESTS) {
+        rejectedRequests++;
         callback({errors:"Umple code execution Docker server is too heavily loaded to execute your code at the same time as many others, please try again in a few seconds to execute your code. If the problem persists for many minutes, then please report to Umple developers.", output:""})
     } else {
         callback(null);
@@ -224,4 +245,3 @@ const canProceed = (callback) => {
 server.listen(port, () => {
     console.log("Listening at "+port)
 });
-

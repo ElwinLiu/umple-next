@@ -176,3 +176,19 @@ export function setupWSConnection(
     send(doc, conn, encoding.toUint8Array(encoder))
   }
 }
+
+export function getCollabStats() {
+  let activeConnections = 0
+  let awarenessStates = 0
+
+  docs.forEach((doc) => {
+    activeConnections += doc.conns.size
+    awarenessStates += doc.awareness.getStates().size
+  })
+
+  return {
+    activeRooms: docs.size,
+    activeConnections,
+    awarenessStates,
+  }
+}
