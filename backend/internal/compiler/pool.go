@@ -37,6 +37,14 @@ type Pool struct {
 	modelMu sync.Map // map[string]*sync.Mutex
 }
 
+type StatusSnapshot struct {
+	JarPath string `json:"jarPath"`
+	Port    int    `json:"port"`
+	WorkDir string `json:"workDir"`
+	Alive   bool   `json:"alive"`
+	PID     int    `json:"pid,omitempty"`
+}
+
 func NewPool(jarPath string, port int) (*Pool, error) {
 	return NewPoolWithWorkDir(jarPath, port, "")
 }
@@ -105,6 +113,38 @@ func (p *Pool) execute(req CompileRequest) (*CompileResult, error) {
 	defer conn.Close()
 
 	return sendCommand(conn, req.Command)
+}
+
+func (p *Pool) Log() (*CompileResult, error) {
+	if err := p.ensureRunning(); err != nil {
+		return nil, fmt.Errorf("compiler not available: %w", err)
+	}
+
+	conn, err := net.DialTimeout("tcp", fmt.Sprintf("localhost:%d", p.port), dialTimeout)
+	if err != nil {
+		return nil, fmt.Errorf("connect failed: %w", err)
+	}
+	defer conn.Close()
+
+	return sendCommand(conn, "-log")
+}
+
+func (p *Pool) Status() StatusSnapshot {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	pid := 0
+	if p.process != nil && p.process.Process != nil {
+		pid = p.process.Process.Pid
+	}
+
+	return StatusSnapshot{
+		JarPath: p.jarPath,
+		Port:    p.port,
+		WorkDir: p.workDir,
+		Alive:   p.alive,
+		PID:     pid,
+	}
 }
 
 func (p *Pool) startServer() error {

@@ -18,6 +18,8 @@ services:
       - MODEL_STORE_PATH=/data/models
       - EXAMPLE_PATH=/examples
       - CODE_EXEC_PORT=${CODE_EXEC_PORT:-4401}
+      - COLLAB_PORT=${COLLAB_PORT:-3002}
+      - LSP_PORT=${LSP_PORT:-9999}
       - PORT=${BACKEND_PORT:-3001}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
     depends_on:
@@ -90,13 +92,7 @@ services:
       - UMPLESYNC_JAR_PATH=/jars/umplesync.jar
       - LSP_PORT=${LSP_PORT:-9999}
     healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "const W=require('ws'),c=new W('ws://127.0.0.1:${LSP_PORT:-9999}');c.on('open',()=>{c.close();process.exit(0)});c.on('error',()=>process.exit(1));setTimeout(()=>process.exit(1),4000)",
-        ]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:${LSP_PORT:-9999}/health"]
       interval: 30s
       timeout: 5s
       retries: 3

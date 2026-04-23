@@ -16,8 +16,10 @@ import { WelcomeDialog } from '@/components/onboarding/WelcomeDialog'
 import { OnboardingTour } from '@/components/onboarding/OnboardingTour'
 import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { TaskSheet } from '@/components/task/TaskSheet'
+import { api } from '@/api/client'
 
 const SIDEBAR_TOGGLE_GUARD_MS = 350
+const SESSION_COUNTER_KEY = 'umpleonline-session-counted-v1'
 
 export function AppShell() {
   const showEditor = useEphemeralStore((s) => s.showEditor)
@@ -27,6 +29,14 @@ export function AppShell() {
   useModelFromURL()
   useCollab()
   useTaskRoute()
+
+  useEffect(() => {
+    if (sessionStorage.getItem(SESSION_COUNTER_KEY)) return
+    sessionStorage.setItem(SESSION_COUNTER_KEY, '1')
+    void api.recordSessionStarted().catch(() => {
+      sessionStorage.removeItem(SESSION_COUNTER_KEY)
+    })
+  }, [])
 
   useEffect(() => {
     let lastSidebarToggleAt = 0

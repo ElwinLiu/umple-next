@@ -14,6 +14,8 @@ type Config struct {
 	ModelStorePath string
 	ExamplePath    string
 	ExecutionURL   string
+	CollabURL      string
+	LSPURL         string
 	TaskStorePath  string
 	AllowedOrigins []string
 }
@@ -26,6 +28,8 @@ func Load() *Config {
 		ModelStorePath: getEnv("MODEL_STORE_PATH", "/data/models"),
 		ExamplePath:    getEnv("EXAMPLE_PATH", "/examples"),
 		ExecutionURL:   getExecutionURL(),
+		CollabURL:      getCollabURL(),
+		LSPURL:         getLSPURL(),
 		TaskStorePath:  getEnv("TASK_STORE_PATH", "/data/models/tasks"),
 		AllowedOrigins: getOrigins("ALLOWED_ORIGINS", []string{"http://localhost:3100"}),
 	}
@@ -37,6 +41,22 @@ func getExecutionURL() string {
 	}
 
 	return fmt.Sprintf("http://code-exec:%d", getEnvInt("CODE_EXEC_PORT", 4401))
+}
+
+func getCollabURL() string {
+	if v := os.Getenv("COLLAB_URL"); v != "" {
+		return v
+	}
+
+	return fmt.Sprintf("http://collab:%d", getEnvInt("COLLAB_PORT", 3002))
+}
+
+func getLSPURL() string {
+	if v := os.Getenv("LSP_URL"); v != "" {
+		return v
+	}
+
+	return fmt.Sprintf("http://lsp-proxy:%d", getEnvInt("LSP_PORT", 9999))
 }
 
 func getOrigins(key string, fallback []string) []string {

@@ -2,6 +2,7 @@
 
 const { WebSocketServer } = require("ws");
 const { spawn } = require("child_process");
+const http = require("http");
 const path = require("path");
 const fs = require("fs");
 const url = require("url");
@@ -23,6 +24,10 @@ const SESSION_ID_RE = /^[a-zA-Z0-9_-]+$/;
 // ---------------------------------------------------------------------------
 const activeSessions = new Map();
 let connectionCounter = 0;
+let totalSessionsStarted = 0;
+let rejectedConnections = 0;
+let maxConcurrentSessions = 0;
+const startedAt = Date.now();
 
 function log(msg) {
   console.log(`[lsp-proxy] ${new Date().toISOString()} ${msg}`);
@@ -118,9 +123,39 @@ function killSession(modelId, reason) {
 // ---------------------------------------------------------------------------
 // WebSocket server
 // ---------------------------------------------------------------------------
-const wss = new WebSocketServer({ port: LSP_PORT, host: "0.0.0.0" });
+const server = http.createServer((req, res) => {
+  const pathname = new url.URL(req.url, "http://localhost").pathname;
+  if (pathname === "/health") {
+    res.writeHead(200, { "Content-Type": "text/plain" });
+    res.end("ok");
+    return;
+  }
+  if (pathname === "/status") {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    res.end(JSON.stringify({
+      status: "ok",
+      port: LSP_PORT,
+      pid: process.pid,
+      uptimeSeconds: Math.round((Date.now() - startedAt) / 1000),
+      command: LSP_COMMAND,
+      baseDir: UMP_BASE_DIR,
+      umplesyncJarPath: UMPLESYNC_JAR_PATH,
+      activeSessions: activeSessions.size,
+      totalSessionsStarted,
+      rejectedConnections,
+      maxConcurrentSessions,
+      processLimit: MAX_PROCESSES_GLOBAL,
+      debug: LSP_DEBUG,
+    }));
+    return;
+  }
+  res.writeHead(404);
+  res.end();
+});
 
-wss.on("listening", () => {
+const wss = new WebSocketServer({ server });
+
+server.on("listening", () => {
   log(`WebSocket server listening on 0.0.0.0:${LSP_PORT}`);
 });
 
@@ -130,6 +165,7 @@ wss.on("connection", (ws, req) => {
 
   if (!SESSION_ID_RE.test(modelId)) {
     warn(`Invalid session ID: ${modelId}`);
+    rejectedConnections++;
     ws.close(4001, "Invalid session ID");
     return;
   }
@@ -142,12 +178,14 @@ wss.on("connection", (ws, req) => {
   }
   if (!modelDir) {
     warn(`Model directory not found or path traversal: ${modelId}`);
+    rejectedConnections++;
     ws.close(4002, "Model directory not found");
     return;
   }
 
   if (activeSessions.size >= MAX_PROCESSES_GLOBAL) {
     warn(`Global process limit reached (${MAX_PROCESSES_GLOBAL})`);
+    rejectedConnections++;
     ws.close(4005, "Server capacity reached");
     return;
   }
@@ -174,6 +212,8 @@ wss.on("connection", (ws, req) => {
   const entry = { process: lspProcess, framer, ws, cleanedUp: false };
 
   activeSessions.set(connId, entry);
+  totalSessionsStarted++;
+  maxConcurrentSessions = Math.max(maxConcurrentSessions, activeSessions.size);
   log(`Session started for model=${modelId} conn=${connId} (pid=${lspProcess.pid})`);
 
   // LSP stdout → WebSocket
@@ -245,6 +285,8 @@ wss.on("connection", (ws, req) => {
 wss.on("error", (err) => {
   warn(`WebSocket server error: ${err.message}`);
 });
+
+server.listen(LSP_PORT, "0.0.0.0");
 
 // ---------------------------------------------------------------------------
 // Graceful shutdown
