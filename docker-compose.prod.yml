@@ -22,6 +22,10 @@ services:
       - LSP_PORT=${LSP_PORT:-9999}
       - PORT=${BACKEND_PORT:-3001}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS}
+      - DEPLOYED_AT=${DEPLOYED_AT:-}
+      - DEPLOYED_SOURCE_COMMIT=${DEPLOYED_SOURCE_COMMIT:-}
+      - DEPLOYED_SOURCE_REF=${DEPLOYED_SOURCE_REF:-}
+      - RELEASE_TAG=${RELEASE_TAG:-}
     depends_on:
       code-exec:
         condition: service_healthy

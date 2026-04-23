@@ -154,6 +154,8 @@ jobs:
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             bash "${{ secrets.DEPLOY_PATH }}/scripts/release.sh" \
               "${{ secrets.DEPLOY_PATH }}" \
+              "${{ steps.meta.outputs.release_tag }}" \
+              "${{ steps.meta.outputs.sha }}" \
               "${{ steps.meta.outputs.backend_image }}" \
               "${{ steps.meta.outputs.frontend_image }}" \
               "${{ steps.meta.outputs.code_exec_image }}" \

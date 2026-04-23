@@ -121,7 +121,7 @@ EOF
 Notes:
 
 - `ALLOWED_ORIGINS` must be the real production origin, not localhost.
-- Leave image variables out. The release script writes `BACKEND_IMAGE`, `FRONTEND_IMAGE`, `CODE_EXEC_IMAGE`, `CODE_RUNNER_IMAGE`, `COLLAB_IMAGE`, `LSP_PROXY_IMAGE`, and `DOCKER_GID` automatically during deploy.
+- Leave image and release metadata variables out. The release script writes `BACKEND_IMAGE`, `FRONTEND_IMAGE`, `CODE_EXEC_IMAGE`, `CODE_RUNNER_IMAGE`, `COLLAB_IMAGE`, `LSP_PROXY_IMAGE`, `DEPLOYED_AT`, `DEPLOYED_SOURCE_COMMIT`, `DEPLOYED_SOURCE_REF`, `RELEASE_TAG`, and `DOCKER_GID` automatically during deploy.
 - Keep `FRONTEND_BIND_HOST=127.0.0.1` unless you intentionally want the container bound publicly.
 
 ### 6. Configure the public entry point

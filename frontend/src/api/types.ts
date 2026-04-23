@@ -291,6 +291,7 @@ export interface StatusResponse {
   generatedAt: string;
   uptimeSeconds: number;
   build: Record<string, unknown>;
+  release?: Record<string, unknown>;
   process: Record<string, unknown>;
   config: Record<string, unknown>;
   dependencies: Array<Record<string, unknown>>;
