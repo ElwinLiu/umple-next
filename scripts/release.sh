@@ -243,6 +243,7 @@ check_frontend "$FRONTEND_CHECK_HOST" "$FRONTEND_HOST_PORT"
 
 ROLLBACK_ARMED=0
 
-cleanup_docker_storage
+# Do not prune here: CODE_RUNNER_IMAGE is intentionally idle between requests,
+# so `docker image prune -a` would remove the image that code-exec needs later.
 
 echo "==> Release complete!"
