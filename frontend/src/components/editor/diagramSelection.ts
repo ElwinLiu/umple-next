@@ -1,6 +1,7 @@
 export interface DiagramSelectDetail {
   name: string
   kind: 'node' | 'edge'
+  anchorTitle?: string | null
 }
 
 interface TextRange {
@@ -8,8 +9,20 @@ interface TextRange {
   to: number
 }
 
+interface ParsedStateEdgeSelection {
+  sourceRawId: string
+  targetRawId: string
+  targetLabel: string
+  trigger: string
+  guard: string | null
+}
+
 function escapeForRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function normalizeWhitespace(value: string): string {
+  return value.replace(/\u00a0/g, ' ').replace(/\s+/g, ' ').trim()
 }
 
 function stripNumericInstanceSuffix(value: string): string {
@@ -195,12 +208,177 @@ function findRangeForPath(code: string, path: string[]): TextRange | null {
   return match
 }
 
+function parseStateEdgeSelection(detail: DiagramSelectDetail): ParsedStateEdgeSelection | null {
+  if (detail.kind !== 'edge' || !detail.anchorTitle) return null
+
+  const [sourceRawId = '', targetRawId = ''] = detail.name.split('->')
+  if (!sourceRawId || !targetRawId) return null
+
+  const lines = detail.anchorTitle
+    .split(/[\r\n]+/)
+    .map(normalizeWhitespace)
+    .filter(Boolean)
+
+  const firstLine = lines[0] ?? ''
+  const match = firstLine.match(/^From\s+(.+?)\s+to\s+(.+?)\s+(.+)$/)
+  if (!match) return null
+
+  let trigger = normalizeWhitespace(match[3])
+  if (trigger.startsWith('on ')) trigger = trigger.slice(3).trim()
+  if (trigger === 'automatically') trigger = ''
+
+  const guardLine = lines.find((line) => line.startsWith('Guard:'))
+
+  return {
+    sourceRawId,
+    targetRawId,
+    targetLabel: match[2].trim(),
+    trigger,
+    guard: guardLine ? normalizeWhitespace(guardLine.slice('Guard:'.length)) : null,
+  }
+}
+
+function findTransitionEnd(code: string, from: number): number | null {
+  let braceDepth = 0
+  let quote: '"' | '\'' | '`' | null = null
+  let lineComment = false
+  let blockComment = false
+
+  for (let i = from; i < code.length; i++) {
+    const char = code[i]
+    const next = code[i + 1]
+
+    if (lineComment) {
+      if (char === '\n') lineComment = false
+      continue
+    }
+
+    if (blockComment) {
+      if (char === '*' && next === '/') {
+        blockComment = false
+        i++
+      }
+      continue
+    }
+
+    if (quote) {
+      if (char === '\\') {
+        i++
+        continue
+      }
+      if (char === quote) quote = null
+      continue
+    }
+
+    if (char === '/' && next === '/') {
+      lineComment = true
+      i++
+      continue
+    }
+
+    if (char === '/' && next === '*') {
+      blockComment = true
+      i++
+      continue
+    }
+
+    if (char === '"' || char === '\'' || char === '`') {
+      quote = char
+      continue
+    }
+
+    if (char === '{') {
+      braceDepth++
+      continue
+    }
+
+    if (char === '}') {
+      if (braceDepth > 0) braceDepth--
+      continue
+    }
+
+    if (char === ';' && braceDepth === 0) return i + 1
+  }
+
+  return null
+}
+
+function transitionMatchesCandidate(
+  candidate: string,
+  transition: ParsedStateEdgeSelection,
+  requireGuard: boolean,
+): boolean {
+  const normalized = normalizeWhitespace(candidate)
+  if (!normalized.startsWith(transition.trigger)) return false
+
+  const destinationPattern = new RegExp(`->\\s*${escapeForRegex(transition.targetLabel)}\\s*;`)
+  if (!destinationPattern.test(candidate)) return false
+
+  if (requireGuard && transition.guard && !normalized.includes(transition.guard)) return false
+
+  return true
+}
+
+function findStateTransitionRangeWithin(
+  stateBlock: string,
+  transition: ParsedStateEdgeSelection,
+): TextRange | null {
+  const triggerPattern = transition.trigger.length > 0
+    ? new RegExp(`^[ \\t]*${escapeForRegex(transition.trigger)}(?=[ \\t]|\\[|\\/|\\-|$)`, 'gm')
+    : /^[ \t]*(?=(?:\[[^\n]*\]\s*)?(?:\/|->))/gm
+
+  const matches: TextRange[] = []
+  let match: RegExpExecArray | null
+  while ((match = triggerPattern.exec(stateBlock)) !== null) {
+    const from = match.index
+    const to = findTransitionEnd(stateBlock, from)
+    if (!to) continue
+    matches.push({ from, to })
+  }
+
+  for (const range of matches) {
+    if (transitionMatchesCandidate(stateBlock.slice(range.from, range.to), transition, true)) {
+      return range
+    }
+  }
+
+  for (const range of matches) {
+    if (transitionMatchesCandidate(stateBlock.slice(range.from, range.to), transition, false)) {
+      return range
+    }
+  }
+
+  return null
+}
+
+function findStateEdgeRange(code: string, detail: DiagramSelectDetail): TextRange | null {
+  const parsed = parseStateEdgeSelection(detail)
+  if (!parsed) return null
+
+  const sourceRange = findDiagramRange(code, { name: parsed.sourceRawId, kind: 'node' })
+  if (!sourceRange) return null
+
+  const stateBlock = code.slice(sourceRange.from, sourceRange.to)
+  const localRange = findStateTransitionRangeWithin(stateBlock, parsed)
+  if (!localRange) return null
+
+  return {
+    from: sourceRange.from + localRange.from,
+    to: sourceRange.from + localRange.to,
+  }
+}
+
 export function findDiagramRange(code: string, detail: DiagramSelectDetail): TextRange | null {
   if (detail.kind === 'node') {
     for (const path of getNodeLookupPaths(detail.name)) {
       const range = findRangeForPath(code, path)
       if (range) return range
     }
+  }
+
+  if (detail.kind === 'edge') {
+    const stateEdgeRange = findStateEdgeRange(code, detail)
+    if (stateEdgeRange) return stateEdgeRange
   }
 
   for (const candidate of getLookupCandidates(detail.name, detail.kind)) {

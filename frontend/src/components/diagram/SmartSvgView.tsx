@@ -509,6 +509,7 @@ const SmartSvgViewInner = ({ svg, viewMode }: SmartSvgViewProps) => {
           detail: {
             name: interactionTarget.rawId,
             kind: interactionTarget.kind,
+            anchorTitle: interactionTarget.anchorTitle,
           },
         }))
       } else {

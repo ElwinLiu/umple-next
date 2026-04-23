@@ -69,6 +69,88 @@ describe('findDiagramRange', () => {
     }`)
   })
 
+  it('matches a multi-line state transition instead of falling back to the source state', () => {
+    const code = `class ItemAtAuction {
+  status {
+    created {
+
+      listitem(double reserve) / {
+        reservePrice = reserve;
+        active = true;
+      }
+      -> listed;
+    }
+
+    listed {
+    }
+  }
+}
+`
+
+    const range = findDiagramRange(code, {
+      name: 'ItemAtAuction_status_created->ItemAtAuction_status_listed',
+      kind: 'edge',
+      anchorTitle: `From created to listed on listitem(double reserve)
+Transition Action:
+    reservePrice = reserve;
+    active = true;`,
+    })
+
+    expect(range).not.toBeNull()
+    expect(code.slice(range!.from, range!.to)).toBe(`      listitem(double reserve) / {
+        reservePrice = reserve;
+        active = true;
+      }
+      -> listed;`)
+  })
+
+  it('matches an automatic transition without falling back to the source state', () => {
+    const code = `class X {
+  sm {
+    s1 {
+      -> s2;
+    }
+
+    s2 {
+    }
+  }
+}
+`
+
+    const range = findDiagramRange(code, {
+      name: 'X_sm_s1->X_sm_s2',
+      kind: 'edge',
+      anchorTitle: 'From s1 to s2 automatically',
+    })
+
+    expect(range).not.toBeNull()
+    expect(code.slice(range!.from, range!.to)).toBe('      -> s2;')
+  })
+
+  it('matches a guarded automatic transition without falling back to the source state', () => {
+    const code = `class X {
+  sm {
+    s1 {
+      [guard] -> s2;
+    }
+
+    s2 {
+    }
+  }
+}
+`
+
+    const range = findDiagramRange(code, {
+      name: 'X_sm_s1->X_sm_s2',
+      kind: 'edge',
+      anchorTitle: `From s1 to s2 automatically
+Guard: [guard]`,
+    })
+
+    expect(range).not.toBeNull()
+    expect(code.slice(range!.from, range!.to)).toBe('      [guard] -> s2;')
+  })
+
   it('still resolves simple instance ids back to their class definitions', () => {
     const code = `class Segment {
   bend;

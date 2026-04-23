@@ -54,12 +54,12 @@ export function EditorPanel() {
   // Uses a native DOM CustomEvent so delivery is synchronous and framework-independent.
   useEffect(() => {
     const handler = (e: Event) => {
-      const { name, kind } = (e as CustomEvent<DiagramSelectDetail>).detail
+      const { name, kind, anchorTitle } = (e as CustomEvent<DiagramSelectDetail>).detail
       const view = editorViewRef.current ?? editorRef.current?.view
       if (!view) return
 
       const doc = view.state.doc.toString()
-      const range = findDiagramRange(doc, { name, kind })
+      const range = findDiagramRange(doc, { name, kind, anchorTitle })
       if (!range) return
 
       view.dispatch({

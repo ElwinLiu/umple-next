@@ -50,10 +50,16 @@ const STATE_SVG = `
     </g>
     <g class="edge">
       <title>Phone_screenLight_On->Phone_screenLight_Off</title>
-      <a xlink:title="From On to Off on hangUp">
-        <path d="M120,34 C120,60 60,60 40,34"></path>
-      </a>
-      <text x="86" y="58">hangUp</text>
+      <g id="a_edge1">
+        <a xlink:title="From On to Off on hangUp">
+          <path d="M120,34 C120,60 60,60 40,34"></path>
+        </a>
+      </g>
+      <g id="a_edge1-label">
+        <a xlink:title="From On to Off on hangUp">
+          <text x="86" y="58">hangUp</text>
+        </a>
+      </g>
     </g>
   </svg>
 `
@@ -117,6 +123,31 @@ afterEach(() => {
 })
 
 describe('SmartSvgView state interactions', () => {
+  it('dispatches edge metadata when clicking a transition label', () => {
+    const events: Array<CustomEvent<{ name: string; kind: string; anchorTitle?: string | null }>> = []
+    const handler = (event: Event) => {
+      events.push(event as CustomEvent<{ name: string; kind: string; anchorTitle?: string | null }>)
+    }
+    window.addEventListener('umple:diagram-select', handler)
+
+    render(
+      <TooltipProvider>
+        <SmartSvgView svg={STATE_SVG} viewMode="state" />
+      </TooltipProvider>,
+    )
+
+    fireEvent.click(screen.getByText('hangUp'))
+
+    expect(events).toHaveLength(1)
+    expect(events[0].detail).toEqual({
+      name: 'Phone_screenLight_On->Phone_screenLight_Off',
+      kind: 'edge',
+      anchorTitle: 'From On to Off on hangUp',
+    })
+
+    window.removeEventListener('umple:diagram-select', handler)
+  })
+
   it('opens a state node menu and renames the selected state', async () => {
     useSessionStore.setState({
       code: STATE_CODE,
