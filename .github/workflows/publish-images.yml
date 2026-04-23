@@ -93,8 +93,16 @@ jobs:
             org.opencontainers.image.url=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ steps.resolve.outputs.sha }}
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
+            org.opencontainers.image.ref.name=${{ github.ref_name }}
             org.opencontainers.image.vendor=University of Ottawa
             org.opencontainers.image.description=UmpleOnline backend API
+          build-args: |
+            SOURCE_COMMIT=${{ steps.resolve.outputs.sha }}
+            SOURCE_REF=${{ github.ref }}
+            SOURCE_REF_NAME=${{ github.ref_name }}
+            SOURCE_REF_TYPE=${{ github.ref_type }}
+            BUILD_TIME=${{ steps.meta.outputs.created }}
+            BACKEND_IMAGE_REF=${{ steps.meta.outputs.prefix }}/backend:${{ steps.meta.outputs.sha_tag }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
           sbom: true

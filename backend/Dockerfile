@@ -8,6 +8,19 @@ RUN go mod tidy && CGO_ENABLED=0 go build -o /server ./cmd/server
 FROM eclipse-temurin:17-jdk-alpine-3.23
 
 ARG GLIBC_VERSION=2.35-r1
+ARG SOURCE_COMMIT=unknown
+ARG SOURCE_REF=
+ARG SOURCE_REF_NAME=
+ARG SOURCE_REF_TYPE=
+ARG BUILD_TIME=
+ARG BACKEND_IMAGE_REF=
+
+ENV SOURCE_COMMIT=${SOURCE_COMMIT} \
+    SOURCE_REF=${SOURCE_REF} \
+    SOURCE_REF_NAME=${SOURCE_REF_NAME} \
+    SOURCE_REF_TYPE=${SOURCE_REF_TYPE} \
+    BUILD_TIME=${BUILD_TIME} \
+    BACKEND_IMAGE_REF=${BACKEND_IMAGE_REF}
 
 RUN apk upgrade --no-cache && apk add --no-cache graphviz python3
 

@@ -86,6 +86,7 @@ func (h *StatusHandler) Status(w http.ResponseWriter, r *http.Request) {
 		"generatedAt":   time.Now().UTC().Format(time.RFC3339),
 		"uptimeSeconds": int(time.Since(h.started).Seconds()),
 		"build":         buildStatus(),
+		"release":       releaseStatus(),
 		"process": map[string]any{
 			"pid":       os.Getpid(),
 			"hostname":  hostname(),
@@ -305,14 +306,63 @@ func (h *StatusHandler) umplesyncStatus() map[string]any {
 }
 
 func buildStatus() map[string]any {
+	sourceRef := firstPresent(os.Getenv("SOURCE_REF"), os.Getenv("GITHUB_REF"))
+	imageRef := firstPresent(os.Getenv("BACKEND_IMAGE_REF"), os.Getenv("IMAGE_TAG"))
+
 	return map[string]any{
-		"commit":    firstNonEmpty(os.Getenv("GIT_COMMIT"), os.Getenv("GITHUB_SHA"), commandOutput("git", "rev-parse", "--short", "HEAD")),
-		"branch":    firstNonEmpty(os.Getenv("GIT_BRANCH"), os.Getenv("GITHUB_REF_NAME"), commandOutput("git", "rev-parse", "--abbrev-ref", "HEAD")),
-		"updated":   firstNonEmpty(os.Getenv("BUILD_TIME"), commandOutput("git", "log", "-1", "--format=%cd", "--date=relative")),
-		"builtAt":   os.Getenv("BUILD_TIME"),
-		"imageTag":  os.Getenv("IMAGE_TAG"),
-		"sourceRef": os.Getenv("GITHUB_REF"),
+		"sourceCommit":  firstNonEmpty(os.Getenv("SOURCE_COMMIT"), os.Getenv("GIT_COMMIT"), os.Getenv("GITHUB_SHA"), commitFromImageRef(imageRef), commandOutput("git", "rev-parse", "--short", "HEAD")),
+		"sourceRef":     sourceRef,
+		"sourceRefName": firstPresent(os.Getenv("SOURCE_REF_NAME"), os.Getenv("GITHUB_REF_NAME"), refNameFromRef(sourceRef), commandOutput("git", "rev-parse", "--abbrev-ref", "HEAD")),
+		"sourceRefType": firstPresent(os.Getenv("SOURCE_REF_TYPE"), refTypeFromRef(sourceRef)),
+		"builtAt":       os.Getenv("BUILD_TIME"),
+		"backendImage":  imageRef,
 	}
+}
+
+func releaseStatus() map[string]any {
+	release := map[string]any{
+		"releaseTag":   os.Getenv("RELEASE_TAG"),
+		"deployedAt":   os.Getenv("DEPLOYED_AT"),
+		"sourceCommit": os.Getenv("DEPLOYED_SOURCE_COMMIT"),
+		"sourceRef":    os.Getenv("DEPLOYED_SOURCE_REF"),
+		"backendImage": firstPresent(os.Getenv("BACKEND_IMAGE_REF"), os.Getenv("IMAGE_TAG")),
+	}
+	for _, value := range release {
+		if text, ok := value.(string); ok && strings.TrimSpace(text) != "" {
+			return release
+		}
+	}
+	return map[string]any{}
+}
+
+func commitFromImageRef(imageRef string) string {
+	_, tag, ok := strings.Cut(strings.TrimSpace(imageRef), ":sha-")
+	if !ok {
+		return ""
+	}
+	return tag
+}
+
+func refNameFromRef(ref string) string {
+	ref = strings.TrimSpace(ref)
+	if name, ok := strings.CutPrefix(ref, "refs/heads/"); ok {
+		return name
+	}
+	if name, ok := strings.CutPrefix(ref, "refs/tags/"); ok {
+		return name
+	}
+	return ""
+}
+
+func refTypeFromRef(ref string) string {
+	ref = strings.TrimSpace(ref)
+	if strings.HasPrefix(ref, "refs/heads/") {
+		return "branch"
+	}
+	if strings.HasPrefix(ref, "refs/tags/") {
+		return "tag"
+	}
+	return ""
 }
 
 func dependencyStatus() []map[string]string {
@@ -554,4 +604,13 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return "unknown"
+}
+
+func firstPresent(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
 }

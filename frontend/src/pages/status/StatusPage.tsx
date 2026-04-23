@@ -111,18 +111,25 @@ function StatusContent({ status }: { status: StatusResponse }) {
   const services = Object.entries(status.services ?? {});
   const legacy = status.legacy ?? {};
   const legacyDocker = asRecord(legacy.docker);
+  const release = status.release ?? {};
+  const releaseLabel = formatValue(release.releaseTag) || shortCommit(status.build?.sourceCommit) || "unknown";
+  const releaseDetail = shortCommit(release.sourceCommit) || shortCommit(status.build?.sourceCommit) || formatValue(status.build?.sourceRefName);
 
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-4 lg:grid-cols-3">
         <SummaryCard title="Backend uptime" value={formatDuration(status.uptimeSeconds)} description="Since this backend process started" />
-        <SummaryCard title="Commit" value={formatValue(status.build?.commit)} description={formatValue(status.build?.branch)} />
+        <SummaryCard title="Release" value={releaseLabel} description={releaseDetail} />
         <SummaryCard title="Compiler" value={formatValue(status.umplesync?.alive) === "true" ? "Running" : "Not running"} description={`Port ${formatValue(status.umplesync?.port)}`} />
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DataCard title="Build" description="Source revision and image metadata">
+      <div className="grid gap-4 xl:grid-cols-3">
+        <DataCard title="Build" description="Source revision baked into the backend image">
           <KeyValueTable data={status.build} />
+        </DataCard>
+
+        <DataCard title="Release" description="Deployment metadata written by the production release flow">
+          <KeyValueTable data={status.release} />
         </DataCard>
 
         <DataCard title="Runtime" description="Backend process and configured service targets">
@@ -358,6 +365,12 @@ function formatValue(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean") return String(value);
   return JSON.stringify(value);
+}
+
+function shortCommit(value: unknown): string {
+  const commit = formatValue(value);
+  if (!commit || commit === "unknown") return "";
+  return commit.length > 12 ? commit.slice(0, 12) : commit;
 }
 
 function formatDate(value: string): string {

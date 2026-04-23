@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-DEPLOY_PATH="${1:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <code-runner-image> <collab-image> <lsp-proxy-image>}"
-BACKEND_IMAGE="${2:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <code-runner-image> <collab-image> <lsp-proxy-image>}"
-FRONTEND_IMAGE="${3:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <code-runner-image> <collab-image> <lsp-proxy-image>}"
-CODE_EXEC_IMAGE="${4:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <code-runner-image> <collab-image> <lsp-proxy-image>}"
-CODE_RUNNER_IMAGE="${5:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <code-runner-image> <collab-image> <lsp-proxy-image>}"
-COLLAB_IMAGE="${6:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <code-runner-image> <collab-image> <lsp-proxy-image>}"
-LSP_PROXY_IMAGE="${7:?Usage: release.sh <deploy-path> <backend-image> <frontend-image> <code-exec-image> <code-runner-image> <collab-image> <lsp-proxy-image>}"
+USAGE="Usage: release.sh <deploy-path> <release-tag> <source-sha> <backend-image> <frontend-image> <code-exec-image> <code-runner-image> <collab-image> <lsp-proxy-image>"
+
+DEPLOY_PATH="${1:?$USAGE}"
+RELEASE_TAG="${2:?$USAGE}"
+SOURCE_SHA="${3:?$USAGE}"
+BACKEND_IMAGE="${4:?$USAGE}"
+FRONTEND_IMAGE="${5:?$USAGE}"
+CODE_EXEC_IMAGE="${6:?$USAGE}"
+CODE_RUNNER_IMAGE="${7:?$USAGE}"
+COLLAB_IMAGE="${8:?$USAGE}"
+LSP_PROXY_IMAGE="${9:?$USAGE}"
 
 compose() {
   if docker compose version >/dev/null 2>&1; then
@@ -84,6 +88,10 @@ rollback_release() {
   upsert_env "CODE_RUNNER_IMAGE" "$PREVIOUS_CODE_RUNNER_IMAGE" .env
   upsert_env "COLLAB_IMAGE" "$PREVIOUS_COLLAB_IMAGE" .env
   upsert_env "LSP_PROXY_IMAGE" "$PREVIOUS_LSP_PROXY_IMAGE" .env
+  upsert_env "DEPLOYED_AT" "$PREVIOUS_DEPLOYED_AT" .env
+  upsert_env "DEPLOYED_SOURCE_COMMIT" "$PREVIOUS_DEPLOYED_SOURCE_COMMIT" .env
+  upsert_env "DEPLOYED_SOURCE_REF" "$PREVIOUS_DEPLOYED_SOURCE_REF" .env
+  upsert_env "RELEASE_TAG" "$PREVIOUS_RELEASE_TAG" .env
   upsert_env "DOCKER_GID" "$DOCKER_GID" .env
 
   compose -f docker-compose.prod.yml pull || true
@@ -197,6 +205,11 @@ PREVIOUS_CODE_EXEC_IMAGE="$(read_env_value "CODE_EXEC_IMAGE" .env || true)"
 PREVIOUS_CODE_RUNNER_IMAGE="$(read_env_value "CODE_RUNNER_IMAGE" .env || true)"
 PREVIOUS_COLLAB_IMAGE="$(read_env_value "COLLAB_IMAGE" .env || true)"
 PREVIOUS_LSP_PROXY_IMAGE="$(read_env_value "LSP_PROXY_IMAGE" .env || true)"
+PREVIOUS_DEPLOYED_AT="$(read_env_value "DEPLOYED_AT" .env || true)"
+PREVIOUS_DEPLOYED_SOURCE_COMMIT="$(read_env_value "DEPLOYED_SOURCE_COMMIT" .env || true)"
+PREVIOUS_DEPLOYED_SOURCE_REF="$(read_env_value "DEPLOYED_SOURCE_REF" .env || true)"
+PREVIOUS_RELEASE_TAG="$(read_env_value "RELEASE_TAG" .env || true)"
+DEPLOYED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
 upsert_env "BACKEND_IMAGE" "$BACKEND_IMAGE" .env
 upsert_env "FRONTEND_IMAGE" "$FRONTEND_IMAGE" .env
@@ -204,9 +217,15 @@ upsert_env "CODE_EXEC_IMAGE" "$CODE_EXEC_IMAGE" .env
 upsert_env "CODE_RUNNER_IMAGE" "$CODE_RUNNER_IMAGE" .env
 upsert_env "COLLAB_IMAGE" "$COLLAB_IMAGE" .env
 upsert_env "LSP_PROXY_IMAGE" "$LSP_PROXY_IMAGE" .env
+upsert_env "DEPLOYED_AT" "$DEPLOYED_AT" .env
+upsert_env "DEPLOYED_SOURCE_COMMIT" "$SOURCE_SHA" .env
+upsert_env "DEPLOYED_SOURCE_REF" "refs/tags/$RELEASE_TAG" .env
+upsert_env "RELEASE_TAG" "$RELEASE_TAG" .env
 upsert_env "DOCKER_GID" "$DOCKER_GID" .env
 
 echo "==> Releasing images:"
+echo "    RELEASE_TAG=$RELEASE_TAG"
+echo "    SOURCE_SHA=$SOURCE_SHA"
 echo "    BACKEND_IMAGE=$BACKEND_IMAGE"
 echo "    FRONTEND_IMAGE=$FRONTEND_IMAGE"
 echo "    CODE_EXEC_IMAGE=$CODE_EXEC_IMAGE"
@@ -214,6 +233,7 @@ echo "    CODE_RUNNER_IMAGE=$CODE_RUNNER_IMAGE"
 echo "    COLLAB_IMAGE=$COLLAB_IMAGE"
 echo "    LSP_PROXY_IMAGE=$LSP_PROXY_IMAGE"
 echo "    DOCKER_GID=$DOCKER_GID"
+echo "    DEPLOYED_AT=$DEPLOYED_AT"
 echo "    BACKEND_PORT=$BACKEND_PORT"
 echo "    FRONTEND_BIND_HOST=$FRONTEND_BIND_HOST"
 echo "    FRONTEND_HOST_PORT=$FRONTEND_HOST_PORT"
