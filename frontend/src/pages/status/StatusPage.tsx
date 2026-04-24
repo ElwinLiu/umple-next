@@ -1,7 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { AlertCircle, RefreshCw } from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  Clock,
+  Cpu,
+  HelpCircle,
+  RefreshCw,
+  Tag,
+  Terminal,
+  XCircle,
+} from "lucide-react";
 import { api } from "@/api/client";
 import type { StatusResponse } from "@/api/types";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -72,31 +84,46 @@ export function StatusPage() {
   return (
     <main className="h-screen overflow-y-auto bg-surface-1 text-ink">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
-        <header className="flex flex-col gap-3 rounded-lg border border-border bg-surface-0 px-4 py-4 shadow-sm md:flex-row md:items-center md:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <img src="/umple-logo.svg" alt="" className="mt-0.5 h-9 w-auto shrink-0" />
+        <header className="flex flex-col gap-4 rounded-xl border border-border bg-surface-0 p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+          <div className="flex min-w-0 items-center gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-brand/10 p-2 shadow-inner ring-1 ring-brand/20">
+              <img src="/umple-logo.svg" alt="" className="h-full w-full object-contain" />
+            </div>
             <div className="flex min-w-0 flex-col gap-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-xl font-semibold tracking-tight">UmpleOnline Status</h1>
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-2xl font-bold tracking-tight text-ink">System Status</h1>
                 {status ? <StatusBadge value={status.status} /> : null}
               </div>
-              <p className="text-sm text-ink-muted">
-                Developer monitoring for the backend, compiler, collaboration, LSP, and execution services.
+              <p className="text-sm font-medium text-ink-muted">
+                UmpleOnline Backend • Compiler • Collaboration • LSP • Execution
               </p>
               {status ? (
-                <p className="text-xs text-ink-faint">
-                  Last refresh {formatDate(status.generatedAt)}. Auto-refreshes every 30 seconds.
-                </p>
+                <div className="flex items-center gap-2 text-xs text-ink-faint">
+                  <span className="flex items-center gap-1">
+                    <Clock className="size-3" />
+                    Last update: {formatDate(status.generatedAt)}
+                  </span>
+                  <span className="h-1 w-1 rounded-full bg-border" />
+                  <span>Refreshes every 30s</span>
+                </div>
               ) : null}
             </div>
           </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            <Button asChild variant="outline" size="sm">
+          <div className="flex shrink-0 flex-wrap items-center gap-3">
+            <Button asChild variant="outline" size="sm" className="font-semibold">
               <Link to="/">Back to editor</Link>
             </Button>
-            <Button onClick={() => void loadStatus()} disabled={refreshing} size="sm">
-              <RefreshCw data-icon="inline-start" />
-              {refreshing ? "Refreshing" : "Refresh"}
+            <Button
+              onClick={() => void loadStatus()}
+              disabled={refreshing}
+              size="sm"
+              className={cn(
+                "font-semibold transition-all",
+                refreshing ? "opacity-80" : "shadow-sm active:scale-95",
+              )}
+            >
+              <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+              {refreshing ? "Refreshing..." : "Refresh Status"}
             </Button>
           </div>
         </header>
@@ -124,17 +151,82 @@ function StatusContent({ status }: { status: StatusResponse }) {
   const releaseDetail = shortCommit(release.sourceCommit) || shortCommit(status.build?.sourceCommit) || formatValue(status.build?.sourceRefName);
   const compilerState = formatValue(status.umplesync?.alive) === "true" ? "Running" : "Not running";
   const healthRecords = buildHealthRecords(status);
+  const dockerStats = asRecordArray(legacyDocker.stats);
 
   return (
     <div className="flex flex-col gap-4" data-testid="status-dashboard">
       <OverviewStrip
         items={[
-          { label: "Backend uptime", value: formatDuration(status.uptimeSeconds), detail: "Since this process started" },
-          { label: "Release", value: releaseLabel, detail: releaseDetail || "No release metadata" },
-          { label: "Compiler", value: compilerState, detail: `Port ${formatValue(status.umplesync?.port) || "unknown"}` },
-          { label: "Health rows", value: String(healthRecords.length), detail: "Services, checks, dependencies" },
+          {
+            label: "Backend uptime",
+            value: formatDuration(status.uptimeSeconds),
+            detail: "Since this process started",
+            icon: <Clock className="size-5" />,
+          },
+          {
+            label: "Release",
+            value: releaseLabel,
+            detail: releaseDetail || "No release metadata",
+            icon: <Tag className="size-5" />,
+          },
+          {
+            label: "Compiler",
+            value: compilerState,
+            detail: `Port ${formatValue(status.umplesync?.port) || "unknown"}`,
+            icon: <Cpu className="size-5" />,
+          },
+          {
+            label: "Health rows",
+            value: String(healthRecords.length),
+            detail: "Services, checks, dependencies",
+            icon: <Activity className="size-5" />,
+          },
         ]}
       />
+
+      {dockerStats.length > 0 && (
+        <StatusSection
+          title="System resources"
+          description="Real-time Docker container resource usage across the UmpleOnline stack"
+          testId="status-system-resources"
+        >
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {dockerStats.map((stat, index) => (
+              <div
+                key={`${stat.name}-${index}`}
+                className="flex flex-col gap-2 rounded-lg border border-border bg-surface-1 p-3 shadow-sm transition-all hover:border-brand/30 hover:shadow-md"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="truncate font-bold text-ink">{labelize(String(stat.name))}</span>
+                  <StatusBadge value={String(stat.status)} />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-ink-muted">CPU Usage</span>
+                    <span className="font-mono font-medium text-ink">{formatValue(stat.CPUPerc)}</span>
+                  </div>
+                  <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-2">
+                    <div
+                      className="h-full bg-brand"
+                      style={{ width: String(stat.CPUPerc).replace("%", "") + "%" }}
+                    />
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-ink-muted">Memory</span>
+                    <span className="font-mono font-medium text-ink">{formatValue(stat.MemUsage)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-ink-muted">Net I/O</span>
+                    <span className="font-mono text-[10px] text-ink-faint">
+                      {formatValue(stat.NetIO)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </StatusSection>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
         <StatusSection
@@ -171,11 +263,46 @@ function StatusContent({ status }: { status: StatusResponse }) {
         action={<StatusBadge value={formatValue(status.umplesync?.status)} />}
         testId="status-umplesync"
       >
-        <KeyValueTable data={withoutKeys(status.umplesync, ["log"])} />
-        <Separator className="my-4" />
-        <pre className="max-h-[28rem] overflow-auto rounded-md bg-muted p-3 font-mono text-xs leading-relaxed text-foreground">
-          {formatValue(status.umplesync?.log) || "No log output returned."}
-        </pre>
+        <div className="grid gap-6 xl:grid-cols-[1fr_2fr]">
+          <div className="flex flex-col gap-4">
+            <SectionBlock title="Compiler details">
+              <KeyValueTable data={withoutKeys(status.umplesync, ["log", "errors"])} compact />
+            </SectionBlock>
+            {formatValue(status.umplesync?.errors) ? (
+              <SectionBlock title="Errors" className="text-status-error">
+                <div className="p-3 font-mono text-xs bg-status-error/5 border border-status-error/20 rounded-md">
+                  {formatValue(status.umplesync.errors)}
+                </div>
+              </SectionBlock>
+            ) : null}
+          </div>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-1.5 text-xs font-semibold uppercase text-ink-faint">
+                <Terminal className="size-3" />
+                Compiler logs
+              </h2>
+            </div>
+            <div className="group relative">
+              <div className="absolute inset-0 -m-0.5 rounded-lg bg-gradient-to-b from-brand/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
+              <div className="relative flex flex-col overflow-hidden rounded-lg border border-neutral-800 bg-neutral-950 shadow-2xl">
+                <div className="flex items-center gap-1.5 border-b border-neutral-800 bg-neutral-900/50 px-4 py-2">
+                  <div className="size-2.5 rounded-full bg-red-500/80 shadow-[0_0_8px_rgba(239,68,68,0.3)]" />
+                  <div className="size-2.5 rounded-full bg-amber-500/80 shadow-[0_0_8px_rgba(245,158,11,0.3)]" />
+                  <div className="size-2.5 rounded-full bg-green-500/80 shadow-[0_0_8px_rgba(34,197,94,0.3)]" />
+                  <span className="ml-2 font-mono text-[10px] text-neutral-500 uppercase tracking-widest">
+                    umplesync.log
+                  </span>
+                </div>
+                <pre className="max-h-[28rem] overflow-auto p-4 font-mono text-xs leading-relaxed text-neutral-300 scrollbar-thin scrollbar-track-neutral-950 scrollbar-thumb-neutral-800">
+                  {formatValue(status.umplesync?.log) || (
+                    <span className="italic text-neutral-600">No log output returned.</span>
+                  )}
+                </pre>
+              </div>
+            </div>
+          </div>
+        </div>
       </StatusSection>
 
       <StatusSection
@@ -198,8 +325,6 @@ function StatusContent({ status }: { status: StatusResponse }) {
           </SectionBlock>
           <SectionBlock title="Legacy Docker" className="xl:col-span-2">
             <KeyValueTable data={withoutKeys(legacyDocker, ["stats"])} compact />
-            <Separator className="my-3" />
-            <RecordsTable records={asRecordArray(legacyDocker.stats)} primary="name" />
           </SectionBlock>
           <SectionBlock title="Legacy execution" className="xl:col-span-2">
             <KeyValueTable data={asRecord(legacy.execution)} compact />
@@ -213,7 +338,7 @@ function StatusContent({ status }: { status: StatusResponse }) {
 function OverviewStrip({
   items,
 }: {
-  items: Array<{ label: string; value: string; detail: string }>;
+  items: Array<{ label: string; value: string; detail: string; icon?: ReactNode }>;
 }) {
   return (
     <section className="grid overflow-hidden rounded-lg border border-border bg-surface-0 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
@@ -221,14 +346,23 @@ function OverviewStrip({
         <div
           key={item.label}
           className={cn(
-            "min-w-0 px-4 py-3",
+            "flex min-w-0 gap-3 px-4 py-4",
             index > 0 && "border-t border-border sm:border-l sm:border-t-0",
             index === 2 && "sm:border-l-0 xl:border-l",
           )}
         >
-          <p className="text-xs font-medium uppercase text-ink-faint">{item.label}</p>
-          <p className="mt-1 truncate text-xl font-semibold tracking-tight">{item.value}</p>
-          <p className="mt-0.5 truncate text-xs text-ink-muted">{item.detail}</p>
+          {item.icon && (
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-surface-1 text-ink-muted shadow-inner">
+              {item.icon}
+            </div>
+          )}
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-wider text-ink-faint">
+              {item.label}
+            </p>
+            <p className="mt-0.5 truncate text-xl font-bold tracking-tight text-ink">{item.value}</p>
+            <p className="mt-0.5 truncate text-xs text-ink-muted">{item.detail}</p>
+          </div>
         </div>
       ))}
     </section>
@@ -434,19 +568,34 @@ function FormattedValue({ value }: { value: unknown }) {
 }
 
 function StatusBadge({ value }: { value: string }) {
-  const normalized = value.toLowerCase();
-  const className = cn(
-    "border font-semibold",
-    (normalized === "ok" || normalized === "running") &&
-      "border-status-success/30 bg-status-success/10 text-status-success",
-    (normalized === "degraded" || normalized === "unparsed" || normalized === "not_tracked") &&
-      "border-status-warning/30 bg-status-warning/10 text-status-warning",
-    (normalized === "unreachable" || normalized === "unavailable") &&
-      "border-status-error/30 bg-status-error/10 text-status-error",
-  );
+  const normalized = (value || "unknown").toLowerCase();
+
+  let icon = <HelpCircle className="size-3.5" />;
+  let className = "border-muted-foreground/30 bg-muted/50 text-muted-foreground";
+
+  if (normalized === "ok" || normalized === "running") {
+    icon = <CheckCircle2 className="size-3.5" />;
+    className =
+      "border-status-success/30 bg-status-success text-white dark:text-status-success dark:bg-status-success/10";
+  } else if (["degraded", "unparsed", "not_tracked"].includes(normalized)) {
+    icon = <AlertTriangle className="size-3.5" />;
+    className =
+      "border-status-warning/30 bg-status-warning text-white dark:text-status-warning dark:bg-status-warning/10";
+  } else if (["unreachable", "unavailable", "error"].includes(normalized)) {
+    icon = <XCircle className="size-3.5" />;
+    className =
+      "border-status-error/30 bg-status-error text-white dark:text-status-error dark:bg-status-error/10";
+  }
 
   return (
-    <Badge variant="outline" className={className}>
+    <Badge
+      variant="outline"
+      className={cn(
+        "flex w-fit items-center gap-1.5 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+        className,
+      )}
+    >
+      {icon}
       {value || "unknown"}
     </Badge>
   );
@@ -454,18 +603,33 @@ function StatusBadge({ value }: { value: string }) {
 
 function StatusSkeleton() {
   return (
-    <div className="grid gap-4 lg:grid-cols-3">
-      {Array.from({ length: 6 }).map((_, index) => (
-        <Card key={index}>
-          <CardHeader>
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-3 w-48" />
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-8 w-full" />
-          </CardContent>
-        </Card>
-      ))}
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, index) => (
+          <Card key={index} className="px-4 py-4">
+            <div className="flex items-center gap-3">
+              <Skeleton className="size-10 rounded-full" />
+              <div className="flex flex-col gap-2">
+                <Skeleton className="h-3 w-20" />
+                <Skeleton className="h-5 w-28" />
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+      <div className="grid gap-4 lg:grid-cols-3">
+        {Array.from({ length: 3 }).map((_, index) => (
+          <Card key={index}>
+            <CardHeader>
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-48" />
+            </CardHeader>
+            <CardContent>
+              <Skeleton className="h-24 w-full" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }
