@@ -38,7 +38,7 @@ This guide walks you through everything you need to set up the project, make cha
 
 ### Prerequisites
 
-You need three tools installed on your machine before you begin. All three are free and work on macOS, Linux, and Windows (via WSL).
+You need two tools installed on your machine before you begin. Both are free and work on macOS, Linux, and Windows (via WSL).
 
 #### 1. Docker
 
@@ -64,28 +64,6 @@ Bun is the JavaScript runtime and package manager we use for the frontend (simil
 - **Install:** `curl -fsSL https://bun.sh/install | bash` (then restart your terminal)
 - **Verify:** `bun --version`
 
-#### 3. GitHub CLI (`gh`)
-
-The GitHub CLI is used to download build artifacts (the Umple compiler JAR file) from GitHub Releases.
-
-- **Install (Linux/WSL):**
-  ```bash
-  (type -p wget >/dev/null || sudo apt-get install wget -y) \
-    && sudo mkdir -p -m 755 /etc/apt/keyrings \
-    && out=$(mktemp) \
-    && wget -qO- https://cli.github.com/packages/githubcli-archive-keyring.gpg \
-         | sudo tee /etc/apt/keyrings/githubcli-archive-keyring.gpg > /dev/null \
-    && sudo chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
-    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] \
-         https://cli.github.com/packages stable main" \
-         | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
-    && sudo apt update \
-    && sudo apt install gh -y
-  ```
-- **Install (macOS):** `brew install gh`
-- **Verify:** `gh --version`
-- **Authenticate:** Run `gh auth login` and follow the prompts (you only need to do this once)
-
 ### First-Time Setup
 
 Run these commands in order. Each one is explained below.
@@ -108,7 +86,7 @@ make dev
 **What each step does:**
 
 1. **`git clone`** — Downloads the repository to your machine.
-2. **`make fetch-jar`** — Downloads `umplesync.jar` (the Umple compiler) from GitHub Releases into the `jars/` directory. The backend needs this to compile Umple code.
+2. **`make fetch-jar`** — Downloads the latest UmpleOnline-hosted `umplesync.jar` (the Umple compiler) into the `jars/` directory and records its SHA256 digest. The backend needs this to compile Umple code.
 3. **`make install`** — Runs `bun install` in the `frontend/` directory to download all JavaScript/TypeScript dependencies.
 4. **`make dev`** — Starts the backend services in Docker, then starts the frontend dev server. You'll see Vite output in your terminal.
 
@@ -126,7 +104,7 @@ umpleonline/
 ├── backend/            # Go API server (communicates with umplesync.jar + Graphviz)
 ├── code-exec/          # Node.js sandboxed code runner
 ├── examples/           # Built-in Umple example files (.ump)
-├── jars/               # umplesync.jar (downloaded via make fetch-jar, gitignored)
+├── jars/               # umplesync.jar and digest (downloaded via make fetch-jar, gitignored)
 ├── data/               # Runtime data (models, temp files)
 ├── .github/workflows/  # CI/CD pipelines
 ├── Makefile            # All dev commands
@@ -276,15 +254,9 @@ This is the single command you should run before pushing. It runs:
 
 ## Troubleshooting
 
-### `make fetch-jar` fails with "authentication required"
+### `make fetch-jar` fails
 
-You need to authenticate the GitHub CLI first:
-
-```bash
-gh auth login
-```
-
-Follow the prompts to log in via browser.
+Check that you can reach `https://try.umple.org/scripts/umplesync.jar` from your network, then rerun `make fetch-jar`. The command no longer requires GitHub CLI authentication.
 
 ### `make dev` fails with "Cannot connect to the Docker daemon"
 

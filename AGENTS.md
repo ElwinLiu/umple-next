@@ -61,7 +61,7 @@ If you add new Go dependencies: run `docker compose exec backend go mod tidy`.
 | `make up-prod` | Deploy production (all services in Docker) |
 | `make tidy` | Run `go mod tidy` for backend |
 | `make clean` | Stop services + remove temp model data |
-| `make fetch-jar` | Download umplesync.jar from GitHub releases |
+| `make fetch-jar` | Download the latest UmpleOnline-hosted umplesync.jar |
 | `make check` | Run the local equivalent of the CI validation suite |
 
 ## Playwright
