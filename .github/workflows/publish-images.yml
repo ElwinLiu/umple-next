@@ -29,6 +29,8 @@ jobs:
       contents: read
       id-token: write
       packages: write
+    env:
+      UMPLESYNC_JAR_URL: https://try.umple.org/scripts/umplesync.jar
     steps:
       - uses: actions/checkout@v6
         with:
@@ -37,11 +39,6 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-
-      - name: Read shared versions
-        id: versions
-        run: |
-          echo "umplesync_version=$(cat .umplesync-version)" >> "$GITHUB_OUTPUT"
 
       - name: Resolve latest LSP version
         id: lsp_version
@@ -72,11 +69,12 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Fetch umplesync.jar
+        id: umplesync_jar
         run: |
           mkdir -p jars
-          gh release download "jars/${{ steps.versions.outputs.umplesync_version }}" --pattern 'umplesync.jar' --dir jars --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          curl -fL --retry 3 --retry-delay 5 "$UMPLESYNC_JAR_URL" -o jars/umplesync.jar
+          sha256sum jars/umplesync.jar | tee jars/umplesync.jar.sha256
+          echo "sha256=$(cut -d ' ' -f1 jars/umplesync.jar.sha256)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push backend
         id: backend_build
@@ -103,6 +101,8 @@ jobs:
             SOURCE_REF_TYPE=${{ github.ref_type }}
             BUILD_TIME=${{ steps.meta.outputs.created }}
             BACKEND_IMAGE_REF=${{ steps.meta.outputs.prefix }}/backend:${{ steps.meta.outputs.sha_tag }}
+            UMPLESYNC_JAR_URL=${{ env.UMPLESYNC_JAR_URL }}
+            UMPLESYNC_JAR_SHA256=${{ steps.umplesync_jar.outputs.sha256 }}
           cache-from: type=gha,scope=backend
           cache-to: type=gha,mode=max,scope=backend
           sbom: true
@@ -300,6 +300,8 @@ jobs:
             echo "- Code Runner: \`${{ steps.meta.outputs.prefix }}/code-runner:${{ steps.meta.outputs.sha_tag }}\`"
             echo "- Collab: \`${{ steps.meta.outputs.prefix }}/collab:${{ steps.meta.outputs.sha_tag }}\`"
             echo "- LSP Proxy: \`${{ steps.meta.outputs.prefix }}/lsp-proxy:${{ steps.meta.outputs.sha_tag }}\`"
+            echo "- umplesync.jar source: \`${{ env.UMPLESYNC_JAR_URL }}\`"
+            echo "- umplesync.jar SHA256: \`${{ steps.umplesync_jar.outputs.sha256 }}\`"
             echo "- Signed backend digest: \`${{ steps.meta.outputs.prefix }}/backend@${{ steps.backend_build.outputs.digest }}\`"
             echo "- Signed frontend digest: \`${{ steps.meta.outputs.prefix }}/frontend@${{ steps.frontend_build.outputs.digest }}\`"
             echo "- Signed code-exec digest: \`${{ steps.meta.outputs.prefix }}/code-exec@${{ steps.code_exec_build.outputs.digest }}\`"

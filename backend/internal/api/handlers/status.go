@@ -310,12 +310,14 @@ func buildStatus() map[string]any {
 	imageRef := firstPresent(os.Getenv("BACKEND_IMAGE_REF"), os.Getenv("IMAGE_TAG"))
 
 	return map[string]any{
-		"sourceCommit":  firstNonEmpty(os.Getenv("SOURCE_COMMIT"), os.Getenv("GIT_COMMIT"), os.Getenv("GITHUB_SHA"), commitFromImageRef(imageRef), commandOutput("git", "rev-parse", "--short", "HEAD")),
-		"sourceRef":     sourceRef,
-		"sourceRefName": firstPresent(os.Getenv("SOURCE_REF_NAME"), os.Getenv("GITHUB_REF_NAME"), refNameFromRef(sourceRef), commandOutput("git", "rev-parse", "--abbrev-ref", "HEAD")),
-		"sourceRefType": firstPresent(os.Getenv("SOURCE_REF_TYPE"), refTypeFromRef(sourceRef)),
-		"builtAt":       os.Getenv("BUILD_TIME"),
-		"backendImage":  imageRef,
+		"sourceCommit":       firstNonEmpty(os.Getenv("SOURCE_COMMIT"), os.Getenv("GIT_COMMIT"), os.Getenv("GITHUB_SHA"), commitFromImageRef(imageRef), commandOutput("git", "rev-parse", "--short", "HEAD")),
+		"sourceRef":          sourceRef,
+		"sourceRefName":      firstPresent(os.Getenv("SOURCE_REF_NAME"), os.Getenv("GITHUB_REF_NAME"), refNameFromRef(sourceRef), commandOutput("git", "rev-parse", "--abbrev-ref", "HEAD")),
+		"sourceRefType":      firstPresent(os.Getenv("SOURCE_REF_TYPE"), refTypeFromRef(sourceRef)),
+		"builtAt":            os.Getenv("BUILD_TIME"),
+		"backendImage":       imageRef,
+		"umplesyncJarSource": os.Getenv("UMPLESYNC_JAR_URL"),
+		"umplesyncJarSha256": os.Getenv("UMPLESYNC_JAR_SHA256"),
 	}
 }
 

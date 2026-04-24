@@ -37,6 +37,7 @@ backend/tmp/
 
 # Jars (downloaded via make fetch-jar)
 jars/*.jar
+jars/*.sha256
 
 # Environment
 .env

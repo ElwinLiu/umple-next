@@ -1,6 +1,6 @@
 .PHONY: dev dev-backend dev-frontend install up-prod down logs logs-backend clean tidy fetch-jar sync-examples test-e2e test-e2e-live test-e2e-ui check check-frontend check-backend
 
-UMPLESYNC_VERSION := $(shell cat .umplesync-version)
+UMPLESYNC_JAR_URL ?= https://try.umple.org/scripts/umplesync.jar
 export UMPLE_LSP_VERSION ?= $(shell npm view umple-lsp-server version 2>/dev/null || echo latest)
 export DOCKER_GID := $(shell stat -c '%g' /var/run/docker.sock 2>/dev/null || echo 0)
 LEGACY_UMPLE_GIT_URL ?= https://github.com/umple/umple.git
@@ -90,12 +90,14 @@ tidy:
 
 # ── Jar Management ──
 
-# Download the latest umplesync.jar from GitHub releases
+# Download the latest umplesync.jar published by UmpleOnline.
 fetch-jar:
 	@mkdir -p jars
-	@echo "Fetching umplesync.jar from GitHub releases..."
-	@gh release download jars/$(UMPLESYNC_VERSION) --pattern 'umplesync.jar' --dir jars --clobber
+	@echo "Fetching umplesync.jar from $(UMPLESYNC_JAR_URL)..."
+	@curl -fL --retry 3 --retry-delay 5 "$(UMPLESYNC_JAR_URL)" -o jars/umplesync.jar
+	@if command -v sha256sum >/dev/null 2>&1; then sha256sum jars/umplesync.jar > jars/umplesync.jar.sha256; else shasum -a 256 jars/umplesync.jar > jars/umplesync.jar.sha256; fi
 	@echo "Downloaded jars/umplesync.jar"
+	@echo "Recorded jars/umplesync.jar.sha256"
 
 # Refresh the committed example manifest and bundled example files from the legacy repo
 sync-examples:

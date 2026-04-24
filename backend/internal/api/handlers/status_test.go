@@ -11,6 +11,8 @@ func TestBuildStatusUsesImageBuildEnvironment(t *testing.T) {
 	t.Setenv("SOURCE_REF_TYPE", "branch")
 	t.Setenv("BUILD_TIME", "2026-04-23T20:13:17Z")
 	t.Setenv("BACKEND_IMAGE_REF", "ghcr.io/umple/umpleonline/backend:sha-e3cdcad2cf7de3b9e510efc58856086406004718")
+	t.Setenv("UMPLESYNC_JAR_URL", "https://try.umple.org/scripts/umplesync.jar")
+	t.Setenv("UMPLESYNC_JAR_SHA256", "abc123")
 
 	status := buildStatus()
 
@@ -31,6 +33,12 @@ func TestBuildStatusUsesImageBuildEnvironment(t *testing.T) {
 	}
 	if status["backendImage"] != "ghcr.io/umple/umpleonline/backend:sha-e3cdcad2cf7de3b9e510efc58856086406004718" {
 		t.Fatalf("backendImage = %q, want backend image", status["backendImage"])
+	}
+	if status["umplesyncJarSource"] != "https://try.umple.org/scripts/umplesync.jar" {
+		t.Fatalf("umplesyncJarSource = %q, want jar source", status["umplesyncJarSource"])
+	}
+	if status["umplesyncJarSha256"] != "abc123" {
+		t.Fatalf("umplesyncJarSha256 = %q, want jar digest", status["umplesyncJarSha256"])
 	}
 }
 
@@ -102,6 +110,8 @@ func clearBuildStatusEnv(t *testing.T) {
 		"RELEASE_TAG",
 		"IMAGE_TAG",
 		"BACKEND_IMAGE_REF",
+		"UMPLESYNC_JAR_URL",
+		"UMPLESYNC_JAR_SHA256",
 	} {
 		t.Setenv(key, "")
 	}
