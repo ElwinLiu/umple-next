@@ -29,6 +29,12 @@ import { cn } from "@/lib/utils";
 
 const REFRESH_INTERVAL_MS = 30_000;
 
+type HealthRecord = {
+  group: string;
+  name: string;
+  data: Record<string, unknown>;
+};
+
 export function StatusPage() {
   const [status, setStatus] = useState<StatusResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,19 +73,22 @@ export function StatusPage() {
     <main className="h-screen overflow-y-auto bg-surface-1 text-ink">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
         <header className="flex flex-col gap-3 rounded-lg border border-border bg-surface-0 px-4 py-4 shadow-sm md:flex-row md:items-center md:justify-between">
-          <div className="flex min-w-0 flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-tight">UmpleOnline Status</h1>
-              {status ? <StatusBadge value={status.status} /> : null}
-            </div>
-            <p className="text-sm text-ink-muted">
-              Developer monitoring for the backend, compiler, collaboration, LSP, and execution services.
-            </p>
-            {status ? (
-              <p className="text-xs text-ink-faint">
-                Last refresh {formatDate(status.generatedAt)}. Auto-refreshes every 30 seconds.
+          <div className="flex min-w-0 items-start gap-3">
+            <img src="/umple-logo.svg" alt="" className="mt-0.5 h-9 w-auto shrink-0" />
+            <div className="flex min-w-0 flex-col gap-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl font-semibold tracking-tight">UmpleOnline Status</h1>
+                {status ? <StatusBadge value={status.status} /> : null}
+              </div>
+              <p className="text-sm text-ink-muted">
+                Developer monitoring for the backend, compiler, collaboration, LSP, and execution services.
               </p>
-            ) : null}
+              {status ? (
+                <p className="text-xs text-ink-faint">
+                  Last refresh {formatDate(status.generatedAt)}. Auto-refreshes every 30 seconds.
+                </p>
+              ) : null}
+            </div>
           </div>
           <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button asChild variant="outline" size="sm">
@@ -108,147 +117,249 @@ export function StatusPage() {
 }
 
 function StatusContent({ status }: { status: StatusResponse }) {
-  const services = Object.entries(status.services ?? {});
+  const release = status.release ?? {};
   const legacy = status.legacy ?? {};
   const legacyDocker = asRecord(legacy.docker);
-  const release = status.release ?? {};
   const releaseLabel = formatValue(release.releaseTag) || shortCommit(status.build?.sourceCommit) || "unknown";
   const releaseDetail = shortCommit(release.sourceCommit) || shortCommit(status.build?.sourceCommit) || formatValue(status.build?.sourceRefName);
+  const compilerState = formatValue(status.umplesync?.alive) === "true" ? "Running" : "Not running";
+  const healthRecords = buildHealthRecords(status);
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-4 lg:grid-cols-3">
-        <SummaryCard title="Backend uptime" value={formatDuration(status.uptimeSeconds)} description="Since this backend process started" />
-        <SummaryCard title="Release" value={releaseLabel} description={releaseDetail} />
-        <SummaryCard title="Compiler" value={formatValue(status.umplesync?.alive) === "true" ? "Running" : "Not running"} description={`Port ${formatValue(status.umplesync?.port)}`} />
+    <div className="flex flex-col gap-4" data-testid="status-dashboard">
+      <OverviewStrip
+        items={[
+          { label: "Backend uptime", value: formatDuration(status.uptimeSeconds), detail: "Since this process started" },
+          { label: "Release", value: releaseLabel, detail: releaseDetail || "No release metadata" },
+          { label: "Compiler", value: compilerState, detail: `Port ${formatValue(status.umplesync?.port) || "unknown"}` },
+          { label: "Health rows", value: String(healthRecords.length), detail: "Services, checks, dependencies" },
+        ]}
+      />
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(22rem,0.65fr)]">
+        <StatusSection
+          title="Service health"
+          description="Services, backend checks, and configured software or filesystem dependencies"
+          testId="status-service-health"
+        >
+          <HealthTable records={healthRecords} />
+        </StatusSection>
+
+        <StatusSection
+          title="Release & runtime"
+          description="Build provenance, deployment metadata, backend process, and configured service targets"
+          testId="status-release-runtime"
+        >
+          <SectionBlock title="Build">
+            <KeyValueTable data={status.build} compact />
+          </SectionBlock>
+          <SectionBlock title="Release">
+            <KeyValueTable data={status.release} compact />
+          </SectionBlock>
+          <SectionBlock title="Process">
+            <KeyValueTable data={status.process} compact />
+          </SectionBlock>
+          <SectionBlock title="Config">
+            <KeyValueTable data={status.config} compact />
+          </SectionBlock>
+        </StatusSection>
       </div>
 
-      <div className="grid gap-4 xl:grid-cols-3">
-        <DataCard title="Build" description="Source revision baked into the backend image">
-          <KeyValueTable data={status.build} />
-        </DataCard>
-
-        <DataCard title="Release" description="Deployment metadata written by the production release flow">
-          <KeyValueTable data={status.release} />
-        </DataCard>
-
-        <DataCard title="Runtime" description="Backend process and configured service targets">
-          <KeyValueTable data={{ ...status.process, ...status.config }} />
-        </DataCard>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DataCard title="Dependency Checks" description="Configured software and filesystem dependencies">
-          <RecordsTable records={status.dependencies ?? []} primary="name" />
-        </DataCard>
-
-        <DataCard title="Health Checks" description="Backend healthcheck inputs used by Docker and operators">
-          <KeyValueTable data={status.checks} />
-        </DataCard>
-      </div>
-
-      <section className="grid gap-4 xl:grid-cols-3">
-        {services.map(([name, service]) => (
-          <DataCard key={name} title={serviceTitle(name)} description={formatValue(service.url)}>
-            <KeyValueTable data={service} />
-          </DataCard>
-        ))}
-      </section>
-
-      <DataCard
-        title="Umplesync"
+      <StatusSection
+        title="Umplesync compiler"
         description="Compiler process details and raw output from the umplesync -log command"
         action={<StatusBadge value={formatValue(status.umplesync?.status)} />}
+        testId="status-umplesync"
       >
         <KeyValueTable data={withoutKeys(status.umplesync, ["log"])} />
         <Separator className="my-4" />
         <pre className="max-h-[28rem] overflow-auto rounded-md bg-muted p-3 font-mono text-xs leading-relaxed text-foreground">
           {formatValue(status.umplesync?.log) || "No log output returned."}
         </pre>
-      </DataCard>
+      </StatusSection>
 
-      <DataCard title="Counters" description="Historical and since-start counters exposed by the status API">
-        <KeyValueTable data={status.counters} />
-      </DataCard>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DataCard title="Legacy Software" description="Legacy log.php software probes, including executable paths">
-          <RecordsTable records={asRecordArray(legacy.software)} primary="name" />
-        </DataCard>
-
-        <DataCard title="Legacy Listener" description="Legacy lsof-style listener check for the umplesync port">
-          <KeyValueTable data={asRecord(legacy.listener)} />
-        </DataCard>
-      </div>
-
-      <div className="grid gap-4 xl:grid-cols-2">
-        <DataCard title="Legacy Docker" description="Legacy container names and docker stats probes">
-          <KeyValueTable data={withoutKeys(legacyDocker, ["stats"])} />
-          <Separator className="my-4" />
-          <RecordsTable records={asRecordArray(legacyDocker.stats)} primary="name" />
-        </DataCard>
-
-        <DataCard title="Legacy Execution" description="Execution-server fields exposed by the old status page">
-          <KeyValueTable data={asRecord(legacy.execution)} />
-        </DataCard>
-      </div>
-
-      <DataCard title="Legacy Visits" description="Old countlog.txt visit counter when present in the deployment">
-        <KeyValueTable data={asRecord(legacy.visits)} />
-      </DataCard>
+      <StatusSection
+        title="Diagnostics"
+        description="Counters and legacy status probes retained from the full status payload"
+        testId="status-diagnostics"
+      >
+        <div className="grid gap-4 xl:grid-cols-2">
+          <SectionBlock title="Counters">
+            <KeyValueTable data={status.counters} compact />
+          </SectionBlock>
+          <SectionBlock title="Legacy visits">
+            <KeyValueTable data={asRecord(legacy.visits)} compact />
+          </SectionBlock>
+          <SectionBlock title="Legacy software">
+            <RecordsTable records={asRecordArray(legacy.software)} primary="name" />
+          </SectionBlock>
+          <SectionBlock title="Legacy listener">
+            <KeyValueTable data={asRecord(legacy.listener)} compact />
+          </SectionBlock>
+          <SectionBlock title="Legacy Docker" className="xl:col-span-2">
+            <KeyValueTable data={withoutKeys(legacyDocker, ["stats"])} compact />
+            <Separator className="my-3" />
+            <RecordsTable records={asRecordArray(legacyDocker.stats)} primary="name" />
+          </SectionBlock>
+          <SectionBlock title="Legacy execution" className="xl:col-span-2">
+            <KeyValueTable data={asRecord(legacy.execution)} compact />
+          </SectionBlock>
+        </div>
+      </StatusSection>
     </div>
   );
 }
 
-function SummaryCard({
-  title,
-  value,
-  description,
+function OverviewStrip({
+  items,
 }: {
-  title: string;
-  value: string;
-  description: string;
+  items: Array<{ label: string; value: string; detail: string }>;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm text-muted-foreground">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <p className="truncate text-2xl font-semibold tracking-tight">{value}</p>
-      </CardContent>
-    </Card>
+    <section className="grid overflow-hidden rounded-lg border border-border bg-surface-0 shadow-sm sm:grid-cols-2 xl:grid-cols-4">
+      {items.map((item, index) => (
+        <div
+          key={item.label}
+          className={cn(
+            "min-w-0 px-4 py-3",
+            index > 0 && "border-t border-border sm:border-l sm:border-t-0",
+            index === 2 && "sm:border-l-0 xl:border-l",
+          )}
+        >
+          <p className="text-xs font-medium uppercase text-ink-faint">{item.label}</p>
+          <p className="mt-1 truncate text-xl font-semibold tracking-tight">{item.value}</p>
+          <p className="mt-0.5 truncate text-xs text-ink-muted">{item.detail}</p>
+        </div>
+      ))}
+    </section>
   );
 }
 
-function DataCard({
+function StatusSection({
   title,
   description,
   action,
   children,
+  testId,
 }: {
   title: string;
   description: string;
   action?: ReactNode;
   children: ReactNode;
+  testId?: string;
 }) {
   return (
-    <Card>
-      <CardHeader>
+    <Card className="gap-4 rounded-lg py-4" data-testid={testId}>
+      <CardHeader className="gap-1 px-4 sm:px-5">
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
         {action ? <CardAction>{action}</CardAction> : null}
       </CardHeader>
-      <CardContent>{children}</CardContent>
+      <CardContent className="px-4 sm:px-5">{children}</CardContent>
     </Card>
   );
 }
 
-function KeyValueTable({ data }: { data: Record<string, unknown> | undefined }) {
+function SectionBlock({
+  title,
+  className,
+  children,
+}: {
+  title: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  return (
+    <section className={cn("min-w-0", className)}>
+      <h2 className="mb-2 text-xs font-semibold uppercase text-ink-faint">{title}</h2>
+      <div className="overflow-hidden rounded-md border border-border bg-surface-0/40">{children}</div>
+    </section>
+  );
+}
+
+function buildHealthRecords(status: StatusResponse): HealthRecord[] {
+  const services = Object.entries(status.services ?? {}).map(([name, data]) => ({
+    group: "Service",
+    name: serviceTitle(name),
+    data,
+  }));
+  const checks = Object.entries(status.checks ?? {}).map(([name, data]) => ({
+    group: "Check",
+    name: labelize(name),
+    data,
+  }));
+  const dependencies = (status.dependencies ?? []).map((data) => ({
+    group: "Dependency",
+    name: formatValue(data.name) || "Dependency",
+    data,
+  }));
+
+  return [...services, ...checks, ...dependencies];
+}
+
+function HealthTable({ records }: { records: HealthRecord[] }) {
+  if (records.length === 0) {
+    return <p className="text-sm text-muted-foreground">No health records reported.</p>;
+  }
+
+  return (
+    <div className="overflow-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-28">Group</TableHead>
+            <TableHead className="w-44">Name</TableHead>
+            <TableHead className="w-28">Status</TableHead>
+            <TableHead>Details</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {records.map((record, index) => (
+            <TableRow key={`${record.group}-${record.name}-${index}`}>
+              <TableCell className="align-top text-xs text-ink-muted">{record.group}</TableCell>
+              <TableCell className="align-top font-medium">{record.name}</TableCell>
+              <TableCell className="align-top">
+                <StatusBadge value={formatValue(record.data.status) || "unknown"} />
+              </TableCell>
+              <TableCell className="max-w-[42rem] whitespace-normal break-words align-top font-mono text-xs">
+                <CompactRecord data={withoutKeys(record.data, ["name", "status"])} />
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function CompactRecord({ data }: { data: Record<string, unknown> }) {
+  const entries = Object.entries(data).filter(([, value]) => formatValue(value) !== "");
+  if (entries.length === 0) return <span className="text-ink-faint">No detail</span>;
+
+  return (
+    <dl className="grid gap-1">
+      {entries.map(([key, value]) => (
+        <div key={key} className="grid gap-1 md:grid-cols-[9rem_minmax(0,1fr)]">
+          <dt className="font-sans text-xs font-medium text-ink-muted">{labelize(key)}</dt>
+          <dd className="min-w-0 break-words">
+            <FormattedValue value={value} />
+          </dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function KeyValueTable({
+  data,
+  compact = false,
+}: {
+  data: Record<string, unknown> | undefined;
+  compact?: boolean;
+}) {
   const entries = Object.entries(data ?? {});
   if (entries.length === 0) {
-    return <p className="text-sm text-muted-foreground">No data reported.</p>;
+    return <p className="px-3 py-2 text-sm text-muted-foreground">No data reported.</p>;
   }
 
   return (
@@ -256,8 +367,10 @@ function KeyValueTable({ data }: { data: Record<string, unknown> | undefined }) 
       <TableBody>
         {entries.map(([key, value]) => (
           <TableRow key={key}>
-            <TableCell className="w-48 align-top font-medium text-muted-foreground">{labelize(key)}</TableCell>
-            <TableCell className="max-w-[44rem] whitespace-normal break-words font-mono text-xs">
+            <TableCell className={cn("align-top font-medium text-muted-foreground", compact ? "w-36 py-2" : "w-48")}>
+              {labelize(key)}
+            </TableCell>
+            <TableCell className={cn("max-w-[44rem] whitespace-normal break-words font-mono text-xs", compact && "py-2")}>
               <FormattedValue value={value} />
             </TableCell>
           </TableRow>
@@ -275,33 +388,35 @@ function RecordsTable({
   primary: string;
 }) {
   if (records.length === 0) {
-    return <p className="text-sm text-muted-foreground">No records reported.</p>;
+    return <p className="px-3 py-2 text-sm text-muted-foreground">No records reported.</p>;
   }
 
   const keys = Array.from(new Set(records.flatMap((record) => Object.keys(record))));
   const sortedKeys = [primary, ...keys.filter((key) => key !== primary)];
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          {sortedKeys.map((key) => (
-            <TableHead key={key}>{labelize(key)}</TableHead>
-          ))}
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {records.map((record, index) => (
-          <TableRow key={`${formatValue(record[primary])}-${index}`}>
+    <div className="overflow-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
             {sortedKeys.map((key) => (
-              <TableCell key={key} className="max-w-[28rem] whitespace-normal break-words font-mono text-xs">
-                <FormattedValue value={record[key]} />
-              </TableCell>
+              <TableHead key={key}>{labelize(key)}</TableHead>
             ))}
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {records.map((record, index) => (
+            <TableRow key={`${formatValue(record[primary])}-${index}`}>
+              {sortedKeys.map((key) => (
+                <TableCell key={key} className="max-w-[28rem] whitespace-normal break-words font-mono text-xs">
+                  <FormattedValue value={record[key]} />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -324,7 +439,7 @@ function StatusBadge({ value }: { value: string }) {
     "border font-semibold",
     (normalized === "ok" || normalized === "running") &&
       "border-status-success/30 bg-status-success/10 text-status-success",
-    normalized === "degraded" &&
+    (normalized === "degraded" || normalized === "unparsed" || normalized === "not_tracked") &&
       "border-status-warning/30 bg-status-warning/10 text-status-warning",
     (normalized === "unreachable" || normalized === "unavailable") &&
       "border-status-error/30 bg-status-error/10 text-status-error",
@@ -332,7 +447,7 @@ function StatusBadge({ value }: { value: string }) {
 
   return (
     <Badge variant="outline" className={className}>
-      {value}
+      {value || "unknown"}
     </Badge>
   );
 }
@@ -357,7 +472,7 @@ function StatusSkeleton() {
 
 function isStatusValue(value: unknown): value is string {
   if (typeof value !== "string") return false;
-  return ["ok", "degraded", "unreachable", "unavailable", "not_tracked", "running"].includes(value.toLowerCase());
+  return ["ok", "degraded", "unreachable", "unavailable", "not_tracked", "running", "unparsed"].includes(value.toLowerCase());
 }
 
 function formatValue(value: unknown): string {
@@ -404,7 +519,7 @@ function serviceTitle(value: string): string {
   return labelize(value);
 }
 
-function withoutKeys(data: Record<string, unknown>, keys: string[]) {
+function withoutKeys(data: Record<string, unknown> | undefined, keys: string[]) {
   return Object.fromEntries(Object.entries(data ?? {}).filter(([key]) => !keys.includes(key)));
 }
 
