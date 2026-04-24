@@ -91,7 +91,7 @@ export function StatusPage() {
             </div>
             <div className="flex min-w-0 flex-col gap-1">
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-2xl font-bold tracking-tight text-ink">System Status</h1>
+                <h1 className="text-2xl font-bold tracking-tight text-ink">UmpleOnline Status</h1>
                 {status ? <StatusBadge value={status.status} /> : null}
               </div>
               <p className="text-sm font-medium text-ink-muted">
