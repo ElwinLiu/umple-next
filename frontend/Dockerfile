@@ -6,7 +6,8 @@ COPY . .
 RUN bun run build
 
 FROM nginx:1.29.6-alpine
-RUN apk upgrade --no-cache
+ARG APK_SECURITY_REFRESH
+RUN echo "Refreshing Alpine packages at ${APK_SECURITY_REFRESH}" && apk upgrade --no-cache
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 EXPOSE 80

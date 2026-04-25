@@ -124,6 +124,8 @@ jobs:
             org.opencontainers.image.created=${{ steps.meta.outputs.created }}
             org.opencontainers.image.vendor=University of Ottawa
             org.opencontainers.image.description=UmpleOnline frontend
+          build-args: |
+            APK_SECURITY_REFRESH=${{ steps.meta.outputs.created }}
           cache-from: type=gha,scope=frontend
           cache-to: type=gha,mode=max,scope=frontend
           sbom: true
