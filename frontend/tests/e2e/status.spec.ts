@@ -70,7 +70,7 @@ test.describe('Status dashboard', () => {
     await expect(page.getByTestId('status-release-runtime')).toContainText('http://code-exec:3000')
     await expect(page.getByTestId('status-umplesync')).toContainText('Umple compiler listener ready')
     await expect(page.getByTestId('status-diagnostics')).toContainText('Legacy software')
-    await expect(page.getByTestId('status-system-resources')).toContainText('Umpleonline backend')
+    await expect(page.getByTestId('status-diagnostics')).toContainText('umpleonline-backend')
     await expect(page.locator('.react-resizable-handle')).toHaveCount(0)
     await expect(page.locator('.status-widget-drag-handle')).toHaveCount(0)
   })
