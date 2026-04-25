@@ -120,6 +120,7 @@ function StatusContent({ status }: { status: StatusResponse }) {
   const release = status.release ?? {};
   const legacy = status.legacy ?? {};
   const legacyDocker = asRecord(legacy.docker);
+  const runtimeToolRecords = withRuntimeToolPurposes(asRecordArray(legacy.software));
   const releaseLabel = formatValue(release.releaseTag) || shortCommit(status.build?.sourceCommit) || "unknown";
   const releaseDetail = shortCommit(release.sourceCommit) || shortCommit(status.build?.sourceCommit) || formatValue(status.build?.sourceRefName);
   const compilerState = formatValue(status.umplesync?.alive) === "true" ? "Running" : "Not running";
@@ -180,28 +181,28 @@ function StatusContent({ status }: { status: StatusResponse }) {
 
       <StatusSection
         title="Diagnostics"
-        description="Counters and legacy status probes retained from the full status payload"
+        description="Counters and operational probes for runtime tools, compiler listener, containers, and execution settings"
         testId="status-diagnostics"
       >
         <div className="grid gap-4 xl:grid-cols-2">
           <SectionBlock title="Counters">
             <KeyValueTable data={status.counters} compact />
           </SectionBlock>
-          <SectionBlock title="Legacy visits">
+          <SectionBlock title="Visit counter">
             <KeyValueTable data={asRecord(legacy.visits)} compact />
           </SectionBlock>
-          <SectionBlock title="Legacy software">
-            <RecordsTable records={asRecordArray(legacy.software)} primary="name" />
+          <SectionBlock title="Runtime tools">
+            <RecordsTable records={runtimeToolRecords} primary="name" />
           </SectionBlock>
-          <SectionBlock title="Legacy listener">
+          <SectionBlock title="Compiler listener">
             <KeyValueTable data={asRecord(legacy.listener)} compact />
           </SectionBlock>
-          <SectionBlock title="Legacy Docker" className="xl:col-span-2">
+          <SectionBlock title="Container stats" className="xl:col-span-2">
             <KeyValueTable data={withoutKeys(legacyDocker, ["stats"])} compact />
             <Separator className="my-3" />
             <RecordsTable records={asRecordArray(legacyDocker.stats)} primary="name" />
           </SectionBlock>
-          <SectionBlock title="Legacy execution" className="xl:col-span-2">
+          <SectionBlock title="Code execution settings" className="xl:col-span-2">
             <KeyValueTable data={asRecord(legacy.execution)} compact />
           </SectionBlock>
         </div>
@@ -295,6 +296,31 @@ function buildHealthRecords(status: StatusResponse): HealthRecord[] {
   }));
 
   return [...services, ...checks, ...dependencies];
+}
+
+function withRuntimeToolPurposes(records: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  return records.map((record) => ({
+    name: record.name,
+    purpose: runtimeToolPurpose(formatValue(record.name)),
+    ...withoutKeys(record, ["name"]),
+  }));
+}
+
+function runtimeToolPurpose(name: string): string {
+  switch (name) {
+    case "php":
+      return "Old UmpleOnline PHP runtime probe; not required by the new app";
+    case "java":
+      return "Runs umplesync.jar, the Umple compiler service";
+    case "dot":
+      return "Graphviz renderer for diagram layout output";
+    case "gcc":
+      return "Native C/C++ compiler used by generated-code workflows";
+    case "docker":
+      return "Container runtime used for services and isolated code execution";
+    default:
+      return "Runtime command reported by the status endpoint";
+  }
 }
 
 function HealthTable({ records }: { records: HealthRecord[] }) {
